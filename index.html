@@ -9,7 +9,10 @@
 <title>Buckets</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<!-- multiplayer library: served from this site first (school filters often block CDNs), then backups -->
+<script src="peerjs.min.js"></script>
+<script>if(typeof Peer==='undefined') document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>');</script>
+<script>if(typeof Peer==='undefined') document.write('<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"><\/script>');</script>
 <style>
   :root{ --ink:#1b1530; --cream:#fff6e5; --red:#ff5a4f; --blue:#3d8bff; --yellow:#ffd23f; }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -221,7 +224,7 @@ for(const h of HOOPS){ h.bb = h.cx + h.dir*40; h.base = h.i===0 ? COURT_L : COUR
 const THREE_D = 440;
 const P_R = 20, REACH = 160, BLOCK_R = 20;
 const RUN = 400, ACC = 3200, AIR_ACC = 600, JUMP_V = 560, SHOT_JUMP = 500, DUNK_V = 720;
-const BURST_V = 720, BURST_T = 0.24, BURST_CD = 1.1, STEAL_R = 62, STEAL_CD = 1.0, REACH_T = 0.28;
+const BURST_V = 690, BURST_T = 0.24, BURST_CD = 1.1, STEAL_R = 62, STEAL_CD = 1.0, REACH_T = 0.28;
 const METER_T = 0.62, SWEET = 0.8, SHOT_CLOCK = 16;
 const attackHoop = t => HOOPS[t===0?1:0];
 const defendHoop = t => HOOPS[t===0?0:1];
@@ -318,20 +321,26 @@ function dribblePos(x,y,z,face,hand,act,cross,t){
 function hoopVec(p, h){ const dx=h.cx-p.x, dz=-p.z, d=hyp(dx,dz)||1; return {dx,dz,d,ux:dx/d,uz:dz/d}; }
 function shotWindow(M,p){
   const h=attackHoop(p.team), v=hoopVec(p,h), dist=v.d;
-  let w = dist<220 ? 0.15 : lerp(0.10, 0.05, clamp((dist-220)/420,0,1));
+  let w = dist<220 ? 0.13 : lerp(0.10, 0.05, clamp((dist-220)/420,0,1));
   if(dist>THREE_D+200) w*=0.6;
+  if(dist>=220) w*=lerp(1, 0.72, clamp((p.moveShot||0)/RUN,0,1));   // pull-ups on the run are harder than set shots
   if(p.fire) w*=1.35;
   if(p.cold) w*=0.75;
   let c=1;
   for(const o of M.players){
     if(o.team===p.team) continue;
-    const ox=o.x-p.x, oz=o.z-p.z, d=hyp(ox,oz); if(d>=115) continue;
-    let f=0.38+0.62*(d/115);
-    if(ox*v.ux+oz*v.uz < -15) f=Math.min(1,f+0.35);   // defender behind you barely matters
-    if(o.y>20) f*=0.8;                                 // hand in the air
-    c=Math.min(c,f);
+    const ox=o.x-p.x, oz=o.z-p.z, d=hyp(ox,oz), ahead=ox*v.ux+oz*v.uz;
+    if(d<115){
+      let f=0.38+0.62*(d/115);
+      if(ahead < -15) f=Math.min(1,f+0.35);            // defender behind you barely matters
+      if(o.y>20) f*=0.8;                                 // hand in the air
+      c=Math.min(c,f);
+    }
+    // rim protection: a defender camped between you and the rim makes drives a lot tougher
+    if(dist<300){ const dr=hyp(o.x-h.cx,o.z);
+      if(dr<100 && ahead>-10 && ahead<dist+25){ let f=0.5+0.5*(dr/100); if(o.y>20) f*=0.85; c=Math.min(c,f); } }
   }
-  return clamp(w*c, 0.022, 0.2);
+  return clamp(w*c, 0.02, 0.2);
 }
 
 function handleActions(M,p){
@@ -345,7 +354,7 @@ function handleActions(M,p){
         p.vx=clamp((h.cx-v.ux*8-p.x)/T,-520,520); p.vz=clamp((0-p.z)/T,-400,400); p.face=Math.sign(v.ux)||p.face; p.burstT=0;
         pushEv(M,{k:'dunkgo', id:p.id});
       } else {
-        p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.25; p.vz*=0.25; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.meterWin=shotWindow(M,p);
+        p.moveShot=hyp(p.vx,p.vz); p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.25; p.vz*=0.25; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.meterWin=shotWindow(M,p);
       }
     } else if(!has && ground && p.act===''){ p.act='jump'; p.vy=JUMP_V; p.vx*=0.6; p.vz*=0.6; }
   }
@@ -386,7 +395,7 @@ function releaseShot(M,p,m){
   Object.assign(b,{st:'shot',holder:null,x:sx,y:sy,z:sz,vx:(tx-sx)/T,vz:(tz-sz)/T,vy:(ty-sy+0.5*GRAV*T*T)/T,
     shooter:p.id,shotTeam:p.team,pts3:dist>THREE_D,t:0,touchedRim:false,dunk:false,reb:true,wasShot:true,lastTeam:p.team,post:null});
   p.act='follow'; p.noGrabT=0.35; p.shotRange=0; M.scOn=false;
-  pushEv(M,{k:'shot', id:p.id, q, three:dist>THREE_D});
+  pushEv(M,{k:'shot', id:p.id, q, three:dist>THREE_D, d:Math.round(dist)});
 }
 
 function tryDunk(M,p){
@@ -394,11 +403,14 @@ function tryDunk(M,p){
   const hdist=hyp(hx-h.cx, hzz);
   if(hdist>95) return;
   if((hdist<40 && hy>RIM_Y+5) || (p.vy<0 && p.y>90)){
-    // only a defender whose hand is actually up at the rim can stop it
-    const blk=M.players.find(o=>o.team!==p.team && o.y+REACH+10>RIM_Y && hyp(o.x-h.cx,o.z)<70);
+    // contested dunks: a defender right at the rim can stuff it; open dunks always go down
+    let blk=null, best=1e9;
+    for(const o of M.players){ if(o.team===p.team || o.downT>0) continue; const dr=hyp(o.x-h.cx,o.z); if(dr<best){ best=dr; blk=o; } }
+    let make = best<60 ? 0.55 : best<110 ? 0.78 : 1;
+    if(blk && blk.y>30 && best<110) make-=0.15;          // already up there waiting
     const victim=M.players.find(o=>o.team!==p.team && hyp(o.x-h.cx,o.z)<110);
     p.act='follow'; p.noGrabT=0.5;
-    if(blk && Math.random()<0.5){
+    if(blk && Math.random()>make){
       looseBall(M, h.cx-h.dir*20, RIM_Y+40, 0, -h.dir*rnd(250,420), rnd(80,240), rnd(-200,200), blk.team);
       pushEv(M,{k:'block', id:blk.id, x:h.cx, y:RIM_Y+40, z:0}); return;
     }
@@ -462,6 +474,17 @@ function movePlayer(M,p,dt){
   if(p.downT>0) p.downT-=dt;
   const locked = p.act==='shoot'||p.act==='fake'||p.act==='dunk'||p.act==='follow'||p.downT>0;
   let ix=p.inX, iz=p.inZ; const il=hyp(ix,iz); if(il>1){ ix/=il; iz/=il; }
+  // defense assist for humans: a light pull toward the right guarding spot (big help on a touchscreen)
+  const hold = b.st==='held' ? findP(M,b.holder) : null;
+  if(!p.bot && hold && hold.team!==p.team && ground && !locked && p.act===''){
+    const d=hyp(hold.x-p.x,hold.z-p.z);
+    if(d<150){
+      const v=hoopVec(hold,defendHoop(p.team)), gx=hold.x+v.ux*52, gz=hold.z+v.uz*52, ax=gx-p.x, az=gz-p.z, al=hyp(ax,az);
+      if(al>5){ const k=Math.min(1,al/40), mag=hyp(ix,iz);
+        if(mag<0.2){ ix=ax/al*k*0.5; iz=az/al*k*0.5; }
+        else { ix=ix*0.82+ax/al*k*0.22; iz=iz*0.82+az/al*k*0.22; const l2=hyp(ix,iz); if(l2>1){ ix/=l2; iz/=l2; } } }
+    }
+  }
   if(p.burstT>0){ p.burstT-=dt; p.vx=p.bdx*BURST_V; p.vz=p.bdz*BURST_V*0.85; }
   else if(ground && !locked){
     const k=(has?0.93:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1);
@@ -483,6 +506,8 @@ function movePlayer(M,p,dt){
   }
   p.x=clamp(p.x+p.vx*dt, COURT_L+P_R, COURT_R-P_R);
   p.z=clamp(p.z+p.vz*dt, -HALF_D+12, HALF_D-12);
+  // "set" = planted on the floor; set defenders hold their ground and can take charges
+  p.setT = (p.y<=0.01 && hyp(p.vx,p.vz)<80 && p.act==='' && p.burstT<=0) ? (p.setT||0)+dt : 0;
   if(p.act==='shoot'){
     p.shootT+=dt; p.meterWin=Math.min(p.meterWin, shotWindow(M,p));  // closeouts shrink the green live
     const m=p.shootT/METER_T;
@@ -500,7 +525,7 @@ function movePlayer(M,p,dt){
 }
 
 function collidePlayers(M){
-  const ps=M.players;
+  const ps=M.players, b=M.ball, holder = b.st==='held' ? b.holder : null;
   for(let i=0;i<ps.length;i++) for(let j=i+1;j<ps.length;j++){
     const a=ps[i], c=ps[j];
     if(Math.abs(a.y-c.y)>70) continue;
@@ -508,6 +533,25 @@ function collidePlayers(M){
     const nx=d>0.01?dx/d:1, nz=d>0.01?dz/d:0;
     let wa=0.5, wc=0.5;
     if(a.burstT>0 && c.burstT<=0){ wa=0.2; wc=0.8; } else if(c.burstT>0 && a.burstT<=0){ wa=0.8; wc=0.2; }
+    // ball handler driving into a defender in front of them
+    if((holder===a.id || holder===c.id) && a.team!==c.team){
+      const hA = holder===a.id, h=hA?a:c, df=hA?c:a, sx=hA?nx:-nx, sz=hA?nz:-nz;
+      const toward=h.vx*sx+h.vz*sz;
+      if(toward>60 && df.y<5 && df.downT<=0){
+        // bulldoze a planted defender = offensive foul (not under the rim)
+        if(M.phase==='play' && df.setT>0.35 && (h.burstT>0 || toward>330) && hyp(df.x-defendHoop(df.team).cx, df.z)>65 && M.time-(h.lastBump||0)>0.5){
+          h.lastBump=M.time;
+          if(Math.random()<0.4){ df.downT=0.9; df.stumbleT=0.9; pushEv(M,{k:'charge', id:df.id, by:h.id}); turnover(M, df.team, 'CHARGE'); return; }
+        }
+        // body up: a set defender holds their ground and slows the driver down
+        if(h.burstT<=0 || df.setT>0.3){
+          if(hA){ wa=0.72; wc=0.28; } else { wa=0.28; wc=0.72; }
+          if(df.setT>0.3) h.burstT=0;
+          h.vx-=sx*toward*0.4; h.vz-=sz*toward*0.4;
+          if(M.time-(h.lastBump||0)>0.7){ h.lastBump=M.time; pushEv(M,{k:'bump', id:df.id}); }
+        }
+      }
+    }
     a.x-=nx*ov*wa; a.z-=nz*ov*wa; c.x+=nx*ov*wc; c.z+=nz*ov*wc;
   }
 }
@@ -673,6 +717,11 @@ function botOffense(M,p,hoop,opps,mates,tick){
   }
   p.stuckT = lane && laneAlong<75 ? (p.stuckT||0)+tick : Math.max(0,(p.stuckT||0)-tick*0.5);
   if(dist<=p.shotRange && (open>(dist>THREE_D?75:100) || Math.random()<0.03)){ shoot(); return; }
+  // planted defender in the lane: don't bulldoze into a charge — pull up or kick it out
+  if(lane && lane.o.setT>0.3 && laneAlong<95){
+    if(mates.length && Math.random()<0.15){ p.wantB=true; return; }
+    if(dist<THREE_D+60 && Math.random()<0.12){ shoot(); return; }
+  }
   if(M.scT<2.5 && dist<THREE_D+150){ shoot(); return; }
   if(p.stuckT>1.3){
     p.stuckT=0;
@@ -726,7 +775,10 @@ function botDefense(M,p,holder,myHoop,opps,mates,go,tick){
     if(p.jumpIn>=0){ p.jumpIn-=tick; if(p.jumpIn<0){ p.wantA=true; go(holder.x, holder.z, 0); } }
     const ballMySide = Math.abs(p.z-holder.z)<14 || Math.sign(b.z-holder.z)===Math.sign(p.z-holder.z);
     if(!shooting && ballMySide && hyp(b.x-(p.x+p.face*26),b.z-p.z)<STEAL_R*0.75 && p.stealCd<=0 && Math.random()<0.04) p.wantB=true;
-    if(holder.burstT>0 && p.burstCd<=0 && d<120 && Math.random()<0.3){ p.inX=holder.bdx; p.inZ=holder.bdz; p.wantC=true; }
+    // read the crossover: slide to where they're headed (between them and the rim), not where they are
+    if(holder.burstT>0 && p.burstCd<=0 && d<140 && !p.slideRolled){ p.slideRolled=true;
+      if(Math.random()<0.5){ const tx=holder.x+holder.bdx*90+v.ux*40, tz=holder.z+holder.bdz*90+v.uz*40, sx=tx-p.x, sz=tz-p.z, sl=hyp(sx,sz)||1; p.inX=sx/sl; p.inZ=sz/sl; p.wantC=true; } }
+    if(holder.burstT<=0) p.slideRolled=false;
   } else {
     let tx=lerp(mark.x,myHoop.cx,0.3), tz=lerp(mark.z,0,0.3);
     tx+=(holder.x-tx)*0.18; tz+=(holder.z-tz)*0.18;
@@ -776,11 +828,21 @@ function addRosterPlayer(id, name, bot, team){
 function rosterMsg(){ return {t:'roster', code:net.code, phase:G.phase, toWin:G.toWin, players:[...G.players.values()].map(({emAt,...r})=>r)}; }
 function broadcastRoster(){ const m=rosterMsg(); for(const c of net.conns.values()) if(c.open) c.send(m); applyRoster(m); }
 
+function netErrMsg(type, what){
+  if(type==='network' || type==='server-error' || type==='socket-error' || type==='socket-closed')
+    return what+": can't reach the matchmaking server. This Wi-Fi might be blocking it — try a hotspot or a different network.";
+  if(type==='browser-incompatible') return what+': this browser does not support online play. Update Safari / iPadOS.';
+  return what+' ('+type+'). Try again.';
+}
+let hostTimer=0;
 function hostGame(name, tries=0){
-  if(typeof Peer==='undefined'){ homeMsg('Could not load the multiplayer library. Check your internet.'); return; }
+  if(typeof Peer==='undefined'){ homeMsg('Could not load the multiplayer library. Try refreshing the page — if it keeps happening, this network is blocking it.'); return; }
   setBusy(true);
   const code=genCode(), peer=new Peer(PREFIX+code, {debug:1});
+  clearTimeout(hostTimer);
+  hostTimer=setTimeout(()=>{ if(net.role!=='host'){ try{peer.destroy()}catch(e){} setBusy(false); homeMsg(netErrMsg('network','Could not create a room')); } }, 12000);
   peer.on('open', ()=>{
+    clearTimeout(hostTimer);
     net.role='host'; net.peer=peer; net.myId='host'; net.code=code;
     const me=addRosterPlayer('host', name, false, 0); me.cel=SAVE.cel; me.gfx=SAVE.gfx;
     enterRoom(); broadcastRoster();
@@ -788,7 +850,7 @@ function hostGame(name, tries=0){
   peer.on('error', e=>{
     if(e.type==='unavailable-id' && tries<5){ peer.destroy(); hostGame(name, tries+1); return; }
     if(net.role==='host'){ console.warn(e); return; }
-    setBusy(false); homeMsg('Could not create a room ('+e.type+'). Try again.');
+    clearTimeout(hostTimer); setBusy(false); homeMsg(netErrMsg(e.type,'Could not create a room'));
   });
   peer.on('disconnected', ()=>{ if(net.role==='host' && !peer.destroyed) setTimeout(()=>{ try{peer.reconnect()}catch(e){} }, 1000); });
   peer.on('connection', conn=>{
@@ -842,7 +904,7 @@ function hostApply(id, d){
 }
 
 function joinGame(name, code){
-  if(typeof Peer==='undefined'){ homeMsg('Could not load the multiplayer library. Check your internet.'); return; }
+  if(typeof Peer==='undefined'){ homeMsg('Could not load the multiplayer library. Try refreshing the page — if it keeps happening, this network is blocking it.'); return; }
   setBusy(true);
   const peer=new Peer({debug:1});
   let opened=false, failed=false;
@@ -860,7 +922,7 @@ function joinGame(name, code){
   });
   peer.on('error', e=>{
     if(e.type==='peer-unavailable'){ clearTimeout(timer); fail('No room with code '+code+'.'); }
-    else if(!opened){ clearTimeout(timer); fail('Connection problem ('+e.type+').'); }
+    else if(!opened){ clearTimeout(timer); fail(netErrMsg(e.type,'Could not join')); }
   });
 }
 function onClientData(d){
@@ -907,7 +969,8 @@ const LINES={
   cooled:['{n} cooled off 🧊','The fire is out, {n} 🧯'],
   pick:['Picked off! {n} read that all day','{n} jumped the lane 🏃'],
   gamepoint:['GAME POINT, {t}!','{t} is one bucket away!','Pressure is ON 😬'],
-  tip:['Welcome to the BUCKETS arena! 🏀','Phones down, game on 📵','Let\'s get it! 🏀']
+  tip:['Welcome to the BUCKETS arena! 🏀','Phones down, game on 📵','Let\'s get it! 🏀'],
+  charge:['{n} TOOK THE CHARGE 🛑','{n} flopped like a fish 🐟 ...and it WORKED','{v} ran straight into {n}. Offensive foul!','Planted feet, big brain. {n} 🧠']
 };
 function say(kind, vars={}){
   if(!V.inRoom || V.phase!=='game') return;
@@ -1120,6 +1183,11 @@ function handleEvent(e, demo){
       if(!demo){ say('steal',{n:nm(e.id), v:nm(e.from)}); if(mine(e.id)) earn(4,'STEAL'); }
       if(loud) sfx('steal'); break;
     case 'whiff': if(p) floatText('missed', p.x, p.y+185, p.z, 'rgba(255,255,255,.75)', 16, .6); break;
+    case 'bump': if(p) floatText('BUMP', p.x, p.y+175, p.z, '#fff', 18, .6); V.shake=Math.max(V.shake,3); if(loud) sfx('board',.6); break;
+    case 'charge': if(p){ floatText('CHARGE! 🛑', p.x, p.y+150, p.z, '#ffd23f', 34, 1.6); emo(p.x,p.y+80,p.z,'🐟',{vy:200,vx:rnd(-80,80),g:500,life:1.2,max:1.2,s:28}); }
+      V.shake=Math.max(V.shake,8); V.cheer=1.2;
+      if(!demo){ say('charge',{n:nm(e.id), v:nm(e.by)}); if(mine(e.id)) earn(5,'CHARGE'); }
+      if(loud) sfx('whistle'); break;
     case 'reachgo': if(loud) sfx('swipe'); break;
     case 'shook': case 'ankles':
       if(p){ floatText(e.k==='shook'?'SHOOK! 🥴':'ANKLES! 🥴', p.x, p.y+200, p.z, '#ff9ff3', 32, 1.4); emo(p.x,p.y+60,p.z,'🦴',{vx:rnd(-120,120),vy:260,g:700,life:1,max:1,s:24}); }
@@ -1145,7 +1213,7 @@ function handleEvent(e, demo){
     case 'rim': if(loud) sfx('rim', Math.min(1.3,e.v/500)); break;
     case 'board': if(loud) sfx('board', Math.min(1.3,e.v/500)); break;
     case 'bounce': if(loud) sfx('dribble', .8); break;
-    case 'tov': if(!demo){ V.banner={text:e.reason+'!', sub:TEAM_NAME[e.team]+' BALL', c:'#ffd23f', t:1.6}; say(e.reason==='SHOT CLOCK'?'shotclock':'out'); if(loud) sfx(e.reason==='SHOT CLOCK'?'buzzer':'whistle'); } break;
+    case 'tov': if(!demo){ V.banner={text:e.reason+'!', sub:TEAM_NAME[e.team]+' BALL', c:'#ffd23f', t:1.6}; if(e.reason!=='CHARGE') say(e.reason==='SHOT CLOCK'?'shotclock':'out'); if(loud) sfx(e.reason==='SHOT CLOCK'?'buzzer':'whistle'); } break;
     case 'poss': if(!demo && !(V.banner && V.banner.sub)) V.banner={text:TEAM_NAME[e.team]+' BALL', c:TEAM_COL[e.team], t:1.1}; break;
     case 'emote': V.emotes[e.id]={e:EMOTES[e.e], t:2.2}; if(V.inRoom) sfx('pop'); break;
     case 'over':
