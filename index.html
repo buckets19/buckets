@@ -2417,19 +2417,21 @@ function openCrate(id){
   const cr=CRATES.find(c=>c.id===id); if(!cr || (cr.code && !SAVE.vault)) return;
   if(SAVE.coins<cr.price){ toast('Not enough 💰 — go win some games'); return; }
   SAVE.coins-=cr.price;
-  const win=rollCrate(cr), dup=SAVE.owned[win.kind].includes(win.id);
+  // snapshot what you owned BEFORE this open, so the reel's OWNED tags don't count the prize you're about to win
+  const ownedBefore={}; for(const k in SAVE.owned) ownedBefore[k]=new Set(SAVE.owned[k]);
+  const win=rollCrate(cr), dup=ownedBefore[win.kind].has(win.id);
   if(dup) SAVE.coins+=RAR[win.r].refund; else SAVE.owned[win.kind].push(win.id);
   SAVE.stats.crates=(SAVE.stats.crates||0)+1;
   persist();                                   // saved before the spin, so closing the app mid-spin can't lose it
-  lastCrate=cr; ubWin={...win, dup}; spinReel(cr, win);
+  lastCrate=cr; ubWin={...win, dup}; spinReel(cr, win, ownedBefore);
 }
-function tileFor(it){ const t=el('div','tile r-'+it.r); t.style.setProperty('--rc',RAR[it.r].c); t.append(el('div','ic',it.icon), el('small','',it.name));
-  if(SAVE.owned[it.kind].includes(it.id)) t.append(el('span','owned','OWNED')); return t; }
-function spinReel(cr, win){
+function tileFor(it, owned){ const t=el('div','tile r-'+it.r); t.style.setProperty('--rc',RAR[it.r].c); t.append(el('div','ic',it.icon), el('small','',it.name));
+  if(owned && owned[it.kind].has(it.id)) t.append(el('span','owned','OWNED')); return t; }
+function spinReel(cr, win, owned){
   const ub=$('#unbox'), reel=$('#reel');
   ub.classList.remove('hidden'); $('#ubResult').classList.add('hidden'); $('#ubTitle').textContent=cr.icon+' '+cr.name;
   reel.innerHTML=''; const N=46, WIN=40;
-  for(let i=0;i<N;i++) reel.append(tileFor(i===WIN ? win : rollCrate(cr)));
+  for(let i=0;i<N;i++) reel.append(tileFor(i===WIN ? win : rollCrate(cr), owned));
   reel.style.transition='none'; reel.style.transform='translateX(0)';
   const wrap=$('.reelWrap').clientWidth, target=10+WIN*108+50-wrap/2+rnd(-36,36);
   void reel.offsetWidth;
