@@ -706,6 +706,8 @@ function updateBall(M,dt){
     if(p.noGrabT>0 || p.stumbleT>0.3) continue;
     if(b.st==='dead'||b.st==='held') break;
     if(b.st==='shot' && !b.touchedRim) break;
+    // basket interference: hands off while the ball is on the rim / over the cylinder
+    if(HOOPS.some(h=>hyp(b.x-h.cx,b.z)<RIM_R+22 && b.y>RIM_Y-18)) break;
     const yy=b.y-p.y;
     if(hyp(b.x-p.x,b.z-p.z)>P_R+BALL_R+10 || yy<8 || yy>REACH+32) continue;
     if(b.st==='pass' && p.team!==b.passTeam){
