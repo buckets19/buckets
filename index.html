@@ -1049,7 +1049,7 @@ const RAR={
   epic:     {n:'Epic',      c:'#a55eea', refund:90},
   legendary:{n:'Legendary', c:'#ffb400', refund:200},
   mythic:   {n:'Mythic',    c:'#ff3b6b', refund:400},
-  exclusive:{n:'WEST1',     c:'#00e5ff', refund:600},
+  exclusive:{n:'Vault',     c:'#00e5ff', refund:600},
 };
 const RORDER=['common','rare','epic','legendary','mythic','exclusive'];
 const CELLYS=[
@@ -1154,7 +1154,7 @@ const CRATES=[
   {id:'hooper', name:'Hooper Crate', icon:'🏀', price:300, col:'#ff8a1f', pool:['js','dunk'],       odds:{rare:45, epic:37, legendary:16, mythic:2}},
   {id:'drip',   name:'Drip Crate',   icon:'☄️', price:250, col:'#7b5cff', pool:['trail'],           odds:{rare:50, epic:35, legendary:13, mythic:2}},
   {id:'legend', name:'Legend Crate', icon:'👑', price:700, col:'#ffb400', pool:['cel','gfx','js','dunk','trail'], odds:{epic:50, legendary:42, mythic:8}},
-  {id:'vault',  name:'WEST1 Vault',  icon:'🔐', price:250, col:'#00e5ff', pool:['cel','gfx','js','dunk','trail'], odds:{legendary:35, mythic:45, exclusive:20}, code:'west1'},
+  {id:'vault',  name:'Buckets Vault',icon:'🔐', price:1500, col:'#00e5ff', pool:['cel','gfx','js','dunk','trail'], odds:{legendary:35, mythic:45, exclusive:20}, code:'west1'},
 ];
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 const itemOf = (kind,id) => KINDS[kind].list.find(i=>i.id===id);
@@ -2330,7 +2330,7 @@ function renderCrates(box){
     if(locked){
       const row=el('div','row'), inp=el('input'), go=el('button','btn yellow','Unlock');
       inp.placeholder='Enter code'; inp.maxLength=12; inp.setAttribute('autocapitalize','off'); inp.setAttribute('autocomplete','off');
-      go.onclick=()=>{ if(inp.value.trim().toLowerCase()===cr.code){ SAVE.vault=true; persist(); toast('🔓 WEST1 Vault unlocked!'); renderShop(); }
+      go.onclick=()=>{ if(inp.value.trim().toLowerCase()===cr.code){ SAVE.vault=true; persist(); toast('🔓 Buckets Vault unlocked!'); renderShop(); }
         else { inp.value=''; inp.placeholder='Wrong code'; card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); } };
       inp.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Enter') go.click(); });
       row.append(inp,go); card.append(row);
@@ -2348,7 +2348,7 @@ function renderLocker(box){
   for(const it of list){
     const own=SAVE.owned[lockTab].includes(it.id), eq=SAVE[lockTab]===it.id;
     const d=el('div','item r-'+it.r+(eq?' eq':'')+(own?'':' locked')); d.style.setProperty('--rc', RAR[it.r].c);
-    d.append(el('div','rtag', RAR[it.r].n), el('div','ic', own?it.icon:'❔'), el('b','', own?it.name:'???'), el('small','', own?it.desc:(it.r==='exclusive'?'Only in the WEST1 Vault':'Found in crates')));
+    d.append(el('div','rtag', RAR[it.r].n), el('div','ic', own?it.icon:'❔'), el('b','', own?it.name:'???'), el('small','', own?it.desc:(it.r==='exclusive'?'Only in the Buckets Vault':'Found in crates')));
     if(own){
       const row=el('div','row'), pv=el('button','btn pv','▶'), b=el('button','btn'+(eq?'':' yellow'), eq?'Equipped ✓':'Equip');
       pv.title='Preview'; pv.onclick=()=>previewItem(lockTab,it.id);
