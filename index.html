@@ -477,7 +477,7 @@ function releaseShot(M,p,m){
   Object.assign(b,{st:'shot',holder:null,x:sx,y:sy,z:sz,vx:(tx-sx)/T,vz:(tz-sz)/T,vy:(ty-sy+0.5*GRAV*T*T)/T,
     shooter:p.id,shotTeam:p.team,pts3:dist>THREE_D,t:0,touchedRim:false,dunk:false,reb:true,wasShot:true,lastTeam:p.team,post:null});
   p.act='follow'; p.noGrabT=0.35; p.shotRange=0; M.scOn=false;
-  pushEv(M,{k:'shot', id:p.id, q, three:dist>THREE_D, d:Math.round(dist)});
+  pushEv(M,{k:'shot', id:p.id, q, three:dist>THREE_D, d:Math.round(dist), c:r2(p.contest===undefined?1:p.contest)});
 }
 
 function tryDunk(M,p){
@@ -542,9 +542,12 @@ function resolveSteal(M,p){
   if(h.act==='shoot'||h.act==='fake'||h.act==='dunk') ch=0.05;
   if(h.stumbleT>0) ch+=0.35;
   if(Math.random()<ch){
-    const dx=p.x-h.x, dz=p.z-h.z, l=hyp(dx,dz)||1;
-    looseBall(M, b.x, 50, b.z, dx/l*rnd(120,240), rnd(220,320), dz/l*rnd(120,240), p.team);
-    h.noGrabT=0.45; pushEv(M,{k:'steal', id:p.id, from:h.id});
+    // clean pickpocket: the ball is yours (possession + fresh shot clock)
+    Object.assign(b,{st:'held', holder:p.id, vx:0, vy:0, vz:0, t:0, touchedRim:false, dunk:false, reb:false, wasShot:false, lastTeam:p.team});
+    p.act=''; p.hand=Math.sign(p.z-h.z)||-1; p.noGrabT=0;
+    M.poss=p.team; M.scT=SHOT_CLOCK; M.scOn=true;
+    h.noGrabT=0.45; h.stumbleT=Math.max(h.stumbleT,0.25);
+    pushEv(M,{k:'steal', id:p.id, from:h.id});
   } else { p.recoverT=0.22; pushEv(M,{k:'whiff', id:p.id}); }   // missed: a quick recovery, no stumble
 }
 
@@ -1435,6 +1438,8 @@ function handleEvent(e, demo){
   const mine = id => !demo && id && id===net.myId;
   switch(e.k){
     case 'shot':
+      if(p && e.c!==undefined){ const c=e.c, lab = c>=0.9?['OPEN','#bfffd4'] : c>=0.65?['Light contest','#ffe08a'] : c>=0.4?['CONTESTED','#ffb347'] : ['SMOTHERED 🖐️','#ff5a4f'];
+        floatText(lab[0], p.x, p.y+180, p.z, lab[1], c<0.4?24:18, 1.3); }
       if(p){ const good=e.q==='perfect'; floatText(good?'GREEN!':e.q, p.x, p.y+215, p.z, good?'#47e27a':'#ffd23f', good?32:20);
         if(good){ greenFx(((infoOf(e.id)||{}).gfx)||'basic', p.x, p.y, p.z, attackHoop(p.team).cx); if(mine(e.id)){ earn(3,'GREEN'); SAVE.stats.greens++; persist(); } } }
       if(loud) sfx('shoot');
