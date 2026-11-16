@@ -135,6 +135,32 @@
   .crate .row{width:100%;gap:4px}
   .crate input{margin:0;font-size:14px;padding:6px 8px;text-align:center}
   .codeCard{grid-column:1/-1;display:flex;gap:6px;align-items:center}
+  /* ranked */
+  #rankedPanel{z-index:8;right:16px;top:16px;bottom:16px;width:min(440px,calc(100vw - 32px));display:flex;flex-direction:column;padding:18px;overflow:auto}
+  #rankedPanel .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  #rankedPanel h2{margin:0;font-size:26px}
+  #rankCard{border:3px solid var(--ink);border-radius:16px;padding:12px;text-align:center;margin-bottom:10px;
+    background:linear-gradient(160deg,#fff 30%,color-mix(in srgb,var(--tc) 30%,#fff));box-shadow:0 4px 0 var(--ink)}
+  .rkIcon{font-size:54px;line-height:1.1}
+  .rkName{font-size:24px;font-weight:700;color:var(--tc);-webkit-text-stroke:1px var(--ink)}
+  .rkBar{height:12px;border:2px solid var(--ink);border-radius:8px;background:#fff;overflow:hidden;margin:8px 0 4px}
+  .rkFill{height:100%;background:var(--tc)}
+  .rkStats{font-size:13px;font-weight:600;margin-top:4px}
+  #ladder{list-style:none;padding:0;margin:0;border:3px solid var(--ink);border-radius:14px;background:#fff;overflow:hidden}
+  #ladder li{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:2px dashed #eadfca;font-size:14px}
+  #ladder li:last-child{border-bottom:0}
+  #ladder li b{width:22px;text-align:right}
+  #ladder li.me{background:#fff3c4;font-weight:700}
+  #ladder li.gap{justify-content:center;opacity:.5}
+  #ladder .lname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #ladder .lrr{font-weight:700;font-size:12.5px}
+  .rbadge{font-size:11px;font-weight:700;color:#fff;background:var(--tc);border-radius:7px;padding:1px 6px;white-space:nowrap;-webkit-text-stroke:0}
+  .rbadge.big{font-size:18px;padding:3px 10px;display:inline-block;margin:6px 0}
+  #overRank{border:3px solid var(--tc);border-radius:14px;padding:8px;text-align:center;margin-bottom:10px;box-shadow:0 0 18px var(--tc)}
+  #overRank.hidden{display:none}
+  .orTop{font-weight:700;font-size:18px}
+  .orPromo{font-weight:700;color:var(--tc);font-size:17px;margin-top:4px}
+  .orCoins{font-weight:700;margin-top:4px}
   .codeCard input{margin:0;font-size:15px;padding:8px 10px}
   .codeCard .btn{flex:0 0 auto}
   .crate.vault{background:linear-gradient(160deg,#0b1026,#1d1a4a 60%,#00374a);color:#e8fbff;animation:exGlow 1.6s ease-in-out infinite}
@@ -190,7 +216,7 @@
   <button id="hostBtn" class="btn big orange">Host a game</button>
   <div class="or">— or join a friend —</div>
   <div class="row"><input id="code" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters"><button id="joinBtn" class="btn yellow">Join</button></div>
-  <button id="practiceBtn" class="btn big" style="margin-top:12px;font-size:16px">🏀 Practice vs bots</button>
+  <div class="row" style="margin-top:12px"><button id="practiceBtn" class="btn" style="flex:1;font-size:16px">🏀 Practice</button><button id="rankedBtn" class="btn" style="flex:1;font-size:16px;background:#ffd23f">🏆 Ranked</button></div>
   <p class="how">Hold <b>SHOOT</b> and let go in the <b style="color:#1e9e4a">green</b>.<br>Jump into shots to <b>block</b>. Reach for the ball to <b>steal</b>.</p>
   <div class="walletRow"><span class="coinPill">💰 <span class="coinCount">0</span></span><button class="btn tiny shopBtn openShop">📦 Crates & Locker</button></div>
   <p id="homeMsg" class="msg"></p>
@@ -206,7 +232,7 @@
     <button id="switchBtn" class="btn tiny">⇄ Switch team</button>
     <div class="row seg" id="toWin"><span>Game to</span><button data-v="11">11</button><button data-v="15">15</button><button data-v="21">21</button></div>
   </div>
-  <div class="lobbyRow"><div class="row seg" id="botDiff"><span>Bots</span><button data-d="rookie">Rookie</button><button data-d="pro">Pro</button><button data-d="legend">Legend</button></div><button id="winBy2" class="btn tiny">Win by 2: OFF</button></div>
+  <div class="lobbyRow"><div class="row seg" id="botDiff"><span>Bots</span><button data-d="rookie">Rookie</button><button data-d="pro">Pro</button><button data-d="legend">Legend</button></div><button id="winBy2" class="btn tiny">Win by 2: OFF</button><button id="rankedToggle" class="btn tiny hidden">🏆 Ranked: OFF</button></div>
   <button id="startBtn" class="btn big orange">Start game</button>
   <p id="waitMsg" class="hidden">Waiting for the host to start…</p>
   <p class="how" id="needMsg"></p>
@@ -232,6 +258,16 @@
   <p class="stats" id="shopStats"></p>
   <p class="how" style="margin:0 0 10px">Earn 💰 for buckets, greens, blocks, steals, breaking ankles, and wins. Dupes refund 💰. Saved on this device.</p>
   <button id="shopClose" class="btn big orange">Done</button>
+</div>
+
+<div id="rankedPanel" class="panel hidden">
+  <div class="head"><h2>🏆 Ranked</h2><span class="coinPill">💰 <span class="coinCount">0</span></span></div>
+  <div id="rankCard"></div>
+  <button id="rankedPlay" class="btn big orange">▶ Find match</button>
+  <p class="how" style="margin:6px 0 10px">1v1 to 11, win by 2. Opponents match your rank and get tougher as you climb. Wins pay 💰 — rank-ups pay big.</p>
+  <h3 style="margin:4px 0 6px">Leaderboard</h3>
+  <ol id="ladder"></ol>
+  <button id="rankedClose" class="btn big" style="margin-top:10px">Back</button>
 </div>
 
 <div id="unbox" class="hidden">
@@ -260,6 +296,7 @@
   <h2>🏆 FINAL 🏆</h2>
   <div id="overName">RED WINS</div>
   <div id="overScore">11 – 7</div>
+  <div id="overRank" class="hidden"></div>
   <ul id="overList"></ul>
   <div id="overBtns" class="row hidden" style="margin-bottom:8px"><button id="rematchBtn" class="btn orange" style="flex:1">🔁 Rematch</button><button id="toLobbyBtn" class="btn" style="flex:1">Lobby</button></div>
   <p id="overNote">Back to the lobby in a few seconds…</p>
@@ -323,14 +360,14 @@ const outOfCourt = (x,z) => x<COURT_L || x>COURT_R || Math.abs(z)>HALF_D;
 // =====================================================================
 // how good the bots are: shot accuracy, crossover/dodge/slide/jump/steal frequency, speed
 const BOTDIFF={
-  rookie:{name:'Rookie', shotSd:0.15,  burst:0.45, dodge:0.08, slide:0.25, jump:0.55, steal:0.025, speed:0.93},
-  pro:   {name:'Pro',    shotSd:0.115, burst:0.8,  dodge:0.2,  slide:0.4,  jump:0.85, steal:0.035, speed:0.98},
-  legend:{name:'Legend', shotSd:0.085, burst:1.15, dodge:0.4,  slide:0.55, jump:1.15, steal:0.05,  speed:1.02},
+  rookie:{name:'Rookie', shotSd:0.15,  burst:0.45, dodge:0.08, slide:0.25, jump:0.55, steal:0.025, speed:0.93, cushion:105},
+  pro:   {name:'Pro',    shotSd:0.115, burst:0.8,  dodge:0.2,  slide:0.4,  jump:0.85, steal:0.035, speed:0.98, cushion:85},
+  legend:{name:'Legend', shotSd:0.085, burst:1.15, dodge:0.4,  slide:0.55, jump:1.15, steal:0.05,  speed:1.02, cushion:72},
 };
 function newMatch(roster, toWin, demo, diff, winBy2){
   const M = { players:[], ball:{x:COURT_W/2,y:300,z:0,vx:0,vy:0,vz:0,st:'loose',holder:null,t:0,lastTeam:0},
     score:[0,0], phase:'inbound', phaseT:1.5, toWin, demo, time:0, events:[], poss:0, winner:null, nextPoss:0, scT:SHOT_CLOCK, scOn:false };
-  M.diff = BOTDIFF[diff] || BOTDIFF.pro; M.winBy2 = !!winBy2;
+  M.diff = (diff && typeof diff==='object') ? diff : (BOTDIFF[diff] || BOTDIFF.pro); M.winBy2 = !!winBy2;
   const cnt=[0,0];
   for(const r of roster) M.players.push(mkPlayer(r, cnt[r.team]++));
   M.gp=[false,false];
@@ -566,7 +603,7 @@ function movePlayer(M,p,dt){
   let ix=p.inX, iz=p.inZ; const il=hyp(ix,iz); if(il>1){ ix/=il; iz/=il; }
   if(p.burstT>0){ p.burstT-=dt; p.vx=p.bdx*BURST_V; p.vz=p.bdz*BURST_V*0.85; }
   else if(ground && !locked){
-    const k=(has?0.93:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1)*(p.recoverT>0?0.55:1)*(guarding?1.06:1)*(p.bot?D.speed:1);
+    const k=(has?0.93:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1)*(p.recoverT>0?0.55:1)*(guarding && !p.bot ? 1.06 : 1)*(p.bot?D.speed:1);
     p.vx=approach(p.vx, ix*RUN*k, ACC*dt); p.vz=approach(p.vz, iz*RUN*0.85*k, ACC*dt);
   } else if(!ground && !locked){ p.vx=approach(p.vx,ix*RUN,AIR_ACC*dt); p.vz=approach(p.vz,iz*RUN*0.85,AIR_ACC*dt); }
   else if(ground && locked){ p.vx=approach(p.vx,0,ACC*dt); p.vz=approach(p.vz,0,ACC*dt); }
@@ -855,7 +892,9 @@ function botDefense(M,p,holder,myHoop,opps,mates,go,tick){
   const b=M.ball;
   if(mark===holder){
     const v=hoopVec(holder,myHoop);
-    const cushion = v.d>THREE_D+90 ? 95 : v.d>THREE_D-40 ? 55 : 45;
+    // how much room bots give you depends on difficulty; they only get tight near the paint
+    const cu=M.diff.cushion||85;
+    const cushion = v.d>THREE_D+90 ? cu+25 : v.d>THREE_D-40 ? cu : v.d>260 ? Math.max(48,cu*0.75) : 45;
     const along=(p.x-holder.x)*v.ux+(p.z-holder.z)*v.uz;
     p.hustle = along<10 || v.d<320;              // beaten, or protecting the rim: max effort
     go(holder.x+v.ux*cushion, holder.z+v.uz*cushion, 6);
@@ -916,7 +955,7 @@ function addRosterPlayer(id, name, bot, team){
   if(bot) Object.assign(r, botGear());
   G.players.set(id,r); return r;
 }
-function rosterMsg(){ return {t:'roster', code:net.code, phase:G.phase, toWin:G.toWin, diff:G.diff, winBy2:!!G.winBy2, players:[...G.players.values()].map(({emAt,...r})=>r)}; }
+function rosterMsg(){ return {t:'roster', code:net.code, phase:G.phase, toWin:G.toWin, diff:G.diff, winBy2:!!G.winBy2, ranked:!!G.ranked, players:[...G.players.values()].map(({emAt,...r})=>r)}; }
 function broadcastRoster(){ const m=rosterMsg(); for(const c of net.conns.values()) if(c.open) c.send(m); applyRoster(m); }
 
 function netErrMsg(type, what){
@@ -935,7 +974,7 @@ function hostGame(name, tries=0){
   peer.on('open', ()=>{
     clearTimeout(hostTimer);
     net.role='host'; net.peer=peer; net.myId='host'; net.code=code;
-    const me=addRosterPlayer('host', name, false, 0); Object.assign(me, myGear());
+    const me=addRosterPlayer('host', name, false, 0); Object.assign(me, myGear()); me.rr=SAVE.rank.rr;
     enterRoom(); broadcastRoster();
   });
   peer.on('error', e=>{
@@ -970,7 +1009,7 @@ function onHostData(conn,d){
     }
     net.conns.set(id,conn);
     const r=addRosterPlayer(id, d.name, false);
-    setGear(r, d);
+    setGear(r, d); r.rr=clamp(Math.round(+d.rr||0),0,5000);
     conn.send({t:'welcome', id});
     toast(r.name+' joined!');
     broadcastRoster();
@@ -1006,7 +1045,7 @@ function joinGame(name, code){
     conn.on('open', ()=>{
       opened=true; clearTimeout(timer);
       net.role='client'; net.peer=peer; net.myId=id; net.hostConn=conn; net.code=code;
-      conn.send({t:'hello', name, ...myGear()});
+      conn.send({t:'hello', name, ...myGear(), rr:SAVE.rank.rr});
     });
     conn.on('data', onClientData);
     conn.on('close', ()=>{ if(opened) fatal('The host closed the room.'); });
@@ -1368,7 +1407,7 @@ setInterval(()=>{
 
 function applyRoster(m){
   const prev=V.phase;
-  V.roster=m.players; V.rmap=new Map(m.players.map(p=>[p.id,p])); V.phase=m.phase; V.toWin=m.toWin; V.diff=m.diff||'pro'; V.winBy2=!!m.winBy2; if(m.code) net.code=m.code;
+  V.roster=m.players; V.rmap=new Map(m.players.map(p=>[p.id,p])); V.phase=m.phase; V.toWin=m.toWin; V.diff=m.diff||'pro'; V.winBy2=!!m.winBy2; V.rankedRoom=!!m.ranked; if(m.code) net.code=m.code;
   if(!V.inRoom) return;
   if(V.phase==='game' && prev!=='game'){ V.snaps=[]; $('#over').classList.add('hidden'); }
   if(V.phase==='lobby' && prev==='game') $('#over').classList.add('hidden');
@@ -1385,6 +1424,7 @@ function renderLobby(){
     for(const p of V.roster.filter(p=>p.team===t)){
       const li=document.createElement('li');
       const nmS=document.createElement('span'); nmS.textContent='#'+p.num+' '+p.name; li.append(nmS);
+      if(!p.bot && p.rr!==undefined) li.append(rankBadge(p.rr));
       const gear=document.createElement('span'); gear.title='Celly / Green FX'; gear.textContent=((CELLYS.find(c=>c.id===p.cel)||{}).icon||'')+((GFX.find(c=>c.id===p.gfx)||{}).icon||''); li.append(gear);
       const tg = p.id===net.myId ? 'YOU' : p.id==='host' ? 'HOST' : p.bot ? 'BOT' : '';
       if(tg){ const s=document.createElement('span'); s.className='tg'; s.textContent=tg; li.append(s); }
@@ -1396,6 +1436,7 @@ function renderLobby(){
   document.querySelectorAll('#toWin button').forEach(b=>{ b.classList.toggle('on', +b.dataset.v===V.toWin); b.disabled=!isHost; });
   document.querySelectorAll('#botDiff button').forEach(b=>{ b.classList.toggle('on', b.dataset.d===V.diff); b.disabled=!isHost; });
   $('#botDiff').classList.toggle('hidden', !V.roster.some(p=>p.bot));
+  { const ok=rankedRoomOk(); $('#rankedToggle').classList.toggle('hidden', !ok); $('#rankedToggle').textContent='🏆 Ranked: '+(V.rankedRoom&&ok?'ON':'OFF'); $('#rankedToggle').classList.toggle('yellow', V.rankedRoom&&ok); $('#rankedToggle').disabled=net.role!=='host'; }
   $('#winBy2').textContent='Win by 2: '+(V.winBy2?'ON':'OFF'); $('#winBy2').classList.toggle('yellow', !!V.winBy2); $('#winBy2').disabled=net.role!=='host';
   const me=V.rmap.get(net.myId);
   $('#switchBtn').disabled = !me || V.roster.filter(p=>p.team===1-me.team).length>=MAX_PER_TEAM;
@@ -1427,6 +1468,19 @@ function showGameOver(S){
   });
   $('#overBtns').classList.toggle('hidden', net.role!=='host');
   $('#overNote').textContent = net.role==='host' ? 'Run it back, or head to the lobby to switch teams.' : 'Waiting for the host to run it back…';
+  // ranked result: RR change, new rank, coins, promotion
+  const rb=$('#overRank'), rr=V.rankRes; rb.innerHTML=''; rb.classList.toggle('hidden', !rr);
+  if(rr){
+    rb.style.setProperty('--tc', rr.after.t.c);
+    rb.append(el('div','orTop', (rr.win?'VICTORY':'DEFEAT')+' · '+(rr.d>=0?'+':'')+rr.d+' RR'));
+    rb.append(rankBadge(rr.rr,true));
+    const bar=el('div','rkBar'), fill=el('div','rkFill'); fill.style.width=Math.round(rr.after.prog*100)+'%'; bar.append(fill); rb.append(bar);
+    if(rr.promo) rb.append(el('div','orPromo', rr.promo));
+    rb.append(el('div','orCoins', '+'+rr.coins+' 💰'+(SAVE.rank.streak>1?' · 🔥 '+SAVE.rank.streak+' win streak':'')));
+  }
+  $('#rematchBtn').textContent = V.ranked ? '▶ Next ranked match' : '🔁 Rematch';
+  $('#toLobbyBtn').textContent = V.ranked ? '🏆 Ranked menu' : 'Lobby';
+  if(V.ranked) $('#overNote').textContent='Your opponent is matched to your rank.';
   $('#over').classList.remove('hidden');
 }
 
@@ -1523,6 +1577,13 @@ function handleEvent(e, demo){
         sfx('buzzer'); confetti(e.w);
         const me=V.rmap.get(net.myId);
         if(me){ SAVE.stats.games++; earn(10,'PLAYED'); if(me.team===e.w){ SAVE.stats.wins++; earn(25,'WIN'); } persist(); }
+        V.rankRes=null;
+        if(me && (V.ranked || (V.rankedRoom && rankedRoomOk()))){
+          const S0=currentSnap(), opp=V.roster.find(p=>p.team!==me.team), mySc=S0?S0.sc[me.team]:0, opSc=S0?S0.sc[1-me.team]:0;
+          V.rankRes=applyRanked(me.team===e.w, mySc, opSc, opp && opp.rr!==undefined ? opp.rr : SAVE.rank.rr);
+          if(V.rankRes.promo && V.rankRes.after.ti>V.rankRes.before.ti){ confetti(e.w); V.flash=.5; }
+          if(net.role==='host' && RM && V.ranked) RM.phaseT=1e6;        // stay on the results until you pick
+        }
         setTimeout(()=>{ const S=currentSnap(); if(S && V.phase==='game' && S.ph==='over') showGameOver(S); }, 1200);
       }
       break;
@@ -2324,10 +2385,16 @@ $('#practiceBtn').onclick=()=>{
 };
 $('#rematchBtn').onclick=()=>{
   if(net.role!=='host') return;
+  if(V.ranked){ const me=G.players.get('host'); if(me) me.rr=SAVE.rank.rr; setupRankedRoster(); startRankedMatch(); return; }
   const ro=[...G.players.values()]; if(!ro.some(p=>p.team===0)||!ro.some(p=>p.team===1)) return;
   $('#over').classList.add('hidden'); RM=newMatch(ro, G.toWin, false, G.diff, G.winBy2); G.phase='game'; broadcastRoster();
 };
-$('#toLobbyBtn').onclick=()=>{ if(net.role==='host' && RM) RM.phaseT=0; };
+$('#toLobbyBtn').onclick=()=>{ if(V.ranked){ location.href=location.pathname+'#ranked'; location.reload(); return; } if(net.role==='host' && RM) RM.phaseT=0; };
+$('#rankedBtn').onclick=openRanked;
+$('#rankedClose').onclick=closeRanked;
+$('#rankedPlay').onclick=startRanked;
+$('#rankedToggle').onclick=()=>{ if(net.role!=='host') return; G.ranked=!G.ranked; broadcastRoster(); };
+if(location.hash==='#ranked'){ try{ history.replaceState(null,'',location.pathname); }catch(e){} setTimeout(openRanked,50); }
 $('#switchBtn').onclick=()=>sendAct({t:'team'});
 document.querySelectorAll('#toWin button').forEach(b=>b.onclick=()=>{ if(net.role!=='host') return; G.toWin=+b.dataset.v; broadcastRoster(); });
 document.querySelectorAll('#botDiff button').forEach(b=>b.onclick=()=>{ if(net.role!=='host') return; G.diff=b.dataset.d; broadcastRoster(); });
@@ -2340,6 +2407,107 @@ $('#startBtn').onclick=()=>{
 EMOTES.forEach((e,i)=>{ const b=document.createElement('button'); b.textContent=e; b.title='Key '+(i+1);
   b.addEventListener('click', ()=>{ sendAct({t:'emote',e:i}); b.blur(); $('#emotes').classList.add('hidden'); }); $('#emotes').append(b); });
 $('#emoteToggle').onclick=()=>{ $('#emotes').classList.toggle('hidden'); $('#emoteToggle').blur(); };
+
+// ---------------------------------------------------------------- ranked: tiers, rating, ladder, solo queue
+const TIERS=[
+  {n:'Bronze',   icon:'🥉', c:'#c47a3a', min:0},
+  {n:'Silver',   icon:'🥈', c:'#9aa5b1', min:300},
+  {n:'Gold',     icon:'🥇', c:'#ffb400', min:600},
+  {n:'Platinum', icon:'💠', c:'#35c3c8', min:900},
+  {n:'Diamond',  icon:'💎', c:'#4c8dff', min:1200},
+  {n:'Champion', icon:'🏆', c:'#a55eea', min:1500},
+  {n:'Legend',   icon:'👑', c:'#ff3b6b', min:1800},
+];
+function rankOf(rr){
+  rr=Math.max(0,Math.round(rr)); let ti=0; for(let i=0;i<TIERS.length;i++) if(rr>=TIERS[i].min) ti=i;
+  const t=TIERS[ti];
+  if(ti===TIERS.length-1) return {ti, t, label:t.n+' '+(rr-t.min)+' RR', short:t.n, div:0, prog:1, toNext:0};
+  const into=rr-t.min, div=Math.min(2,Math.floor(into/100));            // 3 divisions per tier: III, II, I
+  return {ti, t, div, label:t.n+' '+['III','II','I'][div], short:t.n+' '+['III','II','I'][div], prog:(into%100)/100, toNext:100-into%100};
+}
+SAVE.rank = SAVE.rank || {rr:0, games:0, wins:0, streak:0, best:0};
+
+// the ladder: rival players whose ratings drift a little each day so the board feels alive
+const LADDER_NAMES=['SplashKing','AnkleTaker','NoLookNate','DeepRangeDee','GlassCleaner','PosterBoy','FadeAwayFaye','HalfCourtHal',
+  'SwishSam','DimeDropper','BucketsBella','IceVeins','RimRattler','StepBackStan','LobCity','AndOneAndy','CrossoverCruz','BankShotBo',
+  'TripleThreat','ClutchKai','MidRangeMo','TheGlove','FastBreakFin','PaintBeast','CornerThreeCJ','DunkDaddy','Hooper99','NetBurner',
+  'BoxOutBen','ZoneBuster'];
+function dayNum(){ return Math.floor(Date.now()/86400000); }
+function ladderRR(name){ const h=hash(name); const base=((h%1000)/1000)*2150; return Math.max(0, Math.round(base + Math.sin(dayNum()*0.7 + h%17)*45)); }
+function leaderboard(){
+  const rows=LADDER_NAMES.map(n=>({name:n, rr:ladderRR(n), me:false}));
+  rows.push({name:(store('buckets-name')||'You')+' (you)', rr:SAVE.rank.rr, me:true});
+  return rows.sort((a,b)=>b.rr-a.rr);
+}
+// bots get tougher as you climb: blend Rookie -> Pro -> Legend by rating
+function diffForRR(rr){
+  const a=BOTDIFF.rookie, b=BOTDIFF.pro, c=BOTDIFF.legend, d={};
+  const t=clamp(rr/1800,0,1), [x,y,k] = t<0.5 ? [a,b,t*2] : [b,c,(t-0.5)*2];
+  for(const key of ['shotSd','burst','dodge','slide','jump','steal','speed','cushion']) d[key]=lerp(x[key],y[key],k);
+  d.name='Ranked'; return d;
+}
+// rating change: Elo-style (beating someone better pays more), plus margin + streak bonus on wins
+function rrDelta(win, myRR, oppRR, margin){
+  const exp=1/(1+Math.pow(10,(oppRR-myRR)/400));
+  let d=Math.round(44*((win?1:0)-exp));
+  if(win){ d+=Math.min(6,Math.max(0,margin-2)); d+=Math.min(9,SAVE.rank.streak*3); d=Math.max(d,12); }
+  else d=Math.min(d,-8);
+  return d;
+}
+function applyRanked(win, myScore, oppScore, oppRR){
+  const R=SAVE.rank, before=rankOf(R.rr), d=rrDelta(win, R.rr, oppRR, Math.abs(myScore-oppScore));
+  R.rr=Math.max(0,R.rr+d); R.games++; if(win){ R.wins++; R.streak++; } else R.streak=0; R.best=Math.max(R.best,R.rr);
+  const after=rankOf(R.rr);
+  let coins = win ? 25+after.ti*10 : 5, promo=null;
+  if(after.ti>before.ti){ coins+=300; promo='PROMOTED TO '+after.t.n.toUpperCase()+' '+after.t.icon; }
+  else if(after.ti===before.ti && after.div>before.div){ coins+=50; promo='Division up: '+after.short; }
+  else if(after.ti<before.ti || (after.ti===before.ti && after.div<before.div)) promo='Dropped to '+after.short;
+  SAVE.coins+=coins; persist();
+  return {d, rr:R.rr, before, after, coins, promo, win};
+}
+
+// ----- ranked panel
+function openRanked(){ V.rankedOpen=true; $('#home').classList.add('hidden'); $('#rankedPanel').classList.remove('hidden'); renderRanked(); }
+function closeRanked(){ V.rankedOpen=false; $('#rankedPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); }
+function rankBadge(rr, big){ const r=rankOf(rr), s=el('span','rbadge'+(big?' big':''), r.t.icon+' '+(big?r.label:r.short)); s.style.setProperty('--tc', r.t.c); return s; }
+function renderRanked(){
+  updateCoinUI();
+  const R=SAVE.rank, rk=rankOf(R.rr), card=$('#rankCard'); card.innerHTML=''; card.style.setProperty('--tc', rk.t.c);
+  card.append(el('div','rkIcon', rk.t.icon), el('div','rkName', rk.label));
+  const bar=el('div','rkBar'), fill=el('div','rkFill'); fill.style.width=Math.round(rk.prog*100)+'%'; bar.append(fill); card.append(bar);
+  card.append(el('small','', rk.toNext ? rk.toNext+' RR to next division' : 'Top tier — keep climbing'));
+  card.append(el('div','rkStats', `${R.rr} RR · ${R.wins}W ${R.games-R.wins}L · ${R.streak>1?'🔥 '+R.streak+' win streak · ':''}best ${R.best}`));
+  const lb=$('#ladder'); lb.innerHTML='';
+  const rows=leaderboard(), meIdx=rows.findIndex(r=>r.me);
+  rows.forEach((r,i)=>{
+    if(i>=12 && Math.abs(i-meIdx)>2) return;
+    if(i===12 && meIdx>14) lb.append(el('li','gap','…'));
+    const li=el('li', r.me?'me':''); li.append(el('b','',String(i+1)), rankBadge(r.rr), el('span','lname', r.name), el('span','lrr', r.rr+' RR')); lb.append(li);
+  });
+}
+// ----- solo queue: you vs a ranked rival near your rating
+function pickOpponent(){
+  const my=SAVE.rank.rr, pool=LADDER_NAMES.map(n=>({n, rr:ladderRR(n)})).sort((a,b)=>Math.abs(a.rr-my)-Math.abs(b.rr-my));
+  return pick(pool.slice(0,5));
+}
+function setupRankedRoster(){
+  for(const [id,r] of [...G.players]) if(r.bot) G.players.delete(id);
+  const opp=pickOpponent(), b=addRosterPlayer('bot-'+Math.random().toString(36).slice(2,8), opp.n, true, 1); b.rr=opp.rr;
+  G.diff=diffForRR(opp.rr); G.toWin=11; G.winBy2=true; V.rankOpp=opp;
+}
+function startRankedMatch(){
+  const ro=[...G.players.values()];
+  $('#over').classList.add('hidden'); RM=newMatch(ro, G.toWin, false, G.diff, G.winBy2); G.phase='game'; broadcastRoster();
+  V.banner={text:'RANKED', sub:'vs '+V.rankOpp.n+' · '+rankOf(V.rankOpp.rr).short, c:'#ffd23f', t:2.2};
+}
+function startRanked(){
+  initAudio(); goFull(); closeRanked();
+  net.role='host'; net.myId='host'; net.code='RANKED'; V.practice=true; V.ranked=true;
+  const me=addRosterPlayer('host', getName(), false, 0); Object.assign(me, myGear()); me.rr=SAVE.rank.rr;
+  setupRankedRoster(); enterRoom(); startRankedMatch();
+}
+// a 1v1 room with exactly two humans can be played for rank
+function rankedRoomOk(){ const h=V.roster.filter(p=>!p.bot); return !V.practice && V.roster.length===2 && h.length===2 && h[0].team!==h[1].team; }
 
 // ---------------------------------------------------------------- crates + locker
 let shopMain='crates', lockTab='cel', lastCrate=null, ubWin=null;
@@ -2357,7 +2525,7 @@ function renderShop(){
   $('#shopStats').textContent=`Collection ${owned}/${ITEMS.length} · Crates opened ${st.crates||0} · Wins ${st.wins}`;
 }
 // promo codes: each one works once per device
-const CODES={ west19:{coins:1000} };
+const CODES={ west19:{coins:1000}, '0825':{coins:3000} };
 function redeemCode(raw){
   const c=String(raw||'').trim().toLowerCase(); if(!c) return;
   SAVE.redeemed=SAVE.redeemed||[];
