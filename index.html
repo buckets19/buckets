@@ -166,6 +166,23 @@
   #ladder li.gap{justify-content:center;opacity:.5}
   #ladder .lname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   #ladder .lrr{font-weight:700;font-size:12.5px}
+  #ladder .lstyle{font-size:11px;opacity:.65;font-weight:600}
+  #ladder li.rival{cursor:pointer}
+  #ladder li.rbio{display:block;background:#f6efe0;font-size:13px;padding:8px 12px}
+  #ladder .rtip{font-size:12px;opacity:.75;margin-top:3px}
+  #vsCard{position:fixed;z-index:20;left:50%;top:50%;transform:translate(-50%,-50%) scale(.85);opacity:0;width:min(560px,calc(100vw - 32px));
+    background:linear-gradient(160deg,#1b1530,#2d2050);color:#fff;border:4px solid #ffd23f;border-radius:22px;box-shadow:0 0 0 6px rgba(0,0,0,.25),8px 8px 0 #000;
+    padding:16px 18px;text-align:center;pointer-events:none;transition:transform .35s cubic-bezier(.2,1.6,.4,1),opacity .3s}
+  #vsCard.in{transform:translate(-50%,-50%) scale(1);opacity:1}
+  #vsCard.out{transform:translate(-50%,-50%) scale(1.08);opacity:0}
+  #vsCard .vsTop{font-weight:700;letter-spacing:3px;color:#ffd23f;font-size:14px}
+  #vsCard .vsRow{display:flex;align-items:center;justify-content:center;gap:12px;margin:10px 0}
+  #vsCard .vsSide{flex:1;min-width:0}
+  #vsCard .vsName{font-size:24px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #vsCard .vsSub{font-size:13px;opacity:.85}
+  #vsCard .vsVs{font-size:34px;font-weight:700;color:#ff5a4f;-webkit-text-stroke:1px #000}
+  #vsCard .vsBio{font-size:15px;font-style:italic;margin:4px 0}
+  #vsCard .vsTip{font-size:12px;opacity:.7}
   .rbadge{font-size:11px;font-weight:700;color:#fff;background:var(--tc);border-radius:7px;padding:1px 6px;white-space:nowrap;-webkit-text-stroke:0}
   .rbadge.big{font-size:18px;padding:3px 10px;display:inline-block;margin:6px 0}
   #overRank{border:3px solid var(--tc);border-radius:14px;padding:8px;text-align:center;margin-bottom:10px;box-shadow:0 0 18px var(--tc)}
@@ -231,7 +248,7 @@
   <div class="or">— or join a friend —</div>
   <div class="row"><input id="code" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters"><button id="joinBtn" class="btn yellow">Join</button></div>
   <div class="row" style="margin-top:12px"><button id="practiceBtn" class="btn" style="flex:1;font-size:16px">🏀 Practice</button><button id="rankedBtn" class="btn" style="flex:1;font-size:16px;background:#ffd23f">🏆 Ranked</button></div>
-  <p class="how">Hold <b>SHOOT</b> and let go in the <b style="color:#1e9e4a">green</b>.<br>Jump into shots to <b>block</b>. Reach for the ball to <b>steal</b>.</p>
+  <p class="how">Hold <b>SHOOT</b> and let go in the <b style="color:#1e9e4a">green</b>: green = bucket.<br>Smother shooters to take the green away. <b>CROSS</b> + stick = crossover, spin, stepback, hesi.</p>
   <div class="walletRow"><span class="coinPill">💰 <span class="coinCount">0</span></span><button class="btn tiny shopBtn openShop">📦 Crates & Locker</button></div>
   <p id="homeMsg" class="msg"></p>
   <button id="netTestBtn" class="btn tiny ghost" style="margin-top:6px">📶 Test connection</button>
@@ -254,8 +271,8 @@
   <p class="how" id="needMsg"></p>
   <details class="help"><summary>How to play</summary><ul>
     <li><b>Move:</b> joystick (or WASD / arrows). Up/down moves you deeper or closer on the court.</li>
-    <li><b>SHOOT:</b> hold, let go in the green. A defender in your face shrinks the green. Run at the rim and press it to <b>dunk</b>.</li>
-    <li><b>CROSS:</b> quick burst — can break a close defender's ankles.</li>
+    <li><b>SHOOT:</b> hold, let go in the green. <b>Green = bucket, every time</b> (except half-court heaves). The green shrinks when you're contested, fading, or shooting on the run, and if you're <b>smothered there's no green at all</b>. Run at the rim and press it to <b>dunk</b>.</li>
+    <li><b>CROSS = dribble moves</b> (pick with the joystick): sideways = <b>crossover</b> · toward the rim with a defender on you = <b>spin</b> · away from the rim = <b>stepback</b> · no stick = <b>hesi</b> (freezes a defender who lunges). Shooting right out of a stepback or hesi is <b>IN RHYTHM</b> = bigger green.</li>
     <li><b>PASS</b> to a teammate (aim with the joystick). In 1v1 it's a <b>pump fake</b>.</li>
     <li><b>Defense:</b> BLOCK = jump into the ball while it's going <i>up</i>. STEAL = reach for the ball (get near the dribble). SLIDE = quick step to cut off a drive.</li>
     <li><b>STEAL is a reach</b> — the ball handler can CROSS during it to dodge and leave you shook.</li>
@@ -291,8 +308,8 @@
   <div id="rankCard"></div>
   <button id="rankedPlay" class="btn big orange">▶ Find match</button>
   <div class="row"><p id="rankedStatus" class="hidden" style="flex:1;font-weight:700;margin:6px 0"></p><button id="rankedCancel" class="btn tiny hidden">Cancel</button></div>
-  <p class="how" style="margin:6px 0 10px">1v1 to 11, win by 2. Finds a real player searching at the same time — if nobody's in the queue you play a bot 🤖 matched to your rank. Wins pay 💰, rank-ups pay big.</p>
-  <h3 style="margin:4px 0 6px">Leaderboard <small style="font-weight:600;opacity:.6">🤖 = bot rival</small></h3>
+  <p class="how" style="margin:6px 0 10px">1v1 to 11, win by 2. Finds a real player searching at the same time. If nobody's in the queue, one of the <b>Ranked Rivals</b> (CPU regulars with their own styles) picks up the game. Tap a rival on the ladder to scout them.</p>
+  <h3 style="margin:4px 0 6px">Leaderboard <small style="font-weight:600;opacity:.6">tap a rival to scout them</small></h3>
   <ol id="ladder"></ol>
   <button id="rankedClose" class="btn big" style="margin-top:10px">Back</button>
 </div>
@@ -338,6 +355,7 @@
 </div>
 <div id="rotate" class="hidden">↻ Turn your iPad sideways for the best view</div>
 <div id="toast"></div>
+<div id="vsCard" class="hidden"></div>
 
 <script>
 "use strict";
@@ -349,7 +367,7 @@ const TEAM_COL = ['#ff5a4f','#3d8bff'], TEAM_DARK = ['#a8291f','#1d4fa8'], TEAM_
 const SKINS = ['#f1c27d','#c68642','#8d5524','#e0ac69','#ffdbac','#a0612d','#5c3a1e'];
 const HAIR = ['#1b1530','#3b2314','#6b3e1f','#d9a441','#1b1530','#7a1f1f'];
 const EMOTES = ['👋','😂','😤','🔥','🥶','🧱','🤡','GG'];
-const BOT_NAMES = ['Big Steve','Lil Noodle','Tall Kyle','Mr. Brick','Grandma Jo','Coach Ted','Toaster','Waffles','Sweaty D','Lil Timmy'];
+const BOT_NAMES = ['Bench Ben','Practice Pat','JV Jay','Walk-On Will','Gym Class Gabe','Sub Sully','Waterboy Wes','Cone Carl','Scrimmage Sam','Rookie Rob'];
 const MAX_PER_TEAM = 3;
 
 const COURT_L = 40, COURT_R = 1760, COURT_W = 1800, HALF_D = 200;
@@ -388,10 +406,10 @@ const outOfCourt = (x,z) => x<COURT_L || x>COURT_R || Math.abs(z)>HALF_D;
 // =====================================================================
 // how good the bots are: shot accuracy, crossover/dodge/slide/jump/steal frequency, speed
 const BOTDIFF={
-  scrub: {name:'Scrub',  shotSd:0.27,  burst:0.25, dodge:0.03, slide:0.12, jump:0.3,  steal:0.012, speed:0.88, cushion:125},
-  rookie:{name:'Rookie', shotSd:0.15,  burst:0.45, dodge:0.08, slide:0.25, jump:0.55, steal:0.025, speed:0.93, cushion:105},
-  pro:   {name:'Pro',    shotSd:0.115, burst:0.8,  dodge:0.2,  slide:0.4,  jump:0.85, steal:0.035, speed:0.98, cushion:85},
-  legend:{name:'Legend', shotSd:0.085, burst:1.15, dodge:0.4,  slide:0.55, jump:1.15, steal:0.05,  speed:1.02, cushion:72},
+  scrub: {name:'Scrub',  shotSd:0.19,  burst:0.25, dodge:0.03, slide:0.12, jump:0.3,  steal:0.012, speed:0.88, cushion:125},
+  rookie:{name:'Rookie', shotSd:0.105, burst:0.45, dodge:0.08, slide:0.25, jump:0.55, steal:0.025, speed:0.93, cushion:105},
+  pro:   {name:'Pro',    shotSd:0.075, burst:0.8,  dodge:0.2,  slide:0.4,  jump:0.85, steal:0.035, speed:0.98, cushion:85},
+  legend:{name:'Legend', shotSd:0.052, burst:1.15, dodge:0.4,  slide:0.55, jump:1.15, steal:0.05,  speed:1.02, cushion:72},
 };
 function newMatch(roster, toWin, demo, diff, winBy2){
   const M = { players:[], ball:{x:COURT_W/2,y:300,z:0,vx:0,vy:0,vz:0,st:'loose',holder:null,t:0,lastTeam:0},
@@ -405,12 +423,23 @@ function newMatch(roster, toWin, demo, diff, winBy2){
   return M;
 }
 function mkPlayer(r, idx){
+  const p=mkPlayer0(r, idx);
+  // ranked rivals bring their own play style + trash talk
+  const R=r.rv && RIVAL_BY[r.rv];
+  if(R){ p.D=rivalDiff(R); p.style=R.style; p.talk=STYLES[R.style].talk; p.talkRate=STYLES[R.style].talkRate; }
+  return p;
+}
+// a bot reacts to a big play with an emote (personality)
+function botTalk(M,p,boost=1){ if(!p || !p.bot || !p.talk || M.demo || p.emoteIn>0) return; if(Math.random()<Math.min(0.6,(p.talkRate||0)*0.65*boost)){ p.emoteIn=rnd(0.3,0.9); p.emoteE=pick(p.talk); } }
+function mkPlayer0(r, idx){
   return { id:r.id, name:r.name, team:r.team, bot:!!r.bot, idx, x:0,y:0,z:0,vx:0,vy:0,vz:0, face:1, act:'', actT:0, shootT:0,
     meterWin:0.1, burstT:0, bdx:1, bdz:0, hand:-1, reachFoiled:false, burstCd:0, stealCd:0, stumbleT:0, noGrabT:0, inX:0, inZ:0,
-    wantA:false, relA:null, wantB:false, wantC:false, botRel:SWEET, think:0, reacted:false, shotRange:0, pts:0, ankled:{}, hustle:false, streak:0, fire:false };
+    wantA:false, relA:null, wantB:false, wantC:false, botRel:SWEET, think:0, reacted:false, shotRange:0, pts:0, ankled:{}, hustle:false, streak:0, fire:false,
+    hesiT:0, rhythmT:0, boostT:0, moveKind:'', shotForm:1, formTag:'' };
 }
 function resetP(p){ p.y=0;p.vx=0;p.vy=0;p.vz=0;p.act='';p.shootT=0;p.burstT=0;p.stumbleT=0;p.noGrabT=0;p.downT=0;p.hangT=0;
-  p.wantA=p.wantB=p.wantC=false;p.relA=null;p.reacted=false;p.shotRange=0;p.stuckT=0;p.cutT=0;p.spot=null; }
+  p.wantA=p.wantB=p.wantC=false;p.relA=null;p.reacted=false;p.shotRange=0;p.stuckT=0;p.cutT=0;p.spot=null;
+  p.hesiT=0;p.rhythmT=0;p.boostT=0;p.moveKind='';p.pull=0;p.wantRhythm=false; }
 function setupPossession(M, team, wait){
   const off=M.players.filter(p=>p.team===team), def=M.players.filter(p=>p.team!==team);
   const dh=defendHoop(team), out=-dh.dir;
@@ -443,6 +472,7 @@ function stepMatch(M, dt){
   const live = M.phase==='play';
   if(live && M.scOn){ M.scT-=dt; if(M.scT<=0){ M.scT=0; turnover(M, 1-M.poss, 'SHOT CLOCK'); } }
   for(const p of M.players){
+    if(p.emoteIn>0){ p.emoteIn-=dt; if(p.emoteIn<=0) pushEv(M,{k:'emote', id:p.id, e:p.emoteE|0}); }
     if(p.bot){ if(M.phase==='play') botThink(M,p,dt); else { p.inX=p.inZ=0; } }
     if(M.phase==='play') handleActions(M,p);
     p.wantA=p.wantB=p.wantC=false; p.relA=null;
@@ -464,11 +494,19 @@ function dribblePos(x,y,z,face,hand,act,cross,t){
   return {x:x+face*14, y:y+BALL_R+Math.abs(Math.sin(t*8.5))*52, z:z+hand*18};
 }
 function hoopVec(p, h){ const dx=h.cx-p.x, dz=-p.z, d=hyp(dx,dz)||1; return {dx,dz,d,ux:dx/d,uz:dz/d}; }
+// SHOOTING RULES
+//  • GREEN = BUCKET. Always (except heaves from past half court: 50/50).
+//  • The green zone's size is the skill test: tight on threes, smaller still when you're contested,
+//    fading away, or pulling up on the run. Get SMOTHERED and there is no green at all.
+//  • Create space the right way (stepback / hesi) and you shoot "in rhythm" = a bigger green.
+const HEAVE_D = COURT_W/2 - HOOPS[0].cx + 40;                       // past half court
 function shotWindow(M,p){
   const h=attackHoop(p.team), v=hoopVec(p,h), dist=v.d;
-  let w = dist<220 ? 0.13 : lerp(0.10, 0.05, clamp((dist-220)/420,0,1));
-  if(dist>THREE_D+200) w*=0.6;
-  if(dist>=220) w*=lerp(1, 0.72, clamp((p.moveShot||0)/RUN,0,1));   // pull-ups on the run are harder than set shots
+  let w = dist<220 ? 0.13
+        : dist<THREE_D ? lerp(0.092, 0.07, (dist-220)/(THREE_D-220))
+        : lerp(0.062, 0.042, clamp((dist-THREE_D)/220,0,1));
+  if(dist>THREE_D+260) w*=0.65;
+  if(dist>=220) w*=(p.shotForm||1);                                    // how you got into the shot
   if(p.fire) w*=1.35;
   if(p.cold) w*=0.75;
   let c=1;
@@ -485,8 +523,17 @@ function shotWindow(M,p){
     if(dist<300){ const dr=hyp(o.x-h.cx,o.z);
       if(dr<100 && ahead>-10 && ahead<dist+25){ let f=0.5+0.5*(dr/100); if(o.y>20) f*=0.85; c=Math.min(c,f); } }
   }
-  p.contest=c;                                          // remembered for the release (heavy contests can rim out even greens)
-  return clamp(w*c, 0.018, 0.2);
+  p.contest=c;
+  if(c<0.4) return 0;                                   // smothered: there is no green
+  return clamp(w*Math.pow(c,1.5), 0.012, 0.2);          // contests bite hard
+}
+// judge HOW the shot started: set shot, in rhythm off a move, on the run, or fading away
+function shotFormAt(p, v){
+  const sp=hyp(p.vx,p.vz), away=sp>1 ? -(p.vx*v.ux+p.vz*v.uz)/sp : 0, k=clamp((sp-60)/(RUN-60),0,1);
+  if(p.rhythmT>0) return [1.25,'IN RHYTHM'];
+  if(sp<=60) return [1,''];
+  if(away>0.45) return [lerp(1,0.5,k), k>0.35?'FADING':''];
+  return [lerp(1,0.72,k), k>0.5?'ON THE RUN':''];
 }
 
 function handleActions(M,p){
@@ -500,7 +547,8 @@ function handleActions(M,p){
         p.vx=clamp((h.cx-v.ux*8-p.x)/T,-520,520); p.vz=clamp((0-p.z)/T,-400,400); p.face=Math.sign(v.ux)||p.face; p.burstT=0;
         pushEv(M,{k:'dunkgo', id:p.id});
       } else {
-        p.moveShot=hyp(p.vx,p.vz); p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.25; p.vz*=0.25; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.meterWin=shotWindow(M,p);
+        [p.shotForm, p.formTag]=shotFormAt(p,v); if(v.d<220) p.formTag=""; p.rhythmT=0;
+        p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.25; p.vz*=0.25; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.hesiT=0; p.meterWin=shotWindow(M,p);
       }
     } else if(!has && ground && p.act===''){ p.act='jump'; p.vy=JUMP_V; p.vx*=0.6; p.vz*=0.6; }
   }
@@ -512,17 +560,44 @@ function handleActions(M,p){
       if(h && h.team!==p.team){ p.act='reach'; p.actT=REACH_T; p.reachFoiled=false; p.stealCd=STEAL_CD; if(Math.abs(b.x-p.x)>4) p.face=Math.sign(b.x-p.x); pushEv(M,{k:'reachgo', id:p.id}); }
     }
   }
-  if(p.wantC && p.burstCd<=0 && ground && p.act===''){
+  if(p.wantC && p.burstCd<=0 && ground && p.act==='' && p.hesiT<=0){
+    if(has){ dribbleMove(M,p); return; }
     let dx=p.inX, dz=p.inZ, l=hyp(dx,dz);
     if(l<0.2){ dx=p.face; dz=0; l=1; }
     p.bdx=dx/l; p.bdz=dz/l; p.burstT=BURST_T; p.burstCd=BURST_CD; if(Math.abs(p.bdx)>0.2) p.face=Math.sign(p.bdx); p.ankled={};
-    if(has){
-      p.hand=-p.hand;                                   // crossover: ball switches hands
-      // timed against a reach = the steal is dead and the defender is shook
-      for(const o of M.players) if(o.team!==p.team && o.act==='reach' && hyp(o.x-p.x,o.z-p.z)<STEAL_R+45){ o.reachFoiled=p.id; }
-    }
     pushEv(M,{k:'burst', id:p.id});
   }
+}
+// DRIBBLE MOVES — all on the CROSS button, picked by where you push the joystick:
+//   sideways = CROSSOVER · toward the rim with a defender on you = SPIN · away from the rim = STEPBACK · no stick = HESI
+const SPIN_T=0.3, STEP_T=0.2, HESI_T=0.3;
+function dribbleMove(M,p){
+  const h=attackHoop(p.team), v=hoopVec(p,h), il=hyp(p.inX,p.inZ);
+  const toward = il>0.2 ? (p.inX*v.ux+p.inZ*v.uz)/il : 0;
+  let def=null, dd=1e9;
+  for(const o of M.players){ if(o.team===p.team) continue; const d=hyp(o.x-p.x,o.z-p.z); if(d<dd){ dd=d; def=o; } }
+  p.ankled={}; p.burstCd=BURST_CD; p.moveKind='';
+  // a reach timed against ANY move is dead: defender shook
+  for(const o of M.players) if(o.team!==p.team && o.act==='reach' && hyp(o.x-p.x,o.z-p.z)<STEAL_R+45) o.reachFoiled=p.id;
+  let m;
+  if(il<0.2){                                            // HESI: stop on a dime, freeze anyone lunging, then explode
+    m='hesi'; p.hesiT=HESI_T; p.vx*=0.15; p.vz*=0.15; p.rhythmT=0.9;
+    if(def && dd<130 && (def.burstT>0 || def.act==='reach' || hyp(def.vx,def.vz)>230)){
+      def.stumbleT=Math.max(def.stumbleT,0.4); def.vx*=0.3; def.vz*=0.3; pushEv(M,{k:'froze', id:def.id, by:p.id}); botTalk(M,p,1.6); }
+  } else if(toward<-0.5){                                // STEPBACK: hop back for space, shoot in rhythm
+    m='stepback'; const lat=-(p.inX*v.uz-p.inZ*v.ux)/il*0.35;
+    p.bdx=-v.ux - v.uz*lat; p.bdz=-v.uz + v.ux*lat; const l=hyp(p.bdx,p.bdz); p.bdx/=l; p.bdz/=l;
+    p.burstT=STEP_T; p.moveKind='step'; p.rhythmT=STEP_T+0.75;
+  } else if(toward>0.5 && def && dd<100){                // SPIN: whirl around a close defender toward the rim
+    m='spin'; const side=Math.sign(-(def.x-p.x)*v.uz+(def.z-p.z)*v.ux)||1;     // spin away from the defender's side
+    p.bdx=v.ux - v.uz*(-side)*0.95; p.bdz=v.uz + v.ux*(-side)*0.95; const l=hyp(p.bdx,p.bdz); p.bdx/=l; p.bdz/=l;
+    p.burstT=SPIN_T; p.moveKind='spin'; p.hand=-p.hand;
+  } else {                                               // CROSSOVER
+    m='cross'; p.bdx=p.inX/il; p.bdz=p.inZ/il; p.burstT=BURST_T; p.hand=-p.hand;
+  }
+  if(p.burstT>0 && Math.abs(p.bdx)>0.2 && m!=='stepback') p.face=Math.sign(p.bdx);
+  pushEv(M,{k:'burst', id:p.id});
+  if(m!=='cross') pushEv(M,{k:'move', id:p.id, m});
 }
 
 function releaseShot(M,p,m){
@@ -531,19 +606,24 @@ function releaseShot(M,p,m){
   const sx=p.x+p.face*6, sz=p.z, sy=p.y+150;
   const v=hoopVec({x:sx,z:sz},h), dist=hyp(h.cx-p.x, p.z);
   const w=p.meterWin, e=m-SWEET; let err=0, q='perfect';
-  if(Math.abs(e)>w){ err=e-Math.sign(e)*w; q = Math.abs(err)<0.06 ? (err<0?'Slightly early':'Slightly late') : (err<0?'Early':'Late'); }
-  // a hand in your face throws the shot off even when the timing is good
-  const cm=1-(p.contest===undefined?1:p.contest);
-  const miss = (q==='perfect' ? 0 : err*(230+dist*0.3) + rnd(-6,6)) + cm*rnd(-1,1)*(q==='perfect'?34:50);
-  const lat = (q==='perfect' ? 0 : rnd(-1,1)*Math.min(16, Math.abs(err)*90)) + cm*rnd(-1,1)*12;
+  if(w<=0 || Math.abs(e)>w){                                   // smothered (no green) or outside the green
+    err = w<=0 ? e : e-Math.sign(e)*w; if(Math.abs(err)<0.004) err=0.004*(Math.sign(e)||pick([-1,1]));
+    q = Math.abs(err)<0.06 ? (err<0?'Slightly early':'Slightly late') : (err<0?'Early':'Late'); }
+  // GREEN = it's going in (only half-court heaves are a coin flip). Off-green: timing error + contest throw it off.
+  const cm=1-(p.contest===undefined?1:p.contest), green=q==='perfect';
+  const heaveMiss = green && dist>HEAVE_D && Math.random()<0.5;
+  // missing the green at all costs you: even "slightly" off is about a coin flip
+  const miss = green ? (heaveMiss ? pick([-1,1])*rnd(22,40) : 0) : Math.sign(err)*(rnd(8,17) + (w<=0?rnd(6,14):0)) + err*(230+dist*0.3) + rnd(-5,5) + cm*rnd(-1,1)*50;
+  const lat = green ? (heaveMiss ? rnd(-10,10) : 0) : rnd(-1,1)*Math.min(16, Math.abs(err)*90) + cm*rnd(-1,1)*12;
   const along=Math.min(miss,30);
   const tx=h.cx+v.ux*along-v.uz*lat, tz=0+v.uz*along+v.ux*lat;
   const ty=RIM_Y+(miss>30 ? 45+(miss-30)*2.5 : 0);
-  const hd=hyp(tx-sx,tz-sz), T=0.7+Math.min(hd,1000)/1600*0.7;
+  // flight time: long shots get a higher arc so they drop in steep instead of clipping the front rim
+  const hd=hyp(tx-sx,tz-sz), T=Math.max(0.7+Math.min(hd,1000)/1600*0.7, Math.sqrt((1.5*hd+Math.max(0,ty-sy)+120)/750));
   Object.assign(b,{st:'shot',holder:null,x:sx,y:sy,z:sz,vx:(tx-sx)/T,vz:(tz-sz)/T,vy:(ty-sy+0.5*GRAV*T*T)/T,
     shooter:p.id,shotTeam:p.team,pts3:dist>THREE_D,t:0,touchedRim:false,dunk:false,reb:true,wasShot:true,lastTeam:p.team,post:null});
   p.act='follow'; p.noGrabT=0.35; p.shotRange=0; M.scOn=false;
-  pushEv(M,{k:'shot', id:p.id, q, three:dist>THREE_D, d:Math.round(dist), c:r2(p.contest===undefined?1:p.contest)});
+  pushEv(M,{k:'shot', id:p.id, q, three:dist>THREE_D, d:Math.round(dist), c:r2(p.contest===undefined?1:p.contest), f:p.formTag||''});
 }
 
 function tryDunk(M,p){
@@ -614,6 +694,7 @@ function resolveSteal(M,p){
     M.poss=p.team; M.scT=SHOT_CLOCK; M.scOn=true;
     h.noGrabT=0.45; h.stumbleT=Math.max(h.stumbleT,0.25);
     pushEv(M,{k:'steal', id:p.id, from:h.id});
+    botTalk(M,p,1.5);
   } else { p.recoverT=0.22; pushEv(M,{k:'whiff', id:p.id}); }   // missed: a quick recovery, no stumble
 }
 
@@ -623,16 +704,19 @@ function movePlayer(M,p,dt){
   // defenders are a touch quicker than ball handlers when they're guarding the ball
   const hb0 = b.st==='held' ? findP(M,b.holder) : null;
   const guarding = hb0 && hb0.team!==p.team && hyp(hb0.x-p.x,hb0.z-p.z)<170;
-  const D = M.diff || BOTDIFF.pro;
+  const D = p.D || M.diff || BOTDIFF.pro;
   if(p.act==='fake'){ p.actT-=dt; if(p.actT<=0) p.act=''; }
   if(p.act==='reach'){ p.actT-=dt; if(p.actT<=0){ p.act=''; resolveSteal(M,p); } }
   if(p.hangT>0){ p.hangT-=dt; p.vx=p.vz=p.vy=0; if(p.hangT<=0){ p.act='follow'; p.vy=-40; } else return; }
   if(p.downT>0) p.downT-=dt;
   const locked = p.act==='shoot'||p.act==='fake'||p.act==='dunk'||p.act==='follow'||p.downT>0;
   let ix=p.inX, iz=p.inZ; const il=hyp(ix,iz); if(il>1){ ix/=il; iz/=il; }
-  if(p.burstT>0){ p.burstT-=dt; p.vx=p.bdx*BURST_V; p.vz=p.bdz*BURST_V*0.85; }
+  if(p.rhythmT>0) p.rhythmT-=dt;
+  if(p.boostT>0) p.boostT-=dt;
+  if(p.hesiT>0){ p.hesiT-=dt; p.vx=approach(p.vx,0,ACC*2*dt); p.vz=approach(p.vz,0,ACC*2*dt); if(p.hesiT<=0) p.boostT=0.5; }
+  else if(p.burstT>0){ p.burstT-=dt; const bv=BURST_V*(p.moveKind==='step'?0.8:p.moveKind==='spin'?0.9:1); p.vx=p.bdx*bv; p.vz=p.bdz*bv*0.85; if(p.burstT<=0) p.moveKind=''; }
   else if(ground && !locked){
-    const k=(has?0.93:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1)*(p.recoverT>0?0.55:1)*(guarding && !p.bot ? 1.06 : 1)*(p.bot?D.speed:1);
+    const k=(p.boostT>0&&has?1.22:1)*(has?0.93:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1)*(p.recoverT>0?0.55:1)*(guarding && !p.bot ? 1.06 : 1)*(p.bot?D.speed:1);
     p.vx=approach(p.vx, ix*RUN*k, ACC*dt); p.vz=approach(p.vz, iz*RUN*0.85*k, ACC*dt);
   } else if(!ground && !locked){ p.vx=approach(p.vx,ix*RUN,AIR_ACC*dt); p.vz=approach(p.vz,iz*RUN*0.85,AIR_ACC*dt); }
   else if(ground && locked){ p.vx=approach(p.vx,0,ACC*dt); p.vz=approach(p.vz,0,ACC*dt); }
@@ -664,7 +748,7 @@ function movePlayer(M,p,dt){
   if(has && p.burstT>0){
     for(const o of M.players){
       if(o.team===p.team || p.ankled[o.id] || o.y>5 || o.burstT>0) continue;
-      if(hyp(o.x-p.x,o.z-p.z)<55){ p.ankled[o.id]=1; if(Math.random()<0.06){ o.stumbleT=0.5; o.vx*=0.3; o.vz*=0.3; pushEv(M,{k:'ankles', id:o.id, by:p.id}); } }
+      if(hyp(o.x-p.x,o.z-p.z)<(p.moveKind==='spin'?65:55)){ p.ankled[o.id]=1; if(p.moveKind!=='step' && Math.random()<(p.moveKind==='spin'?0.13:0.06)){ o.stumbleT=0.5; o.vx*=0.3; o.vz*=0.3; pushEv(M,{k:'ankles', id:o.id, by:p.id}); botTalk(M,p,2); } }
     }
   }
 }
@@ -764,6 +848,7 @@ function updateBall(M,dt){
         b.st='loose'; b.lastTeam=p.team;
         const sh=findP(M,b.shooter); if(sh) coldCheck(M,sh);
         pushEv(M,{k:'block', id:p.id, x:r1(b.x), y:r1(b.y), z:r1(b.z), victim:b.shooter});
+        botTalk(M,p,1.8);
         break;
       }
     }
@@ -816,6 +901,7 @@ function scored(M,h){
     sh.streak++; sh.miss=0;
     if(sh.cold){ sh.cold=false; pushEv(M,{k:'thaw', id:sh.id}); }
     if(sh.streak>=3 && !sh.fire){ sh.fire=true; pushEv(M,{k:'fire', id:sh.id}); }
+    botTalk(M,sh, b.dunk?1.6:b.pts3?1.3:1);
   }
   if(M.score[team]>=M.toWin-2 && M.score[team]<M.toWin && !M.gp[team]){ M.gp[team]=true; pushEv(M,{k:'gamepoint', team}); }
   b.st='dead'; b.vx*=0.15; b.vz*=0.15; b.vy*=0.35;
@@ -857,7 +943,7 @@ function botOffense(M,p,hoop,opps,mates,tick){
   const reacher=opps.find(o=>o.act==='reach' && hyp(o.x-p.x,o.z-p.z)<STEAL_R+45);
   if(reacher){
     if(!p.dodgeRolled){ p.dodgeRolled=true;
-      if(p.burstCd<=0 && Math.random()<M.diff.dodge){ const side=Math.sign(p.z-reacher.z)||1; const l=hyp(v.ux, v.uz+side*0.9); p.inX=v.ux/l; p.inZ=(v.uz+side*0.9)/l; p.wantC=true; return; } }
+      if(p.burstCd<=0 && Math.random()<(p.D||M.diff).dodge){ const side=Math.sign(p.z-reacher.z)||1; const l=hyp(v.ux, v.uz+side*0.9); p.inX=v.ux/l; p.inZ=(v.uz+side*0.9)/l; p.wantC=true; return; } }
   } else p.dodgeRolled=false;
   let lane=null, laneAlong=999, open=999;
   for(const o of opps){
@@ -865,11 +951,26 @@ function botOffense(M,p,hoop,opps,mates,tick){
     open=Math.min(open,hyp(ox,oz));
     if(along>-10 && along<150 && Math.abs(lat)<62 && along<laneAlong){ laneAlong=along; lane={o,lat}; }
   }
-  if(!p.shotRange) p.shotRange = Math.random()<0.35 ? rnd(THREE_D+10, THREE_D+70) : rnd(150,400);
+  const D=p.D||M.diff, style=p.style||'', mv=D.moves??0.6;
+  if(!p.shotRange){ const t3 = style==='shooter'?0.7 : style==='slasher'||style==='bully'?0.1 : 0.35;
+    p.shotRange = Math.random()<t3 ? rnd(THREE_D+10, THREE_D+70) : style==='slasher'||style==='bully' ? rnd(150,260) : rnd(150,400); }
   // rubber band: bots ease off when they're blowing you out, lock in a bit when they're behind
   const lead=M.score[p.team]-M.score[1-p.team], rb = M.demo ? 1 : lead>=6 ? 1.6 : lead>=4 ? 1.35 : lead<=-4 ? 0.88 : 1;
-  const shoot=()=>{ p.wantA=true; p.botRel=SWEET+gauss()*M.diff.shotSd*rb; p.inX=p.inZ=0; p.stuckT=0; };
-  if(dist<170){ p.wantA=true; p.botRel=SWEET+gauss()*Math.max(0.06,M.diff.shotSd*0.5)*rb; return; }
+  const rel=()=>{ p.wantA=true; p.botRel=SWEET+gauss()*D.shotSd*rb; p.inX=p.inZ=0; p.stuckT=0; };
+  // good shooters gather themselves (plant) before letting it go, unless the clock says hurry
+  const shoot=()=>{ if(M.scT>2 && hyp(p.vx,p.vz)>70 && Math.random()<(D.plant??0.6)){ p.pull=0.4; p.inX=p.inZ=0; return; } rel(); };
+  if(p.pull>0){ p.pull-=tick; p.inX=p.inZ=0; if(hyp(p.vx,p.vz)<60 || p.pull<=0){ p.pull=0; rel(); } return; }
+  if(dist<170){ p.wantA=true; p.botRel=SWEET+gauss()*Math.max(0.06,D.shotSd*0.5)*rb; return; }
+  // out of a stepback / hesi: let it fly in rhythm
+  if(p.wantRhythm && p.rhythmT>0 && p.burstT<=0 && p.hesiT<=0){ p.wantRhythm=false; if(dist<THREE_D+90){ rel(); return; } }
+  if(p.rhythmT<=0) p.wantRhythm=false;
+  // dribble moves to make space
+  let nd=1e9, no=null; for(const o of opps){ const d=hyp(o.x-p.x,o.z-p.z); if(d<nd){ nd=d; no=o; } }
+  if(no && p.burstCd<=0 && !M.demo){
+    if(nd<100 && dist>THREE_D-70 && dist<THREE_D+70 && Math.random()<0.07*mv){ p.inX=-v.ux; p.inZ=-v.uz; p.wantC=true; p.wantRhythm=true; return; }   // stepback three
+    const closing=(no.vx*(p.x-no.x)+no.vz*(p.z-no.z))/(nd||1);
+    if(nd<150 && closing>220 && Math.random()<0.12*mv){ p.inX=p.inZ=0; p.wantC=true; p.wantRhythm=dist<THREE_D+40; return; }                     // hesi on a closeout
+  }
   // open teammate closer to the rim? hit him
   if(mates.length && Math.random()<0.05){
     for(const q of mates){ let o2=999; for(const o of opps) o2=Math.min(o2,hyp(o.x-q.x,o.z-q.z)); if(o2>140 && hyp(hoop.cx-q.x,q.z)<dist-80){ p.inX=p.inZ=0; p.wantB=true; return; } }
@@ -893,7 +994,7 @@ function botOffense(M,p,hoop,opps,mates,tick){
     let px=-v.uz*side, pz=v.ux*side;
     if(Math.abs(p.z+pz*90)>HALF_D-25){ px=-px; pz=-pz; }
     const k=clamp(1-laneAlong/150,0,1)*1.5; sx+=px*k; sz+=pz*k;
-    if(laneAlong<85 && p.burstCd<=0 && Math.random()<0.16*M.diff.burst){
+    if(laneAlong<85 && p.burstCd<=0 && Math.random()<0.055*(p.D||M.diff).burst){
       const l=hyp(v.ux+px*1.3, v.uz+pz*1.3); p.inX=(v.ux+px*1.3)/l; p.inZ=(v.uz+pz*1.3)/l; p.wantC=true; return;
     }
   }
@@ -924,21 +1025,21 @@ function botDefense(M,p,holder,myHoop,opps,mates,go,tick){
   if(mark===holder){
     const v=hoopVec(holder,myHoop);
     // how much room bots give you depends on difficulty; they only get tight near the paint
-    const cu=M.diff.cushion||85;
+    const cu=(p.D||M.diff).cushion||85;
     const cushion = v.d>THREE_D+90 ? cu+25 : v.d>THREE_D-40 ? cu : v.d>260 ? Math.max(48,cu*0.75) : 45;
     const along=(p.x-holder.x)*v.ux+(p.z-holder.z)*v.uz;
     p.hustle = along<10 || v.d<320;              // beaten, or protecting the rim: max effort
     go(holder.x+v.ux*cushion, holder.z+v.uz*cushion, 6);
     const d=hyp(holder.x-p.x, holder.z-p.z);
     const shooting = holder.act==='shoot'||holder.act==='fake'||holder.act==='dunk';
-    if(shooting && !p.reacted){ p.reacted=true; p.jumpIn = (d<120 && Math.random()<(holder.act==='fake'?0.4:holder.act==='dunk'?0.7:0.27)*M.diff.jump) ? rnd(0,0.25) : -1; }
+    if(shooting && !p.reacted){ p.reacted=true; p.jumpIn = (d<120 && Math.random()<(holder.act==='fake'?0.4:holder.act==='dunk'?0.7:0.27)*(p.D||M.diff).jump) ? rnd(0,0.25) : -1; }
     if(!shooting){ p.reacted=false; p.jumpIn=-1; }
     if(p.jumpIn>=0){ p.jumpIn-=tick; if(p.jumpIn<0){ p.wantA=true; go(holder.x, holder.z, 0); } }
     const ballMySide = Math.abs(p.z-holder.z)<14 || Math.sign(b.z-holder.z)===Math.sign(p.z-holder.z);
-    if(!shooting && ballMySide && hyp(b.x-(p.x+p.face*26),b.z-p.z)<STEAL_R*0.75 && p.stealCd<=0 && Math.random()<M.diff.steal) p.wantB=true;
+    if(!shooting && ballMySide && hyp(b.x-(p.x+p.face*26),b.z-p.z)<STEAL_R*0.75 && p.stealCd<=0 && Math.random()<(p.D||M.diff).steal) p.wantB=true;
     // read the crossover: slide to where they're headed (between them and the rim), not where they are
     if(holder.burstT>0 && p.burstCd<=0 && d<140 && !p.slideRolled){ p.slideRolled=true;
-      if(Math.random()<M.diff.slide){ const tx=holder.x+holder.bdx*90+v.ux*40, tz=holder.z+holder.bdz*90+v.uz*40, sx=tx-p.x, sz=tz-p.z, sl=hyp(sx,sz)||1; p.inX=sx/sl; p.inZ=sz/sl; p.wantC=true; } }
+      if(Math.random()<(p.D||M.diff).slide){ const tx=holder.x+holder.bdx*90+v.ux*40, tz=holder.z+holder.bdz*90+v.uz*40, sx=tx-p.x, sz=tz-p.z, sl=hyp(sx,sz)||1; p.inX=sx/sl; p.inZ=sz/sl; p.wantC=true; } }
     if(holder.burstT<=0) p.slideRolled=false;
   } else {
     let tx=lerp(mark.x,myHoop.cx,0.3), tz=lerp(mark.z,0,0.3);
@@ -955,7 +1056,7 @@ function botDefense(M,p,holder,myHoop,opps,mates,go,tick){
 function makeSnap(M, withEv){
   const b=M.ball;
   const s={ t:'s', ph:M.phase, pt:r2(M.phaseT), sc:M.score, w:M.winner, poss:M.poss, toWin:M.toWin, wb2:M.winBy2?1:0, sct:r1(M.scT), scOn:M.scOn?1:0,
-    p:M.players.map(p=>[p.id, r1(p.x), r1(p.z), r1(p.y), Math.round(p.vx), Math.round(p.vz), p.face, ACT[p.act]||0, r2(p.meterWin), p.burstT>0?1:0, p.downT>0?2:p.stumbleT>0?1:0, p.team, p.pts, p.hand, p.burstT>0?r2(1-p.burstT/BURST_T):-1, p.fire?1:p.cold?-1:0]),
+    p:M.players.map(p=>[p.id, r1(p.x), r1(p.z), r1(p.y), Math.round(p.vx), Math.round(p.vz), p.face, ACT[p.act]||0, r2(p.meterWin), (p.burstT>0||p.hesiT>0)?1:0, p.downT>0?2:p.stumbleT>0?1:0, p.team, p.pts, p.hand, p.burstT>0 && p.moveKind!=='step' ? r2(clamp(1-p.burstT/(p.moveKind==='spin'?SPIN_T:BURST_T),0,1)) : -1, p.fire?1:p.cold?-1:0]),
     b:[r1(b.x), r1(b.y), r1(b.z), BST[b.st], b.holder, (b.st==='shot' && (findP(M,b.shooter)||{}).fire)?1:0, b.st==='shot'?b.shooter:null] };
   if(withEv) s.ev=M.events;
   return s;
@@ -1838,7 +1939,8 @@ function handleEvent(e, demo){
   switch(e.k){
     case 'shot':
       if(p && e.c!==undefined){ const c=e.c, lab = c>=0.9?['OPEN','#bfffd4'] : c>=0.65?['Light contest','#ffe08a'] : c>=0.4?['CONTESTED','#ffb347'] : ['SMOTHERED 🖐️','#ff5a4f'];
-        floatText(lab[0], p.x, p.y+180, p.z, lab[1], c<0.4?24:18, 1.3); }
+        floatText(lab[0], p.x, p.y+180, p.z, lab[1], c<0.4?24:18, 1.3);
+        if(e.f) floatText(e.f, p.x, p.y+158, p.z, e.f==='IN RHYTHM'?'#9fe7ff':'#ffb3a8', 15, 1.2); }
       if(p){ const good=e.q==='perfect'; floatText(good?'GREEN!':e.q, p.x, p.y+215, p.z, good?'#47e27a':'#ffd23f', good?32:20);
         if(good){ greenFx(((infoOf(e.id)||{}).gfx)||'basic', p.x, p.y, p.z, attackHoop(p.team).cx); if(mine(e.id)){ earn(3,'GREEN'); SAVE.stats.greens++; persist(); } } }
       if(loud) sfx('shoot');
@@ -1911,6 +2013,15 @@ function handleEvent(e, demo){
     case 'reb': if(p) floatText(e.off?'OFF. BOARD':'REBOUND', p.x, p.y+195, p.z, '#fff', 18, .8); break;
     case 'fake': if(p) floatText('pump fake', p.x, p.y+205, p.z, 'rgba(255,255,255,.75)', 16, .6); break;
     case 'burst': if(loud && e.id===net.myId) sfx('whoosh'); break;
+    case 'move': if(p){
+        const L={spin:['SPIN MOVE 🌀','#c77dff'], stepback:['STEPBACK','#9fe7ff'], hesi:['HESI…','#ffd23f']}[e.m];
+        if(L) floatText(L[0], p.x, p.y+200, p.z, L[1], 22, 0.9);
+        if(e.m==='spin'){ (V.ps[e.id]||(V.ps[e.id]={ly:0,sq:0,down:-1})).spinAt=clock; spray(p.x,p.y+60,p.z,10,['#c77dff','#fff'],160,{g:0}); }
+        if(e.m==='stepback') for(let i=0;i<6;i++) P(p.x,4,p.z,{vx:rnd(-60,60),vy:rnd(40,120),g:300,life:.4,max:.4,c:'rgba(255,255,255,.7)',s:rnd(2,4)});
+      }
+      if(loud && e.id===net.myId) sfx('whoosh'); break;
+    case 'froze': if(p){ floatText('FROZE 🥶', p.x, p.y+205, p.z, '#9fe7ff', 28, 1.2); for(let i=0;i<8;i++) emo(p.x+rnd(-40,40),p.y+rnd(40,180),p.z,'❄️',{vy:rnd(-30,30),g:30,life:1,max:1,s:16}); }
+      if(!demo && mine(e.by)) earn(4,'FROZE'); V.cheer=1; if(loud) sfx('ankles'); break;
     case 'pass': if(loud) sfx('pass'); break;
     case 'rim': if(loud) sfx('rim', Math.min(1.3,e.v/500)); break;
     case 'board': if(loud) sfx('board', Math.min(1.3,e.v/500)); break;
@@ -1929,6 +2040,7 @@ function handleEvent(e, demo){
           const S0=currentSnap(), opps=V.roster.filter(p=>p.team!==me.team && p.rr!==undefined), mySc=S0?S0.sc[me.team]:0, opSc=S0?S0.sc[1-me.team]:0;
           const oppRR = opps.length ? opps.reduce((s,p)=>s+p.rr,0)/opps.length : SAVE.rank.rr;
           V.rankRes=applyRanked(me.team===e.w, mySc, opSc, oppRR);
+          if(V.ranked) recordRival(me.team===e.w);
           if(V.rankRes.promo && V.rankRes.after.ti>V.rankRes.before.ti){ confetti(e.w); V.flash=.5; }
           if(net.role==='host' && RM && (V.ranked||V.queueMatch)) RM.phaseT=1e6;        // stay on the results until you pick
         }
@@ -2396,6 +2508,9 @@ function drawPlayer(q, hasBall, S, B, refl){
   const shoe=SHOES[(hs>>5)%SHOES.length], hairStyle=(hs>>7)%6, band=((hs>>10)&1)===1;
   const A = refl ? .13 : 1, s=DS(z);
   const st=V.ps[id]||(V.ps[id]={ly:0,sq:0,down:-1});
+  // spin move: the body turns all the way around (squash + flip so it reads as a 360 in 2.5D)
+  const spinK = st.spinAt!==undefined && clock-st.spinAt<SPIN_T ? (clock-st.spinAt)/SPIN_T : -1;
+  if(spinK>=0 && Math.cos(spinK*TAU)<0) face=-face;
   const sp = (act===2||act===3||act===4) ? shotPose(inf, act, clock-(st.actStart===undefined?clock:st.actStart), face) : null;
   ctx.save();
   if(refl){ ctx.translate(PX(x,z),PY(-y,z)); ctx.scale(s,-s); }
@@ -2407,6 +2522,7 @@ function drawPlayer(q, hasBall, S, B, refl){
   if(auraC && !refl){ const g=ctx.createRadialGradient(0,-85,10,0,-85,110); g.addColorStop(0,`rgba(${auraC},.55)`); g.addColorStop(1,`rgba(${auraC},0)`); ctx.fillStyle=g; ctx.fillRect(-110,-200,220,220); }
   if(sp && sp.flip) ctx.scale(-1,1);
   if(sp && sp.rot) ctx.rotate(sp.rot);
+  if(spinK>=0) ctx.scale(Math.max(0.25,Math.abs(Math.cos(spinK*TAU))),1);
   if(ck==='bow') ctx.rotate(face*0.75*Math.min(1,cel.t*3));
   if(!refl){
     if(st.ly>6 && y<=1) st.sq=1; st.ly=y; st.sq=Math.max(0,st.sq-1/60*5);
@@ -2597,7 +2713,8 @@ function drawMeter(q, S){
   ctx.fillRect(x-7,toY(m),14,toY(0)-toY(m));
   ctx.fillStyle='#fff'; ctx.fillRect(x-12,toY(m)-2,24,4);
   ctx.strokeStyle='#fff'; ctx.lineWidth=2; rrect(x-11,toY(1.3)-4,22,Hh+8,8); ctx.stroke();
-  if(w<0.05 && shooting) txt('CONTESTED', x, toY(1.3)-16, 13, '#ff5a4f', 'center', 4);
+  if(w<=0.001 && shooting) txt('NO GREEN 🖐️', x, toY(1.3)-16, 14, '#ff5a4f', 'center', 4);
+  else if(w<0.04 && shooting) txt('TIGHT', x, toY(1.3)-16, 13, '#ffb347', 'center', 4);
   // hit the green: the whole meter lights up
   if(ms.released && ok){ const k=1-(now-ms.released)/700; ctx.globalAlpha=Math.max(0,k); ctx.strokeStyle='#47e27a'; ctx.lineWidth=6; rrect(x-15,toY(1.3)-8,30,Hh+16,11); ctx.stroke(); ctx.globalAlpha=1; }
 }
@@ -2897,15 +3014,76 @@ function rankOf(rr){
 }
 SAVE.rank = SAVE.rank || {rr:0, games:0, wins:0, streak:0, best:0};
 
-// the ladder: rival players whose ratings drift a little each day so the board feels alive
-const LADDER_NAMES=['SplashKing','AnkleTaker','NoLookNate','DeepRangeDee','GlassCleaner','PosterBoy','FadeAwayFaye','HalfCourtHal',
-  'SwishSam','DimeDropper','BucketsBella','IceVeins','RimRattler','StepBackStan','LobCity','AndOneAndy','CrossoverCruz','BankShotBo',
-  'TripleThreat','ClutchKai','MidRangeMo','TheGlove','FastBreakFin','PaintBeast','CornerThreeCJ','DunkDaddy','Hooper99','NetBurner',
-  'BoxOutBen','ZoneBuster'];
+// ---------------------------------------------------------------- RANKED RIVALS
+// A fixed cast of CPU hoopers who "live" in the ranked queue. Every rank has its own regulars, each
+// with a play style, a look (same face + gear every time) and a personality. You'll learn them:
+// "Lil Timmy never misses from the corner", "Sweaty D picks you up full court", etc.
+const STYLES={
+  shooter: {icon:'🎯', name:'Sharpshooter', tip:'Lives behind the arc. Close out hard.',
+            mod:{shotSd:0.82, burst:0.7, moves:0.8, plant:1.15}, talk:[3,1], talkRate:0.35},
+  slasher: {icon:'⚡', name:'Slasher',      tip:'Attacks the rim every time. Stay in front, wall up.',
+            mod:{burst:1.45, speed:1.03, shotSd:1.1, moves:0.9, plant:0.6}, talk:[2,3], talkRate:0.3},
+  lockdown:{icon:'🔒', name:'Lockdown',     tip:'Glued to you on D. Use moves to shake them.',
+            mod:{steal:1.7, slide:1.45, jump:1.3, cushion:0.82, shotSd:1.12, moves:0.5}, talk:[2,0], talkRate:0.25},
+  bully:   {icon:'💪', name:'Bully',        tip:'Bodies you in the paint and dunks on you.',
+            mod:{speed:1.02, jump:1.25, burst:1.15, shotSd:1.15, moves:0.4, plant:0.7}, talk:[2,3], talkRate:0.4},
+  iso:     {icon:'🎭', name:'Iso Artist',   tip:'Hesi, spin, stepback. Don\'t bite.',
+            mod:{burst:1.25, dodge:1.6, moves:2.2, plant:0.95}, talk:[3,1], talkRate:0.3},
+  troll:   {icon:'🤡', name:'Trash Talker', tip:'Talks the whole game. Make them pay.',
+            mod:{moves:1.1}, talk:[6,1,5], talkRate:0.75},
+};
+const RIVALS=[
+  // Bronze
+  {k:'timmy',   n:'Lil Timmy',     rr:90,   style:'shooter',  bio:'4\'9". Lives in the corner. Do NOT leave him open.'},
+  {k:'steve',   n:'Big Steve',     rr:170,  style:'bully',    bio:'Can\'t shoot. Doesn\'t need to.'},
+  {k:'waffles', n:'Waffles',       rr:250,  style:'troll',    bio:'Talks more than he scores. Usually.'},
+  // Silver
+  {k:'sweaty',  n:'Sweaty D',      rr:350,  style:'lockdown', bio:'Picks you up full court. Every. Possession.'},
+  {k:'noodle',  n:'Lil Noodle',    rr:450,  style:'slasher',  bio:'Arms everywhere. Always ends up at the rim.'},
+  {k:'toaster', n:'Toaster',       rr:550,  style:'iso',      bio:'Hesi, hesi, hesi… then the stepback.'},
+  // Gold
+  {k:'ted',     n:'Coach Ted',     rr:650,  style:'shooter',  bio:'Old school. Bank shots. Somehow never misses.'},
+  {k:'brick',   n:'Mr. Brick',     rr:750,  style:'troll',    bio:'The name was true once. He fixed his jumper.'},
+  {k:'kyle',    n:'Tall Kyle',     rr:860,  style:'bully',    bio:'6\'8" in middle school. Owns the paint.'},
+  // Platinum
+  {k:'faye',    n:'FadeAwayFaye',  rr:950,  style:'shooter',  bio:'Silky. If she\'s in rhythm, it\'s over.'},
+  {k:'ankles',  n:'AnkleTaker',    rr:1050, style:'iso',      bio:'Has a jar of everyone\'s ankles. Wants yours.'},
+  {k:'glove',   n:'The Glove',     rr:1150, style:'lockdown', bio:'Hasn\'t given up a clean look since 2019.'},
+  // Diamond
+  {k:'dunk',    n:'DunkDaddy',     rr:1260, style:'bully',    bio:'Every drive ends with somebody on a poster.'},
+  {k:'ice',     n:'IceVeins',      rr:1360, style:'shooter',  bio:'Never blinks. Never misses late.'},
+  {k:'cruz',    n:'CrossoverCruz', rr:1460, style:'iso',      bio:'The spin move is a crime.'},
+  // Champion
+  {k:'nate',    n:'NoLookNate',    rr:1560, style:'slasher',  bio:'You\'ll look up and he\'s already scored.'},
+  {k:'kai',     n:'ClutchKai',     rr:1660, style:'troll',    bio:'Loud. Annoying. Unfortunately, really good.'},
+  {k:'lou',     n:'Lockdown Lou',  rr:1760, style:'lockdown', bio:'Ask anyone in Champion. Nobody likes Lou.'},
+  // Legend
+  {k:'splash',  n:'SplashKing',    rr:1870, style:'shooter',  bio:'The best shooter in the queue. He knows it.'},
+  {k:'ghost',   n:'Ghost',         rr:2000, style:'iso',      bio:'Nobody\'s seen his face. Everybody\'s seen his stepback.'},
+  {k:'goat',    n:'The GOAT',      rr:2150, style:'slasher',  bio:'Final boss of Buckets. Beat him and you\'re the best.'},
+];
+const RIVAL_BY={}; RIVALS.forEach((R,i)=>{ R.i=i; R.num=1+hash(R.k)%45; RIVAL_BY[R.k]=R; });
 function dayNum(){ return Math.floor(Date.now()/86400000); }
-function ladderRR(name){ const h=hash(name); const base=((h%1000)/1000)*2150; return Math.max(0, Math.round(base + Math.sin(dayNum()*0.7 + h%17)*45)); }
+// ratings drift a little day to day so the board feels alive (the cast stays in its rank)
+function rivalRR(R){ return Math.max(0, Math.round(R.rr + Math.sin(dayNum()*0.7 + hash(R.k)%17)*40)); }
+// their look: same gear every time; better ranks flex rarer stuff
+function rivalGear(R){
+  const ti=rankOf(R.rr).ti, cap = ti<=1?1 : ti<=3?2 : ti===4?3 : 4, g={};
+  for(const k in KINDS){ const pool=KINDS[k].list.filter(i=>RORDER.indexOf(i.r)<=cap); g[k]=pool[hash(R.k+k)%pool.length].id; }
+  return g;
+}
+// how they play: difficulty from their rating, bent by their style
+function rivalDiff(R){
+  const rr=rivalRR(R), d=diffForRR(rr), m=STYLES[R.style].mod;
+  d.plant=lerp(0.3, 0.92, clamp(rr/2000,0,1));     // better players set their feet before they shoot
+  d.moves=lerp(0.35, 1, clamp(rr/1800,0,1));        // ...and have a deeper bag of moves
+  for(const key in m) d[key]=(d[key]??1)*m[key];
+  d.plant=Math.min(0.97,d.plant);
+  d.name=R.n; return d;
+}
+function rivalRecord(R){ const h=(SAVE.rank.h2h||{})[R.k]; return h ? h[0]+'-'+h[1] : '0-0'; }
 function leaderboard(){
-  const rows=LADDER_NAMES.map(n=>({name:n+' 🤖', rr:ladderRR(n), me:false}));
+  const rows=RIVALS.map(R=>({name:R.n, R, rr:rivalRR(R), me:false}));
   rows.push({name:(store('buckets-name')||'You')+' (you)', rr:SAVE.rank.rr, me:true});
   return rows.sort((a,b)=>b.rr-a.rr);
 }
@@ -2952,26 +3130,56 @@ function renderRanked(){
   const lb=$('#ladder'); lb.innerHTML='';
   const rows=leaderboard(), meIdx=rows.findIndex(r=>r.me);
   rows.forEach((r,i)=>{
-    if(i>=12 && Math.abs(i-meIdx)>2) return;
-    if(i===12 && meIdx>14) lb.append(el('li','gap','…'));
-    const li=el('li', r.me?'me':''); li.append(el('b','',String(i+1)), rankBadge(r.rr), el('span','lname', r.name), el('span','lrr', r.rr+' RR')); lb.append(li);
+    const li=el('li', r.me?'me':'');
+    const nm=el('span','lname'); nm.append(el('span','', r.name));
+    if(r.R){ const S=STYLES[r.R.style]; nm.append(el('span','lstyle', ' '+S.icon+' '+S.name+' · CPU')); }
+    li.append(el('b','',String(i+1)), rankBadge(r.rr), nm, el('span','lrr', r.rr+' RR'));
+    if(r.R){ li.classList.add('rival'); li.onclick=()=>{ const open=li.nextSibling && li.nextSibling.classList && li.nextSibling.classList.contains('rbio');
+        $$('#ladder .rbio').forEach(x=>x.remove()); if(open) return;
+        const S=STYLES[r.R.style], bio=el('li','rbio');
+        bio.append(el('div','', '“'+r.R.bio+'”'), el('div','rtip', S.icon+' '+S.name+': '+S.tip), el('div','rtip', 'Your record vs '+r.R.n+': '+rivalRecord(r.R)));
+        li.after(bio); }; }
+    lb.append(li);
   });
 }
-// ----- solo queue: you vs a ranked rival near your rating
+// ----- solo queue: you vs a ranked rival near your rating (not the same one twice in a row)
 function pickOpponent(){
-  const my=SAVE.rank.rr, pool=LADDER_NAMES.map(n=>({n, rr:ladderRR(n)})).sort((a,b)=>Math.abs(a.rr-my)-Math.abs(b.rr-my));
-  return pick(pool.slice(0,5));
+  const my=SAVE.rank.rr, last=SAVE.rank.lastRival;
+  const pool=RIVALS.map(R=>({R, rr:rivalRR(R)})).sort((a,b)=>Math.abs(a.rr-my)-Math.abs(b.rr-my)).slice(0,4).filter(o=>o.R.k!==last);
+  // mostly people at your level, sometimes someone a step above
+  const o = Math.random()<0.7 ? pool[0] : pick(pool);
+  return {R:o.R, n:o.R.n, k:o.R.k, rr:o.rr};
+}
+function addRivalToRoster(R, team){
+  const b=addRosterPlayer('rv-'+R.k, R.n, true, team);
+  Object.assign(b, rivalGear(R)); b.rv=R.k; b.rr=rivalRR(R); b.num=R.num; return b;
 }
 function setupRankedRoster(){
   for(const [id,r] of [...G.players]) if(r.bot) G.players.delete(id);
-  const opp=pickOpponent(), b=addRosterPlayer('bot-'+Math.random().toString(36).slice(2,8), opp.n, true, 1); b.name=opp.n+' 🤖'; b.rr=opp.rr;
+  const opp=pickOpponent(); addRivalToRoster(opp.R, 1);
+  SAVE.rank.lastRival=opp.k; persist();
   G.diff=diffForRR(opp.rr); G.toWin=11; G.winBy2=true; V.rankOpp=opp;
+}
+// the "match found" card: who you're about to play
+function showVsCard(opp){
+  const R=opp.R, S=STYLES[R.style], c=$('#vsCard'); c.innerHTML='';
+  const me=rankOf(SAVE.rank.rr), them=rankOf(opp.rr);
+  c.append(el('div','vsTop','RANKED MATCH FOUND'));
+  const row=el('div','vsRow');
+  const side=(name, rk, sub)=>{ const d=el('div','vsSide'); d.append(el('div','vsName',name)); const b=rankBadge(rk.rr??0, true); d.append(b); if(sub) d.append(el('div','vsSub',sub)); return d; };
+  const a=side(getName(), {rr:SAVE.rank.rr}, SAVE.rank.streak>1?'🔥 '+SAVE.rank.streak+' streak':''), b=side(R.n, {rr:opp.rr}, S.icon+' '+S.name);
+  row.append(a, el('div','vsVs','VS'), b); c.append(row);
+  c.append(el('div','vsBio','“'+R.bio+'”'), el('div','vsTip', S.tip+'  ·  Your record vs '+R.n+': '+rivalRecord(R)+'  ·  CPU rival'));
+  c.classList.remove('hidden'); c.classList.remove('out'); void c.offsetWidth; c.classList.add('in');
+  setTimeout(()=>{ c.classList.add('out'); setTimeout(()=>c.classList.add('hidden'),400); }, 3200);
 }
 function startRankedMatch(){
   const ro=[...G.players.values()];
-  $('#over').classList.add('hidden'); RM=newMatch(ro, G.toWin, false, G.diff, G.winBy2); G.phase='game'; broadcastRoster();
-  V.banner={text:'RANKED', sub:'vs '+V.rankOpp.n+' 🤖 (bot) · '+rankOf(V.rankOpp.rr).short, c:'#ffd23f', t:2.4};
+  $('#over').classList.add('hidden'); RM=newMatch(ro, G.toWin, false, G.diff, G.winBy2); RM.phaseT=Math.max(RM.phaseT,3.6); G.phase='game'; broadcastRoster();
+  showVsCard(V.rankOpp);
 }
+// remember how you do against each rival
+function recordRival(win){ const o=V.rankOpp; if(!o || !o.k) return; const h=SAVE.rank.h2h=SAVE.rank.h2h||{}; const r=h[o.k]=h[o.k]||[0,0]; r[win?0:1]++; persist(); }
 function startRanked(){
   initAudio(); goFull(); closeRanked();
   net.role='host'; net.myId='host'; net.code='RANKED'; V.practice=true; V.ranked=true;
@@ -3062,7 +3270,7 @@ async function findRankedMatch(){
   }catch(e){ console.warn(e); }
   clearInterval(tick);
   const cancelled = !qState || qState.cancel; qEnd(); qStatus('');
-  if(!cancelled){ toast('No players in queue — matched with a bot 🤖'); startRanked(); }
+  if(!cancelled){ toast('No players in queue — a Ranked Rival picked up the game'); startRanked(); }
 }
 function startQueueMatch(){
   closeRanked(); V.queueMatch=true; G.ranked=true; G.toWin=11; G.winBy2=true; G.diff='pro';
@@ -3168,13 +3376,13 @@ function duoMatchReady(){
 }
 // nobody searching: two ranked bots near your duo's rating
 function duoVsBots(){
-  toast('No duos in queue — playing 2 ranked bots 🤖');
+  toast('No duos in queue — two Ranked Rivals took the game');
   const hum=[...G.players.values()].filter(p=>!p.bot), avg=hum.reduce((s,p)=>s+(p.rr||0),0)/Math.max(1,hum.length);
-  const pool=LADDER_NAMES.map(n=>({n,rr:ladderRR(n)})).sort((a,b)=>Math.abs(a.rr-avg)-Math.abs(b.rr-avg)).slice(0,6);
-  for(let i=0;i<2;i++){ const o=pool.splice(Math.floor(Math.random()*pool.length),1)[0]; const b=addRosterPlayer('bot-'+Math.random().toString(36).slice(2,8), o.n, true, 1); b.name=o.n+' 🤖'; b.rr=o.rr; }
+  const pool=RIVALS.map(R=>({R,rr:rivalRR(R)})).sort((a,b)=>Math.abs(a.rr-avg)-Math.abs(b.rr-avg)).slice(0,5);
+  const duo=[]; for(let i=0;i<2;i++){ const o=pool.splice(Math.floor(Math.random()*pool.length),1)[0]; addRivalToRoster(o.R, 1); duo.push(o.R.n); }
   G.ranked2=true; G.toWin=11; G.winBy2=true; G.diff=diffForRR(avg);
   RM=newMatch([...G.players.values()], 11, false, G.diff, true); G.phase='game'; broadcastRoster();
-  V.banner={text:'RANKED 2v2', sub:'vs bots 🤖 — no duos in queue', c:'#ffd23f', t:2.4};
+  V.banner={text:'RANKED 2v2', sub:'vs '+duo.join(' & ')+' (CPU rivals)', c:'#ffd23f', t:2.6};
 }
 
 // ---------------------------------------------------------------- crates + locker
