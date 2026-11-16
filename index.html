@@ -4102,9 +4102,10 @@ function renderShop(){
 // promo codes. Only SHA-256 fingerprints live in this file, never the codes themselves,
 // so nobody can read them out of the page source. Each one works once per device.
 const CODE_HASHES={
-  'fba182dc0f3820b44eb2bedabfa4bd4f42245fbdc36767adcbc4666300afdae8':{id:'c1', coins:1000},
-  '66b21095b423e026c83918bc2e49c0e22d5a8e731fa82ba37acab8274e8ca442':{id:'c2', coins:3000},
-  '8734e1503d8b58593a63e1086e623198de9f1118e4b93e4ec365026d98dfd052':{id:'c3', freeCrate:'secret'},
+  'fba182dc0f3820b44eb2bedabfa4bd4f42245fbdc36767adcbc4666300afdae8':{id:'c5', coins:2000},
+  '66b21095b423e026c83918bc2e49c0e22d5a8e731fa82ba37acab8274e8ca442':{id:'c6', coins:2000},
+  '8734e1503d8b58593a63e1086e623198de9f1118e4b93e4ec365026d98dfd052':{id:'c7', coins:2000},
+  '8469e29d6fc9436af0b39fa184be37339b83a9dcc809c1cf9c0470163cdddede':{id:'c8', coins:10000},
 };
 async function codeHash(s){ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode('bk19|'+s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 // older saves stored redeemed codes as plain text: swap them for ids
