@@ -171,6 +171,8 @@
   .codeCard .btn{flex:0 0 auto}
   .crate.vault{background:linear-gradient(160deg,#0b1026,#1d1a4a 60%,#00374a);color:#e8fbff;animation:exGlow 1.6s ease-in-out infinite}
   .crate.vault .cKinds{opacity:.85}
+  .crate.secretc{background:radial-gradient(circle at 50% 25%,#3a1060,#07050f 80%);color:#fff;animation:secretGlow 1.4s linear infinite}
+  .crate.secretc .cKinds{opacity:.85}
   .shake{animation:shake .4s}
   @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
   #unbox{position:fixed;inset:0;z-index:12;background:rgba(10,6,24,.86);display:flex;align-items:center;justify-content:center}
@@ -1257,6 +1259,7 @@ const CRATES=[
   {id:'drip',   name:'Drip Crate',   icon:'☄️', price:250, col:'#7b5cff', pool:['trail'],           odds:{rare:50, epic:35, legendary:13, mythic:2}},
   {id:'legend', name:'Legend Crate', icon:'👑', price:700, col:'#ffb400', pool:['cel','gfx','js','dunk','trail'], odds:{epic:50, legendary:42, mythic:8}},
   {id:'vault',  name:'Buckets Vault',icon:'🔐', price:1500, col:'#00e5ff', pool:['cel','gfx','js','dunk','trail'], odds:{legendary:35, mythic:45, exclusive:20}},
+  {id:'secret', name:'Secret Crate', icon:'🤫', price:3000, col:'#ff00e5', pool:['cel','gfx','js','dunk','trail'], odds:{secret:100}},
 ];
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 const itemOf = (kind,id) => KINDS[kind].list.find(i=>i.id===id);
@@ -2870,7 +2873,7 @@ function renderShop(){
 const CODE_HASHES={
   'fba182dc0f3820b44eb2bedabfa4bd4f42245fbdc36767adcbc4666300afdae8':{id:'c1', coins:1000},
   '66b21095b423e026c83918bc2e49c0e22d5a8e731fa82ba37acab8274e8ca442':{id:'c2', coins:3000},
-  '8734e1503d8b58593a63e1086e623198de9f1118e4b93e4ec365026d98dfd052':{id:'c3', secrets:true},
+  '8734e1503d8b58593a63e1086e623198de9f1118e4b93e4ec365026d98dfd052':{id:'c3', freeCrate:'secret'},
 };
 async function codeHash(s){ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode('bk19|'+s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 // older saves stored redeemed codes as plain text: swap them for ids
@@ -2884,10 +2887,9 @@ async function redeemCode(raw){
   if(SAVE.redeemed.includes(rw.id)){ toast('Already redeemed on this device'); return true; }
   SAVE.redeemed.push(rw.id);
   if(rw.coins){ SAVE.coins+=rw.coins; persist(); toast('🎟️ +'+rw.coins+' 💰 added!'); confetti(0); }
-  if(rw.secrets){
-    for(const k in KINDS) for(const it of KINDS[k].list) if(it.r==='secret' && !SAVE.owned[k].includes(it.id)) SAVE.owned[k].push(it.id);
-    persist(); V.flash=.6; confetti(1); toast('🤫 SECRET ITEMS UNLOCKED — check your Locker');
-    shopMain='locker'; lockTab='gfx';
+  if(rw.freeCrate){
+    SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[rw.freeCrate]=(SAVE.freeCrates[rw.freeCrate]||0)+1;
+    persist(); V.flash=.5; confetti(1); toast('🎁 FREE Secret Crate added — open it below!'); shopMain='crates';
   }
   renderShop(); return true;
 }
@@ -2899,7 +2901,7 @@ function renderCrates(box){
   cc.append(inp,go); box.append(cc);
   for(const cr of CRATES){
     const locked = cr.code && !SAVE.vault;
-    const card=el('div','crate'+(cr.id==='vault'?' vault':'')); card.style.setProperty('--cc', cr.col);
+    const card=el('div','crate'+(cr.id==='vault'?' vault':cr.id==='secret'?' secretc':'')); card.style.setProperty('--cc', cr.col);
     card.append(el('div','cIcon', locked?'🔒':cr.icon), el('b','',cr.name),
       el('small','cKinds', cr.pool.length===5 ? 'Everything' : cr.pool.map(k=>KINDS[k].label).join(' + ')));
     const odds=el('div','odds');
@@ -2913,7 +2915,8 @@ function renderCrates(box){
       inp.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Enter') go.click(); });
       row.append(inp,go); card.append(row);
     } else {
-      const b=el('button','btn orange','Open · 💰 '+cr.price); b.disabled=SAVE.coins<cr.price; b.onclick=()=>openCrate(cr.id); card.append(b);
+      const free=(SAVE.freeCrates||{})[cr.id]||0;
+      const b=el('button','btn orange', free ? '🎁 Open FREE ('+free+')' : 'Open · 💰 '+cr.price); b.disabled=!free && SAVE.coins<cr.price; b.onclick=()=>openCrate(cr.id); card.append(b);
     }
     box.append(card);
   }
@@ -2926,7 +2929,7 @@ function renderLocker(box){
   for(const it of list){
     const own=SAVE.owned[lockTab].includes(it.id), eq=SAVE[lockTab]===it.id;
     const d=el('div','item r-'+it.r+(eq?' eq':'')+(own?'':' locked')); d.style.setProperty('--rc', RAR[it.r].c);
-    d.append(el('div','rtag', RAR[it.r].n), el('div','ic', own?it.icon:'❔'), el('b','', own?it.name:'???'), el('small','', own?it.desc:(it.r==='secret'?'🤫 Only a secret code unlocks this':it.r==='exclusive'?'Only in the Buckets Vault':'Found in crates')));
+    d.append(el('div','rtag', RAR[it.r].n), el('div','ic', own?it.icon:'❔'), el('b','', own?it.name:'???'), el('small','', own?it.desc:(it.r==='secret'?'🤫 Only in the Secret Crate':it.r==='exclusive'?'Only in the Buckets Vault':'Found in crates')));
     if(own){
       const row=el('div','row'), pv=el('button','btn pv','▶'), b=el('button','btn'+(eq?'':' yellow'), eq?'Equipped ✓':'Equip');
       pv.title='Preview'; pv.onclick=()=>previewItem(lockTab,it.id);
@@ -2946,8 +2949,10 @@ function rollCrate(cr){
 }
 function openCrate(id){
   const cr=CRATES.find(c=>c.id===id); if(!cr || (cr.code && !SAVE.vault)) return;
-  if(SAVE.coins<cr.price){ toast('Not enough 💰 — go win some games'); return; }
-  SAVE.coins-=cr.price;
+  // a free open (from a code) is used before coins
+  SAVE.freeCrates=SAVE.freeCrates||{};
+  if(SAVE.freeCrates[cr.id]>0) SAVE.freeCrates[cr.id]--;
+  else { if(SAVE.coins<cr.price){ toast('Not enough 💰 — go win some games'); return; } SAVE.coins-=cr.price; }
   // snapshot what you owned BEFORE this open, so the reel's OWNED tags don't count the prize you're about to win
   const ownedBefore={}; for(const k in SAVE.owned) ownedBefore[k]=new Set(SAVE.owned[k]);
   const win=rollCrate(cr), dup=ownedBefore[win.kind].has(win.id);
@@ -2979,7 +2984,7 @@ function revealWin(){
   $('#ubNote').className = w.dup ? 'dupNote' : 'newNote';
   $('#ubDup').classList.toggle('hidden', !w.dup);
   const isEq=SAVE[w.kind]===w.id; $('#ubEquip').textContent=isEq?'Equipped ✓':'Equip'; $('#ubEquip').disabled=isEq;
-  $('#ubAgain').textContent='Open another · 💰 '+lastCrate.price; $('#ubAgain').disabled=SAVE.coins<lastCrate.price;
+  { const fr=(SAVE.freeCrates||{})[lastCrate.id]||0; $('#ubAgain').textContent = fr ? 'Open another · FREE ('+fr+')' : 'Open another · 💰 '+lastCrate.price; $('#ubAgain').disabled=!fr && SAVE.coins<lastCrate.price; }
   if(RORDER.indexOf(w.r)>=3){ confetti(0); V.flash=.45; }
   updateCoinUI(); renderShop();
 }
