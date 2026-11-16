@@ -121,6 +121,14 @@
   @keyframes gbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
   .setHead{grid-column:1/-1;font-weight:700;font-size:13px;opacity:.7;margin:6px 0 -2px;letter-spacing:1px}
   .item .stag{font-size:10px;font-weight:700;opacity:.65}
+  #shopList.lookBox{display:flex;flex-direction:column;gap:7px}
+  #shop #lookCv{position:static;inset:auto;height:auto;flex:0 0 auto;width:100%;max-width:360px;align-self:center;border:3px solid var(--ink);border-radius:16px;aspect-ratio:6/5}
+  .lkRow{display:flex;align-items:center;gap:6px}
+  .lkRow b{width:84px;font-size:13px}
+  .lkRow .lkA{flex:0 0 36px;height:36px;padding:0;font-size:22px}
+  .lkVal{flex:1;display:flex;flex-wrap:wrap;gap:4px;justify-content:center;font-weight:700;font-size:14px}
+  .lkVal .sw{width:20px;height:20px;border-radius:50%;border:2px solid var(--ink);cursor:pointer}
+  .lkVal .sw.on{outline:3px solid var(--yellow);outline-offset:1px;transform:scale(1.15)}
   #shop{z-index:8;right:16px;top:16px;bottom:16px;width:min(440px,calc(100vw - 32px));display:flex;flex-direction:column;padding:18px}
   #shop .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
   #shop h2{margin:0;font-size:26px}
@@ -1432,7 +1440,7 @@ function onHostData(conn,d){
   }
   hostApply(id, d);
 }
-function setGear(r, d){ for(const k in KINDS) if(typeof d[k]==='string' && KINDS[k].list.some(i=>i.id===d[k])) r[k]=d[k]; }
+function setGear(r, d){ for(const k in KINDS) if(typeof d[k]==='string' && KINDS[k].list.some(i=>i.id===d[k])) r[k]=d[k]; if(parseLook(d.lk)) r.lk=d.lk; }
 function hostApply(id, d){
   if(d.t==='gear'){ const r=G.players.get(id); if(r){ setGear(r,d); broadcastRoster(); } return; }
   if(d.t==='team'){ if(G.phase!=='lobby') return; const r=G.players.get(id); if(!r) return; const t=1-r.team; if(teamCount(t)<MAX_PER_TEAM){ r.team=t; broadcastRoster(); } return; }
@@ -1738,7 +1746,7 @@ for(const k in KINDS){
   if(!SAVE.owned[k].includes(SAVE[k])) SAVE[k]=KINDS[k].def;
 }
 SAVE.stats=SAVE.stats||{games:0,wins:0,pts:0,greens:0};
-function myGear(){ const g={}; for(const k in KINDS) g[k]=SAVE[k]; return g; }
+function myGear(){ const g={}; for(const k in KINDS) g[k]=SAVE[k]; if(SAVE.look) g.lk=SAVE.look; return g; }
 function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }catch(e){} updateCoinUI(); }
 function earn(n, why){ if(!V.inRoom || V.phase!=='game') return; SAVE.coins+=n; persist(); V.coinPops.push({n, why, t:1.8}); }
 V.coinPops=[]; V.rings=[]; V.bolts=[]; V.celly=null; V.beams=[]; V.arcs=[]; V.timers=[]; V.scr=[]; V.vortex=null;
@@ -2397,7 +2405,7 @@ function sfx(kind,p=1){
 // =====================================================================
 //  RENDERING  (oblique 2.5D: screen = x + z*SKEW, -(y + z*DEPTH))
 // =====================================================================
-const cv=$('#c'), ctx=cv.getContext('2d');
+const cv=$('#c'); let ctx=cv.getContext('2d');
 let W=0,H=0,dpr=1;
 function resize(){ dpr=Math.min(V.lowFx?1.25:2,devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*dpr; cv.height=H*dpr;
   $('#rotate').classList.toggle('hidden', !(touchMode && H>W)); }
@@ -2746,7 +2754,7 @@ function drawPlayer(q, hasBall, S, B, refl){
   const id=q[Q.id], x=q[Q.x], z=q[Q.z], vx=q[Q.vx], vz=q[Q.vz], act=q[Q.act], burst=q[Q.burst], stum=q[Q.stum], team=q[Q.team], zone=q[Q.fire];
   let y=q[Q.y], face=q[Q.face];
   const inf=infoOf(id), hs=hash(id);
-  const skin=SKINS[hs%SKINS.length], hair=HAIR[(hs>>3)%HAIR.length], col=TEAM_COL[team], dark=TEAM_DARK[team];
+  const LK=lookOf(inf,hs), skin=LK.skin, hair=LK.hair, col=TEAM_COL[team], dark=TEAM_DARK[team];
   const cel = V.celly && V.celly.id===id ? V.celly : null, ck = cel ? cel.kind : null;
   if(cel) y += cellyLift(cel) + (ck==='flex'||ck==='goat'||ck==='dance'||ck==='disco'||ck==='king'||ck==='griddy'||ck==='skibidi' ? Math.abs(Math.sin(cel.t*10))*14 : 0);
   // a scoring team bounces, the other team sulks
@@ -2755,7 +2763,7 @@ function drawPlayer(q, hasBall, S, B, refl){
   const speed=hyp(vx,vz), air=y>2, running=(speed>40&&!air&&stum!==2) || ck==='dance', ph=ck==='dance' ? clock*16 : (x+z)*0.05;
   const celebrating = !cel && scoredPhase && team===V.lastScoreTeam;
   const skinD=shadeCol(skin,.8), trim=team===0?'#ffffff':'#ffd23f';
-  const shoe=SHOES[(hs>>5)%SHOES.length], hairStyle=(hs>>7)%6, band=((hs>>10)&1)===1;
+  const shoe=LK.shoe, hairStyle=LK.hairStyle, band=LK.band;
   const A = refl ? .13 : 1, s=DS(z);
   const st=V.ps[id]||(V.ps[id]={ly:0,sq:0,down:-1});
   // spin move: the body turns all the way around (squash + flip so it reads as a 360 in 2.5D)
@@ -2885,6 +2893,8 @@ function drawPlayer(q, hasBall, S, B, refl){
   ctx.strokeStyle=trim; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(-5,-105); ctx.quadraticCurveTo(0,-99,5,-105); ctx.stroke();
   ctx.font=`700 17px ${FONT}`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineWidth=3; ctx.strokeStyle=INK; ctx.fillStyle=trim;
   const num=String(inf?inf.num:''); ctx.strokeText(num,face*2,-82); ctx.fillText(num,face*2,-82);
+  if(LK.acc===2 || LK.acc===4){ ctx.strokeStyle='#ffd23f'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(face*1,-108,10,.15*Math.PI,.85*Math.PI); ctx.stroke();
+    ctx.fillStyle='#ffd23f'; ctx.beginPath(); ctx.arc(face*1,-96,3.5,0,TAU); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=1.2; ctx.stroke(); }
   // ---------- head
   ctx.fillStyle=skin; ctx.fillRect(-4,-117,8,10);
   const hx=face*2, hy=-128;
@@ -2916,6 +2926,10 @@ function drawPlayer(q, hasBall, S, B, refl){
   else if(mouth==='grin'){ ctx.beginPath(); ctx.arc(mx,my-2,5,.15*Math.PI,.85*Math.PI); ctx.closePath(); ctx.fill(); ctx.fillStyle='#fff'; ctx.fillRect(mx-3.5,my-1.6,7,1.8); }
   else if(mouth==='grit'){ ctx.fillStyle='#fff'; rrect(mx-4,my-2.5,8,5,1.5); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=1.5; ctx.stroke(); ctx.beginPath(); ctx.moveTo(mx-4,my); ctx.lineTo(mx+4,my); ctx.stroke(); }
   else { ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(mx-3,my); ctx.lineTo(mx+3,my-.5); ctx.stroke(); }
+  if(LK.acc===1 || LK.acc===4){ ctx.fillStyle='#111'; rrect(ex-face*7-5,ey-4.5,15,8,3); ctx.fill(); ctx.fillStyle='rgba(120,200,255,.6)'; ctx.fillRect(ex-face*3-2,ey-3,4,2);
+    ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(ex-face*7,ey-1); ctx.lineTo(hx-face*4,ey-2); ctx.stroke(); }
+  if(LK.acc===3){ ctx.strokeStyle='#1b1530'; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(hx,hy-2,17,Math.PI*1.1,Math.PI*1.9); ctx.stroke();
+    ctx.fillStyle='#ff5a4f'; rrect(hx-face*3-5,hy-6,10,13,4); ctx.fill(); ctx.strokeStyle=INK; ctx.lineWidth=2; ctx.stroke(); }
   // ---------- front arm (over everything)
   const fArm=ik(fS[0],fS[1],fH[0],fH[1],28,28,flex?-face:face); limb(fS[0],fS[1],fArm,9.5,8.5,skin); hand(fArm[2],fArm[3],skin);
   if(act===3){ ctx.fillStyle=skin; ctx.beginPath(); ctx.ellipse(fArm[2]+face*4,fArm[3]+3,4,2.5,face*.8,0,TAU); ctx.fill(); }   // flicked wrist
@@ -2929,6 +2943,24 @@ function drawPlayer(q, hasBall, S, B, refl){
 }
 const INK='#1b1530';
 const SHOES=['#f8f8ff','#1b1530','#ff5a4f','#47e27a','#ffd23f','#3d8bff','#c77dff','#ff8a1f'];
+// ---- CHARACTER LOOK: skin · hair style · hair color · shoes · headband · accessory
+// Stored as a short string "skin.hs.hc.shoe.band.acc" so it rides along with gear over the network.
+const LOOK_HAIRC=['#1b1530','#3b2314','#6b3e1f','#d9a441','#7a1f1f','#e8e8f0','#ff5a4f','#3d8bff','#ff6fb5','#47e27a','#c77dff'];
+const LOOK_PARTS=[
+  {k:'skin', n:'Skin',       count:()=>SKINS.length},
+  {k:'hs',   n:'Hair',       count:()=>6, names:['Short','Afro','Flat Top','Dreads','Bald','Twists']},
+  {k:'hc',   n:'Hair Color', count:()=>LOOK_HAIRC.length},
+  {k:'shoe', n:'Shoes',      count:()=>SHOES.length},
+  {k:'band', n:'Headband',   count:()=>2, names:['Off','On']},
+  {k:'acc',  n:'Extra',      count:()=>5, names:['None','Shades','Gold Chain','Headphones','Shades + Chain']},
+];
+function parseLook(s){ if(typeof s!=='string' || !/^\d{1,2}(\.\d{1,2}){5}$/.test(s)) return null; const a=s.split('.').map(Number);
+  return LOOK_PARTS.every((p,i)=>a[i]<p.count()) ? a : null; }
+function lookOf(inf, hs){
+  const a=inf && parseLook(inf.lk);
+  if(a) return {skin:SKINS[a[0]], hair:LOOK_HAIRC[a[2]], shoe:SHOES[a[3]], hairStyle:a[1], band:a[4]===1, acc:a[5]};
+  return {skin:SKINS[hs%SKINS.length], hair:HAIR[(hs>>3)%HAIR.length], shoe:SHOES[(hs>>5)%SHOES.length], hairStyle:(hs>>7)%6, band:((hs>>10)&1)===1, acc:0};
+}
 // two-bone IK: returns [jointX, jointY, endX, endY]
 function ik(ax,ay,bx,by,l1,l2,bend){
   let dx=bx-ax, dy=by-ay, d=hyp(dx,dy); const mx=l1+l2-0.5;
@@ -3767,7 +3799,7 @@ function duoVsBots(){
 // ---------------------------------------------------------------- crates + locker
 let shopMain='crates', lockTab='gfx', lastCrate=null, ubWin=null;
 function updateCoinUI(){ document.querySelectorAll('.coinCount').forEach(e=>e.textContent=SAVE.coins); }
-function openShop(mode){ if(typeof mode==='string') shopMain=mode; else shopMain='crates';
+function openShop(mode){ if(typeof mode==='string') shopMain=mode; else shopMain='crates'; if(shopMain==='locker') lockTab='look';
   V.shopOpen=true; $('#home').classList.add('hidden'); $('#lobby').classList.add('hidden'); $('#shop').classList.remove('hidden'); renderShop(); }
 function closeShop(){ V.shopOpen=false; $('#shop').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); else renderLobby(); }
 function el(tag, cls, text){ const e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; }
@@ -3775,11 +3807,13 @@ function renderShop(){
   updateCoinUI();
   document.querySelectorAll('#mainTabs button').forEach(b=>b.classList.toggle('on', b.dataset.main===shopMain));
   $('#shopTitle').textContent = shopMain==='crates' ? '🛒 Shop' : '🎒 Locker';
-  if(shopMain==='locker' && lockTab==='special') lockTab='cel';
+  if(shopMain==='locker' && lockTab==='special') lockTab='look';
+  if(shopMain==='crates' && lockTab==='look') lockTab='gfx';
+  V.lookOpen = shopMain==='locker' && lockTab==='look';
   // category tabs (shared by Shop + Locker); the Shop also has a ✨ Special tab
   const tabs=$('#lockTabs'); tabs.innerHTML='';
-  const cats=[...Object.keys(KINDS), ...(shopMain==='crates'?['special']:[])];
-  for(const k of cats){ const lab = k==='special' ? '✨ Special' : KINDS[k].icon+' '+KINDS[k].label+(shopMain==='locker' ? ' '+SAVE.owned[k].length+'/'+KINDS[k].list.length : '');
+  const cats=[...(shopMain==='locker'?['look']:[]), ...Object.keys(KINDS), ...(shopMain==='crates'?['special']:[])];
+  for(const k of cats){ const lab = k==='special' ? '✨ Special' : k==='look' ? '🧍 Look' : KINDS[k].icon+' '+KINDS[k].label+(shopMain==='locker' ? ' '+SAVE.owned[k].length+'/'+KINDS[k].list.length : '');
     const b=el('button', k===lockTab?'on':'', lab); b.onclick=()=>{ lockTab=k; renderShop(); }; tabs.append(b); }
   const box=$('#shopList'); box.innerHTML=''; box.className = shopMain==='crates' ? 'crateGrid' : 'lockGrid';
   if(shopMain==='crates') renderCrates(box); else renderLocker(box);
@@ -3841,7 +3875,46 @@ function renderCrates(box){
     box.append(card);
   }
 }
+// ---------------------------------------------------------------- 🧍 LOOK (character customization)
+function renderLook(box){
+  box.className='lookBox';
+  const cvs=el('canvas'); cvs.id='lookCv'; cvs.width=360; cvs.height=300; box.append(cvs);
+  const cur=parseLook(SAVE.look)||[0,0,0,0,0,0];
+  for(let i=0;i<LOOK_PARTS.length;i++){
+    const P2=LOOK_PARTS[i], row=el('div','lkRow'), n=P2.count();
+    const set=v=>{ cur[i]=(v+n)%n; SAVE.look=cur.join('.'); persist(); syncGear(); renderShop(); };
+    const prev=el('button','btn lkA','‹'), next=el('button','btn lkA','›'); prev.onclick=()=>set(cur[i]-1); next.onclick=()=>set(cur[i]+1);
+    const val=el('div','lkVal');
+    if(P2.k==='skin'||P2.k==='hc'||P2.k==='shoe'){
+      const pal = P2.k==='skin'?SKINS : P2.k==='hc'?LOOK_HAIRC : SHOES;
+      pal.forEach((c,j)=>{ const sw=el('span','sw'+(j===cur[i]?' on':'')); sw.style.background=c; sw.onclick=()=>set(j); val.append(sw); });
+    } else val.textContent=P2.names[cur[i]];
+    row.append(el('b','',P2.n), prev, val, next); box.append(row);
+  }
+  const btns=el('div','row');
+  const rnd1=el('button','btn yellow','🎲 Random'); rnd1.onclick=()=>{ SAVE.look=LOOK_PARTS.map(p=>Math.floor(Math.random()*p.count())).join('.'); persist(); syncGear(); renderShop(); };
+  const auto=el('button','btn','↺ Default'); auto.onclick=()=>{ SAVE.look=null; persist(); syncGear(); renderShop(); };
+  btns.append(rnd1,auto); box.append(btns);
+  box.append(el('p','how','Everyone sees your look in online games.'));
+  if(!V.lookLoop){ V.lookLoop=true; requestAnimationFrame(drawLookPreview); }
+}
+function drawLookPreview(){
+  const c=$('#lookCv');
+  if(!c || !V.lookOpen || !V.shopOpen){ V.lookLoop=false; return; }
+  requestAnimationFrame(drawLookPreview);
+  const pc=c.getContext('2d'); pc.setTransform(1,0,0,1,0,0);
+  const g=pc.createLinearGradient(0,0,0,c.height); g.addColorStop(0,'#2d2050'); g.addColorStop(1,'#1b1530'); pc.fillStyle=g; pc.fillRect(0,0,c.width,c.height);
+  pc.fillStyle='rgba(255,210,63,.15)'; pc.beginPath(); pc.ellipse(c.width/2,c.height*.86,80,16,0,0,TAU); pc.fill();
+  DMI.set('__look',{id:'__look', name:getName(), team:0, num:23, ...myGear()});
+  const face = Math.sin(clock*.9)>0 ? 1 : -1;
+  const q=['__look',0,0,0,0,0,face,0,0,0,0,0,0,face,-1,0];
+  const main=ctx; ctx=pc;
+  try{ pc.translate(c.width/2,c.height*.86); pc.scale(1.25,1.25); drawPlayer(q,false,{ph:'lobby',p:[q],b:[0,0,0,4,null,0,null]},null,false); }
+  catch(e){ console.warn(e); }
+  finally{ ctx=main; }
+}
 function renderLocker(box){
+  if(lockTab==='look'){ renderLook(box); return; }
   // owned stuff first, rarest first; locked ones after
   const own0=id=>SAVE.owned[lockTab].includes(id);
   const list=[...KINDS[lockTab].list].sort((a,b)=>(own0(b.id)-own0(a.id)) || (RORDER.indexOf(b.r)-RORDER.indexOf(a.r)));
