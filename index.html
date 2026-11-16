@@ -1256,7 +1256,7 @@ const CRATES=[
   {id:'hooper', name:'Hooper Crate', icon:'🏀', price:300, col:'#ff8a1f', pool:['js','dunk'],       odds:{rare:45, epic:37, legendary:16, mythic:2}},
   {id:'drip',   name:'Drip Crate',   icon:'☄️', price:250, col:'#7b5cff', pool:['trail'],           odds:{rare:50, epic:35, legendary:13, mythic:2}},
   {id:'legend', name:'Legend Crate', icon:'👑', price:700, col:'#ffb400', pool:['cel','gfx','js','dunk','trail'], odds:{epic:50, legendary:42, mythic:8}},
-  {id:'vault',  name:'Buckets Vault',icon:'🔐', price:1500, col:'#00e5ff', pool:['cel','gfx','js','dunk','trail'], odds:{legendary:35, mythic:45, exclusive:20}, code:true},
+  {id:'vault',  name:'Buckets Vault',icon:'🔐', price:1500, col:'#00e5ff', pool:['cel','gfx','js','dunk','trail'], odds:{legendary:35, mythic:45, exclusive:20}},
 ];
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 const itemOf = (kind,id) => KINDS[kind].list.find(i=>i.id===id);
@@ -1281,7 +1281,7 @@ function earn(n, why){ if(!V.inRoom || V.phase!=='game') return; SAVE.coins+=n; 
 V.coinPops=[]; V.rings=[]; V.bolts=[]; V.celly=null; V.beams=[]; V.arcs=[]; V.timers=[]; V.scr=[]; V.vortex=null;
 
 // ---------------------------------------------------------------- VFX helpers (world coords)
-function P(x,y,z,o){ V.parts.push(Object.assign({x,y,z,vx:0,vy:0,vz:0,life:1,max:1,c:'#fff',s:3,g:600},o)); }
+function P(x,y,z,o){ if(V.lowFx && Math.random()<0.45) return; if(V.parts.length>1100) V.parts.shift(); V.parts.push(Object.assign({x,y,z,vx:0,vy:0,vz:0,life:1,max:1,c:'#fff',s:3,g:600},o)); }
 function emo(x,y,z,e,o={}){ P(x,y,z,Object.assign({e, s:26, rot:0, vr:rnd(-3,3)},o)); }
 function ring(x,y,z,c,r1=120,life=.5,w=8){ V.rings.push({x,y,z,c,r1,t:life,max:life,w}); }
 function bolt(x,z,y=0){ V.bolts.push({x,z,y,t:.35,seed:Math.random()*1000}); V.flash=Math.max(V.flash,.3); }
@@ -1941,6 +1941,9 @@ function frame(){
     else if(p.sq){ ctx.fillStyle=p.c; ctx.save(); ctx.translate(px,py); ctx.rotate(p.life*8); ctx.fillRect(-p.s,-p.s*.6,p.s*2,p.s*1.2); ctx.restore(); }
     else { ctx.fillStyle=p.c; ctx.beginPath(); ctx.arc(px,py,p.s*(p.ds||1),0,TAU); ctx.fill(); } }
   draw3dShapes(dt);
+  if(V.floats.length>40) V.floats.splice(0,V.floats.length-40);
+  if(V.rings.length>60) V.rings.splice(0,V.rings.length-60);
+  if(V.r3d.length>40) V.r3d.splice(0,V.r3d.length-40);
   ctx.globalAlpha=1;
   // rainbow arcs (shooter -> rim)
   for(let i=V.arcs.length-1;i>=0;i--){ const ar=V.arcs[i]; ar.t-=dt; if(ar.t<=0){ V.arcs.splice(i,1); continue; }
@@ -1983,7 +1986,9 @@ function drawCrowd(dt){
   ctx.fillStyle='#2b2450'; for(let r=0;r<7;r++) ctx.fillRect(-900,base-(50+r*58),COURT_W+1900,10);
   V.cheer=Math.max(0,V.cheer-dt);
   const sk=zc*SKEW;
+  let ci=0;
   for(const c of crowd){
+    if(V.lowFx && (ci++&1)) continue;                 // low-FX: half the crowd
     const jump = V.cheer>0 ? Math.max(0,Math.sin(clock*14+c.ph))*14*Math.min(1,V.cheer) : Math.sin(clock*2+c.ph)*1.5;
     const x=c.x+sk, y=base-(c.y+40+jump);
     ctx.fillStyle=c.c; ctx.beginPath(); ctx.arc(x,y,10,0,TAU); ctx.fill(); ctx.fillRect(x-11,y+9,22,22);
@@ -2863,7 +2868,6 @@ function renderShop(){
 // promo codes. Only SHA-256 fingerprints live in this file, never the codes themselves,
 // so nobody can read them out of the page source. Each one works once per device.
 const CODE_HASHES={
-  '00ecde49491bfb02da8944f0ec9c7a592745c8dbbbf6c0715ea073aaaf3a70d0':{id:'vault', vault:true},
   'fba182dc0f3820b44eb2bedabfa4bd4f42245fbdc36767adcbc4666300afdae8':{id:'c1', coins:1000},
   '66b21095b423e026c83918bc2e49c0e22d5a8e731fa82ba37acab8274e8ca442':{id:'c2', coins:3000},
   '8734e1503d8b58593a63e1086e623198de9f1118e4b93e4ec365026d98dfd052':{id:'c3', secrets:true},
@@ -2895,7 +2899,7 @@ function renderCrates(box){
   cc.append(inp,go); box.append(cc);
   for(const cr of CRATES){
     const locked = cr.code && !SAVE.vault;
-    const card=el('div','crate'+(cr.code?' vault':'')); card.style.setProperty('--cc', cr.col);
+    const card=el('div','crate'+(cr.id==='vault'?' vault':'')); card.style.setProperty('--cc', cr.col);
     card.append(el('div','cIcon', locked?'🔒':cr.icon), el('b','',cr.name),
       el('small','cKinds', cr.pool.length===5 ? 'Everything' : cr.pool.map(k=>KINDS[k].label).join(' + ')));
     const odds=el('div','odds');
