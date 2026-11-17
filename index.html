@@ -1250,7 +1250,8 @@ function relaySock(R){
     for(const t of W.subs) s.sub(t);
     s.onmsg=(t,x)=>{ if(W.onmsg) W.onmsg(t,x); };
     s.onopen=()=>{ W.open=true; W.everOpen=true; W.fails=0; if(W.onopen) W.onopen(); };
-    s.onclose=()=>{ W.open=false; if(W.dead) return; W.fails++; setTimeout(mk, Math.min(15000, 1500*W.fails)); };
+    // a relay this Wi-Fi blocks: back off fast so we don't keep hammering the network
+    s.onclose=()=>{ W.open=false; if(W.dead) return; W.fails++; setTimeout(mk, W.everOpen ? Math.min(15000,1500*W.fails) : Math.min(90000, 4000*W.fails*W.fails)); };
   };
   W.sub=t=>{ W.subs.add(t); if(W.s) W.s.sub(t); };
   W.pub=(t,x)=>W.s?W.s.pub(t,x):false;
@@ -1258,21 +1259,27 @@ function relaySock(R){
   mk(); return W;
 }
 
-// ---- a "connection" over a relay that looks like a PeerJS DataConnection to the rest of the game
-function RelayConn(sock, me, other, topicOut){
-  const c={peer:'r_'+other, rid:other, open:true, isRelay:true, relay:sock.R.id, sock, _h:{}, n:0, lastIn:performance.now(), lastSn:-1};
+// ---- a "connection" over relays that looks like a PeerJS DataConnection to the rest of the game.
+// Every message goes out on up to TWO relays at once; the other side keeps whichever copy lands first
+// (messages carry a sequence number n, duplicates are dropped). Cuts lag spikes + spreads the load.
+function RelayConn(socks, me, other, topicOut){
+  const c={peer:'r_'+other, rid:other, open:true, isRelay:true, socks:new Set(socks), _h:{}, n:0, lastIn:performance.now(), lastSn:-1, lastN:0};
+  c.relay=socks.map(s=>s.R.id).join('+');
   c.on=(ev,fn)=>{ (c._h[ev]=c._h[ev]||[]).push(fn); };
   c.emit=(ev,x)=>{ for(const fn of (c._h[ev]||[])) try{ fn(x); }catch(e){ console.warn(e); } };
-  c.raw=d=>sock.pub(topicOut, JSON.stringify({f:me, o:other, n:++c.n, d}));
+  c.raw=d=>{ const str=JSON.stringify({f:me, o:other, n:++c.n, d}); for(const s of c.socks) s.pub(topicOut, str); };
   c.send=d=>{ if(c.open) c.raw(d); };
   c.kill=()=>{ if(!c.open) return; c.open=false; clearInterval(c.hb); c.emit('close'); };
   c.close=()=>{ if(!c.open) return; c.raw({t:'bye'}); c.kill(); };
+  // drop duplicates / stale copies (unicast messages count with n; snapshots with their own counter)
+  c.fresh=m=>{ if(m.d && m.d.t==='s'){ if(m.n<=c.lastSn && c.lastSn-m.n<5000) return false; c.lastSn=m.n; return true; }
+    if(!m.n) return true; if(m.n<=c.lastN && c.lastN-m.n<5000) return false; c.lastN=m.n; return true; };
   return c;
 }
 
 // ---- host side: listen for players on every relay
 function RelayHub(code, onConn){
-  const H={code, socks:[], conns:new Map(), st:new Map(), dead:false};
+  const H={code, socks:[], conns:new Map(), sn:0, last:0, pend:[], dead:false};
   const tin=relayTopic(code,'h');
   for(const R of RELAYS){
     const s=relaySock(R); H.socks.push(s); s.sub(tin);
@@ -1281,13 +1288,14 @@ function RelayHub(code, onConn){
       let m; try{ m=JSON.parse(str); }catch(e){ return; }
       if(!m || typeof m.f!=='string' || m.f.length>16 || !/^[a-z0-9]+$/.test(m.f) || !m.d || typeof m.d!=='object') return;
       const f=m.f, d=m.d;
-      if(d.t==='knock'){ s.pub(relayTopic(code,'c.'+f), JSON.stringify({f:'host', o:f, n:0, d:{t:'knockok'}})); return; }
+      if(d.t==='knock'){ s.pub(relayTopic(code,'c.'+f), JSON.stringify({f:'host', o:f, n:0, d:{t:'knockok', ts:d.ts}})); return; }
       let c=H.conns.get(f);
       if(!c){ if(d.t!=='hello' && d.t!=='duo?') return;     // a new player's first message (rooms / duo signposts)
-        c=RelayConn(s,'host',f,relayTopic(code,'c.'+f)); c.hub=H; H.conns.set(f,c);
+        c=RelayConn([s],'host',f,relayTopic(code,'c.'+f)); c.hub=H; H.conns.set(f,c);
         c.on('close',()=>{ if(H.conns.get(f)===c) H.conns.delete(f); }); onConn(c); }
-      else if(c.sock!==s) return;                 // a player only talks on the relay they picked
+      else if(!c.socks.has(s)){ if(c.socks.size>=2) return; c.socks.add(s); c.relay=[...c.socks].map(x=>x.R.id).join('+'); }   // their 2nd relay
       c.lastIn=performance.now();
+      if(!c.fresh(m)) return;
       if(d.t==='bye'){ c.kill(); return; }
       if(d.t==='hb') return;
       c.emit('data', d);
@@ -1295,42 +1303,41 @@ function RelayHub(code, onConn){
   }
   H.tick=setInterval(()=>{ const now=performance.now();
     for(const c of [...H.conns.values()]){ if(now-c.lastIn>12000) c.kill(); else c.raw({t:'hb'}); } }, 2000);
-  // one shared snapshot per relay (not one per player), throttled; events from skipped frames ride along
+  // one shared snapshot per relay (not one per player), throttled; events from skipped frames ride along.
+  // Same sequence number on every relay so players can de-duplicate.
   H.snap=s=>{ const now=performance.now(), used=new Set();
-    for(const c of H.conns.values()) if(c.open) used.add(c.sock);
-    for(const sk of used){
-      let st=H.st.get(sk); if(!st){ st={last:0, pend:[], n:0}; H.st.set(sk,st); }
-      if(now-st.last<RELAY_SNAP_MS-4){ if(s.ev && s.ev.length) st.pend.push(...s.ev); continue; }
-      st.last=now; const d=st.pend.length?{...s, ev:[...st.pend, ...(s.ev||[])]}:s; st.pend=[];
-      sk.pub(relayTopic(code,'c.all'), JSON.stringify({f:'host', o:'*', n:++st.n, d}));
-    } };
+    for(const c of H.conns.values()) if(c.open) for(const sk of c.socks) used.add(sk);
+    if(!used.size) return;
+    if(now-H.last<RELAY_SNAP_MS-4){ if(s.ev && s.ev.length) H.pend.push(...s.ev); return; }
+    H.last=now; const d=H.pend.length?{...s, ev:[...H.pend, ...(s.ev||[])]}:s; H.pend=[];
+    const str=JSON.stringify({f:'host', o:'*', n:++H.sn, d});
+    for(const sk of used) sk.pub(relayTopic(code,'c.all'), str); };
   H.anyOpen=()=>H.socks.some(s=>s.open);
   H.close=()=>{ H.dead=true; clearInterval(H.tick); for(const c of H.conns.values()) try{ c.raw({t:'bye'}); }catch(e){} for(const s of H.socks) s.close(); };
   return H;
 }
 
-// ---- player side: knock on every relay; the host answers on the ones it can hear
+// ---- player side: knock on every relay and time how fast the host answers on each one
 function relayDial(code, onAck){
   const rid=Math.random().toString(36).slice(2,10);
   const D={rid, socks:[], chosen:null, dead:false};
   const tme=relayTopic(code,'c.'+rid), tall=relayTopic(code,'c.all'), th=relayTopic(code,'h');
   for(const R of RELAYS){
     const s=relaySock(R); D.socks.push(s); s.sub(tme); s.sub(tall);
-    const knock=()=>{ if(!D.chosen && !D.dead && s.open) s.pub(th, JSON.stringify({f:rid, o:'host', n:0, d:{t:'knock'}})); };
+    const knock=()=>{ if(!D.chosen && !D.dead && s.open) s.pub(th, JSON.stringify({f:rid, o:'host', n:0, d:{t:'knock', ts:performance.now()}})); };
     s.onopen=()=>{ s.t0=s.t0||performance.now(); setTimeout(knock,150); };
-    s.kt=setInterval(knock, 1200);
+    s.kt=setInterval(knock, 1000);
     s.onmsg=(t,str)=>{
       let m; try{ m=JSON.parse(str); }catch(e){ return; }
       if(!m || m.f!=='host' || !m.d || typeof m.d!=='object') return;
-      if(!D.chosen){ if(m.d.t==='knockok' && m.o===rid) onAck(s); return; }
-      if(s===D.chosen.sock) D.chosen.got(m);
+      if(!D.chosen){ if(m.d.t==='knockok' && m.o===rid){ const rtt=performance.now()-(+m.d.ts||0); if(rtt>0 && rtt<10000) s.rtt=Math.min(s.rtt??1e9, rtt); onAck(s); } return; }
+      if(D.chosen.socks.has(s)) D.chosen.got(m);
     };
   }
-  D.choose=s=>{
-    for(const x of D.socks){ clearInterval(x.kt); if(x!==s) x.close(); }
-    const c=RelayConn(s, rid, 'host', th); c.peer='host'; D.chosen=c;
-    c.got=m=>{ c.lastIn=performance.now(); const d=m.d;
-      if(d.t==='s'){ if(m.n<=c.lastSn && c.lastSn-m.n<1000) return; c.lastSn=m.n; }
+  D.choose=picks=>{
+    for(const x of D.socks){ clearInterval(x.kt); if(!picks.includes(x)) x.close(); }
+    const c=RelayConn(picks, rid, 'host', th); c.peer='host'; D.chosen=c;
+    c.got=m=>{ c.lastIn=performance.now(); if(!c.fresh(m)) return; const d=m.d;
       if(d.t==='bye'){ c.kill(); return; }
       if(d.t==='hb' || d.t==='knockok') return;
       c.emit('data', d); };
@@ -1342,10 +1349,11 @@ function relayDial(code, onAck){
 }
 
 // ---- connect to a room. Direct WebRTC and every relay at once: direct wins if it opens quickly,
-//      otherwise the first relay the host answered on. Resolves {conn, peer, id, via} or {fail}.
+//      otherwise the two FASTEST relays the host answered on. Resolves {conn, peer, id, via} or {fail}.
 function dial(code, o={}){
   return new Promise(res=>{
-    let done=false, peer=null, D=null, relayS=null, unavailable=false, peerErr=null;
+    let done=false, peer=null, D=null, unavailable=false, peerErr=null;
+    const acks=new Set();
     const t0=performance.now(), directWait=o.directWait??2500;
     const useDirect=NET_FORCE!=='relay' && typeof Peer!=='undefined', useRelay=NET_FORCE!=='direct';
     const cleanup=()=>{ try{ peer&&peer.destroy(); }catch(e){} if(D) D.close(); };
@@ -1358,16 +1366,16 @@ function dial(code, o={}){
         conn.on('open',()=>{ if(done || !useDirect){ try{conn.close()}catch(e){} return; } if(D) D.close(); fin({conn, peer, id, via:'direct'}); }); });
       peer.on('error', e=>{ if(e.type==='peer-unavailable') unavailable=true; else peerErr=e.type; });
     }catch(e){ peer=null; } }
-    // collect every relay the host answers on; take the highest on the RELAYS list (lighter ones first)
     let firstAck=0;
-    if(useRelay) D=relayDial(code, s=>{ if(!firstAck) firstAck=performance.now();
-      if(!relayS || RELAYS.indexOf(s.R)<RELAYS.indexOf(relayS.R)) relayS=s; });
+    if(useRelay) D=relayDial(code, s=>{ if(!firstAck) firstAck=performance.now(); acks.add(s); });
     const iv=setInterval(()=>{
       if(o.cancel && o.cancel()){ cleanup(); fin({fail:'cancel'}); return; }
       const el=performance.now()-t0;
-      if(relayS && performance.now()-firstAck>500 && (el>directWait || unavailable || peerErr || !useDirect)){
-        const c=D.choose(relayS); try{ peer&&peer.destroy(); }catch(e){}
-        fin({conn:c, peer:null, id:'r_'+D.rid, via:relayS.R.id}); return; }
+      // wait ~0.8s after the first answer so slower relays can report their timing too
+      if(acks.size && performance.now()-firstAck>800 && (el>directWait || unavailable || peerErr || !useDirect)){
+        const picks=[...acks].sort((a,b)=>(a.rtt??1e9)-(b.rtt??1e9)).slice(0,2);
+        const c=D.choose(picks); try{ peer&&peer.destroy(); }catch(e){}
+        fin({conn:c, peer:null, id:'r_'+D.rid, via:c.relay}); return; }
       if(unavailable && el>(o.unavailWait??7000)){ cleanup(); fin({fail:'none'}); }   // relay-only rooms aren't on the PeerJS server, so give relays time
       if(o.onTick) o.onTick(el, D);
     },100);
@@ -1381,6 +1389,8 @@ function acceptConn(conn){
   conn.on('close', ()=>dropConn(conn));
   conn.on('error', ()=>dropConn(conn));
 }
+// joiners ping the host every 2s so we can show the real lag
+setInterval(()=>{ if(net.role==='client' && net.hostConn && net.hostConn.open && V.inRoom) try{ net.hostConn.send({t:'ping', ts:performance.now()}); }catch(e){} }, 2000);
 function sendSnap(s){
   for(const c of net.conns.values()) if(c.open && !c.isRelay) c.send(s);
   if(net.hub) net.hub.snap(s);
@@ -1436,6 +1446,7 @@ function dropConn(conn){
 function onHostData(conn,d){
   if(!d || typeof d!=='object') return;
   const id=conn.peer;
+  if(d.t==='ping'){ conn.send({t:'pong', ts:d.ts}); return; }
   if(d.t==='hello'){
     if(G.players.has(id)) return;
     // ranked queue: only a host that's still waiting takes a challenger (one at a time)
@@ -1495,9 +1506,11 @@ function onClientData(d){
   else if(d.t==='full') fatal('That room is full (3v3 max).');
   else if(d.t==='roster') applyRoster(d);
   else if(d.t==='ev') handleEvent(d.e,false);
+  else if(d.t==='pong'){ const r=performance.now()-(+d.ts||0); if(r>0 && r<5000) V.rtt=V.rtt?lerp(V.rtt,r,.3):r; }
   else if(d.t==='migrate') migrateTo(String(d.code||'').slice(0,8), d.tag);
   else if(d.t==='s'){
-    d.rt=performance.now(); V.snaps.push(d); if(V.snaps.length>40) V.snaps.shift(); V.lastSnap=d;
+    d.rt=performance.now(); if(V.lastSnap && V.lastSnap.rt){ const g=Math.min(400,d.rt-V.lastSnap.rt); V.gapA=V.gapA?lerp(V.gapA,g,.06):g; V.gapJ=V.gapJ!==undefined?lerp(V.gapJ,Math.abs(g-V.gapA),.06):10; }
+    V.snaps.push(d); if(V.snaps.length>40) V.snaps.shift(); V.lastSnap=d;
     if(d.ev) d.ev.forEach(e=>handleEvent(e,false));
   }
 }
@@ -2516,7 +2529,7 @@ const ctl = {
     if(keys.has('w')||keys.has('arrowup')) z+=1; if(keys.has('s')||keys.has('arrowdown')) z-=1;
     x+=this.sx; z+=this.sz; const l=hyp(x,z); if(l>1){ x/=l; z/=l; } return {x,z}; }
 };
-function pressA(){ if(ctl.aDown) return; ctl.aDown=true; ctl.aT=performance.now(); V.meterShow={start:ctl.aT, released:0, m:0}; sendAct({t:'a',d:1}); }
+function pressA(){ if(ctl.aDown) return; ctl.aDown=true; ctl.aT=performance.now(); V.meterShow={start:ctl.aT, released:0, m:0}; predictLocalMove('a'); sendAct({t:'a',d:1}); }
 function releaseA(){ if(!ctl.aDown) return; ctl.aDown=false; const m=(performance.now()-ctl.aT)/1000/METER_T; if(V.meterShow) V.meterShow.m=m; sendAct({t:'a',d:0,m:r2(m)}); }
 addEventListener('keydown', e=>{
   if(e.target.tagName==='INPUT'){ if(e.key==='Enter') (e.target.id==='code'?$('#joinBtn'):$('#hostBtn')).click(); return; }
@@ -2524,7 +2537,7 @@ addEventListener('keydown', e=>{
   if(!e.repeat){
     if(k==='j'||k===' ') pressA();
     if(k==='k') sendAct({t:'b'});
-    if(k==='l'||k==='shift') sendAct({t:'c'});
+    if(k==='l'||k==='shift'){ predictLocalMove('c'); sendAct({t:'c'}); }
     if(/^[1-8]$/.test(k)) sendAct({t:'emote', e:+k-1});
   }
   if(k===' '||k.startsWith('arrow')) e.preventDefault();
@@ -2552,7 +2565,7 @@ function bindBtn(el, down, up){
 }
 bindBtn($('#bA'), pressA, releaseA);
 bindBtn($('#bB'), ()=>sendAct({t:'b'}));
-bindBtn($('#bC'), ()=>sendAct({t:'c'}));
+bindBtn($('#bC'), ()=>{ predictLocalMove('c'); sendAct({t:'c'}); });
 let lastIn='', lastInAt=0;
 function clientSendInput(){
   if(net.role!=='client' || V.phase!=='game' || !net.hostConn || !net.hostConn.open) return;
@@ -2631,7 +2644,7 @@ function currentSnap(){
 }
 function interpState(){
   const s=V.snaps; if(!s.length) return null;
-  const rt=performance.now()-(isRelay()?125:60);   // relay: 20 snaps/s and more jitter, so buffer a bit more
+  const rt=performance.now()-interpDelay();   // buffer just enough for this connection's jitter
   while(s.length>2 && s[1].rt<=rt) s.shift();
   if(s.length<2 || rt<=s[0].rt) return s[0];
   const a=s[0], b=s[1], t=clamp((rt-a.rt)/((b.rt-a.rt)||1),0,1);
@@ -2644,17 +2657,40 @@ function interpState(){
 function predictMe(S, dt){
   const i=S.p.findIndex(q=>q[0]===net.myId); if(i<0){ V.pred=null; return; }
   const srv=V.lastSnap && V.lastSnap.p.find(q=>q[0]===net.myId); if(!srv) return;
-  const free = srv[Q.act]===0 && srv[Q.stum]===0 && srv[Q.y]<1 && srv[Q.burst]===0 && V.lastSnap.ph==='play';
-  if(!V.pred || !free){ V.pred={x:srv[Q.x], z:srv[Q.z], vx:srv[Q.vx], vz:srv[Q.vz], blend:0}; return; }
-  const P=V.pred, a=ctl.axis(), has=S.b[3]===0 && S.b[4]===net.myId, k=has?0.93:1;
-  P.vx=approach(P.vx, a.x*RUN*k, ACC*dt); P.vz=approach(P.vz, a.z*RUN*0.85*k, ACC*dt);
-  P.x=clamp(P.x+P.vx*dt, COURT_L+P_R, COURT_R-P_R); P.z=clamp(P.z+P.vz*dt, -HALF_D+12, HALF_D-12);
-  // the host's snapshot is ~half a round trip old: aim slightly ahead of it, snap if way off (collisions etc.)
-  const lead=isRelay()?0.13:0.06, ex=srv[Q.x]+srv[Q.vx]*lead-P.x, ez=srv[Q.z]+srv[Q.vz]*lead-P.z;
-  if(hyp(ex,ez)>90){ P.x+=ex; P.z+=ez; } else { const c=Math.min(1,dt*6); P.x+=ex*c; P.z+=ez*c; }
-  P.blend=Math.min(1,P.blend+dt*8);   // fade prediction in so it never pops
-  const q=S.p[i].slice(); q[Q.x]=lerp(q[Q.x],P.x,P.blend); q[Q.z]=lerp(q[Q.z],P.z,P.blend); q[Q.vx]=P.vx; q[Q.vz]=P.vz; S.p[i]=q;
+  // predicted jump-shot: your player leaves the floor the instant you press SHOOT (the host catches up)
+  let jy=-1;
+  if(V.pj){ V.pj.t+=dt; const tt=V.pj.t; jy=SHOT_JUMP*tt-0.5*GRAV*tt*tt; if(jy<=0 && tt>0.1){ V.pj=null; jy=-1; } }
+  const free = srv[Q.act]===0 && srv[Q.stum]===0 && srv[Q.y]<1 && V.lastSnap.ph==='play';
+  if(!V.pred || (!free && !V.pj && !(V.pred.bt>0))){ V.pred={x:srv[Q.x], z:srv[Q.z], vx:srv[Q.vx], vz:srv[Q.vz], blend:0, bt:0}; }
+  else {
+    const P=V.pred, a=ctl.axis(), has=S.b[3]===0 && S.b[4]===net.myId, k=has?0.93:1;
+    if(P.bt>0){ P.bt-=dt; P.vx=P.bdx*BURST_V; P.vz=P.bdz*BURST_V*0.85; }          // predicted crossover / move burst
+    else if(jy>=0){ P.vx=approach(P.vx,0,ACC*dt); P.vz=approach(P.vz,0,ACC*dt); }  // in the air on a shot
+    else { P.vx=approach(P.vx, a.x*RUN*k, ACC*dt); P.vz=approach(P.vz, a.z*RUN*0.85*k, ACC*dt); }
+    P.x=clamp(P.x+P.vx*dt, COURT_L+P_R, COURT_R-P_R); P.z=clamp(P.z+P.vz*dt, -HALF_D+12, HALF_D-12);
+    // the host's snapshot is ~half a round trip old: aim that far ahead of it, snap if way off (collisions etc.)
+    const lead=clamp((V.rtt||80)/2000, .03, .3), ex=srv[Q.x]+srv[Q.vx]*lead-P.x, ez=srv[Q.z]+srv[Q.vz]*lead-P.z;
+    if(hyp(ex,ez)>110){ P.x+=ex; P.z+=ez; } else { const c=Math.min(1,dt*(P.bt>0?2:5)); P.x+=ex*c; P.z+=ez*c; }
+    P.blend=Math.min(1,P.blend+dt*8);   // fade prediction in so it never pops
+  }
+  const P=V.pred, q=S.p[i].slice();
+  q[Q.x]=lerp(q[Q.x],P.x,P.blend); q[Q.z]=lerp(q[Q.z],P.z,P.blend); q[Q.vx]=P.vx; q[Q.vz]=P.vz;
+  if(jy>=0){ q[Q.y]=Math.max(q[Q.y],jy); if(q[Q.act]===0) q[Q.act]=2; }
+  if(P.bt>0 && q[Q.burst]===0){ q[Q.burst]=1; }
+  S.p[i]=q;
 }
+// joiner pressed a move: start it on your own screen right away
+function predictLocalMove(kind){
+  if(net.role!=='client' || V.phase!=='game' || !V.lastSnap || !V.pred) return;
+  const S=V.lastSnap, me=S.p.find(q=>q[0]===net.myId); if(!me || me[Q.y]>1 || me[Q.act]!==0 || S.ph!=='play') return;
+  const has=S.b[3]===0 && S.b[4]===net.myId;
+  if(kind==='a'){ if(has && !V.pj) V.pj={t:0}; return; }
+  if(kind==='c'){ if((V.pred.cdT||0)>performance.now()) return;
+    const a=ctl.axis(), l=hyp(a.x,a.z); if(l<0.2) return;                 // hesi = stop, nothing to predict
+    if(has){ const h=attackHoop(me[Q.team]), v=hoopVec({x:me[Q.x],z:me[Q.z]},h); if((a.x*v.ux+a.z*v.uz)/l<-0.5) return; }   // stepback: let the host do it
+    V.pred.bdx=a.x/l; V.pred.bdz=a.z/l; V.pred.bt=BURST_T; V.pred.cdT=performance.now()+BURST_CD*1000; }
+}
+function interpDelay(){ const g=V.gapA||(isRelay()?50:25), j=V.gapJ||10; return clamp(g+2.2*j+12, isRelay()?70:45, 260); }
 function rrect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function txt(s,x,y,size,color,align='center',stroke=6){
   ctx.font=`700 ${size}px ${FONT}`; ctx.textAlign=align; ctx.textBaseline='middle'; ctx.lineJoin='round';
@@ -3432,6 +3468,9 @@ function drawHUD(S, dt, real){
   const vg=ctx.createRadialGradient(W/2,H*.5,Math.min(W,H)*.35,W/2,H*.5,Math.max(W,H)*.75);
   vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(8,4,24,.55)'); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
   drawScreenFx(dt);
+  // connection quality for players who joined (the host is always instant)
+  if(net.role==='client' && V.inRoom && V.rtt){ const r=Math.round(V.rtt), c=r<120?'#47e27a':r<250?'#ffd23f':'#ff5a4f';
+    txt('📶 '+r+'ms'+(isRelay()?' · relay':''), 14, H-18, 13, c, 'left', 4); }
   // your zone: orange heat or blue frost around the screen edges
   const meZ = real ? (S.p.find(q=>q[0]===net.myId)||[])[Q.fire] : 0;
   if(meZ===1 || meZ===-1){
