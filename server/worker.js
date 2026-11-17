@@ -45,6 +45,8 @@ export class Room {
         this.state.acceptWebSocket(server, ['host']);
         server.serializeAttachment({ role: 'host', id: 'host', key });
         server.send('{"t":"_ok"}');
+        // players who were waiting on a dropped host: it's back
+        for (const w of this.state.getWebSockets('c')) { try { w.send('{"t":"_hostback"}'); } catch (e) {} }
       }
     } else {
       this.state.acceptWebSocket(server, ['c', 'c:' + id]);
@@ -78,7 +80,9 @@ export class Room {
     if (a.role === 'host') {
       // only tell players if no other host connection is still alive
       if (this.state.getWebSockets('host').some(h => h !== ws && h.readyState === 1)) return;
-      for (const w of this.state.getWebSockets('c')) { try { w.send('{"t":"_hostgone"}'); w.close(4003, 'host left'); } catch (e) {} }
+      // don't close anyone: the host may just be reconnecting after a Wi-Fi blip. Players wait (15s) for _hostback.
+      // A host that really leaves sends "bye" to everyone first, which ends the game for them right away.
+      for (const w of this.state.getWebSockets('c')) { try { w.send('{"t":"_hostgone"}'); } catch (e) {} }
     } else if (a.role === 'c') {
       for (const h of this.state.getWebSockets('host')) { try { h.send(a.id + '|{"t":"_left"}'); } catch (e) {} }
     }

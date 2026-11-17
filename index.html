@@ -403,6 +403,21 @@
 <div id="vsCard" class="hidden"></div>
 
 <script>
+// Test switches for faking a blocked network (developer use only; normal players never set this).
+// localStorage 'buckets-sim' containing: nopeer = matchmaking server blocked, noserver = our Cloudflare server blocked,
+// norelay = public relays blocked.
+(function(){ var sim=''; try{ sim=localStorage.getItem('buckets-sim')||''; }catch(e){}
+  if(!sim) return;
+  if(sim.indexOf('nopeer')>=0) window.Peer=undefined;
+  var OW=window.WebSocket;
+  window.WebSocket=function(u,p){ var s=String(u);
+    if((sim.indexOf('noserver')>=0 && s.indexOf('workers.dev')>=0) || (sim.indexOf('norelay')>=0 && !/workers\.dev|peerjs/.test(s))) u='wss://blocked.invalid/';
+    return p?new OW(u,p):new OW(u); };
+  window.WebSocket.prototype=OW.prototype; window.WebSocket.CONNECTING=0; window.WebSocket.OPEN=1; window.WebSocket.CLOSING=2; window.WebSocket.CLOSED=3;
+  console.warn('[buckets] simulating blocked network:', sim);
+})();
+</script>
+<script>
 "use strict";
 // =====================================================================
 //  CONSTANTS  (world: x = along the court, z = depth (+ is far side), y = height)
@@ -1415,19 +1430,22 @@ function serverProbe(code, rid){
 // a player's link to the room through our server. If school Wi-Fi drops it for a moment, it quietly
 // reconnects (same player id, same room) for up to 15s instead of kicking you out of the game.
 function ServerClientConn(ws0, code, rid){
-  const c=connObj({peer:'host', isRelay:true, isServer:true, relay:'server'}); let ws=ws0, lostAt=0; c.sockNow=()=>ws;
+  const c=connObj({peer:'host', isRelay:true, isServer:true, relay:'server'}); let ws=ws0, lostAt=0, hostAway=0; c.sockNow=()=>ws;
   c.send=d=>{ if(c.open && ws && ws.readyState===1) try{ ws.send(JSON.stringify(d)); }catch(e){} }; c.raw=c.send;
   c.close=()=>{ if(!c.open) return; c.send({t:'bye'}); try{ ws.close(); }catch(e){} c.kill(); };
   const attach=w=>{ ws=w;
     w.onmessage=ev=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; } if(!d || typeof d!=='object') return; c.lastIn=performance.now();
-      if(d.t==='_hostgone' || d.t==='bye'){ c.kill(); return; } if(d.t==='_nohost'){ c.kill(); return; }
+      if(d.t==='bye'){ c.kill(); return; }                                           // host really left
+      if(d.t==='_hostgone'){ if(!hostAway) hostAway=performance.now(); V.netLost=true; return; }   // host's Wi-Fi blipped: wait for it
+      if(d.t==='_hostback'){ hostAway=0; V.netLost=false; return; }
+      if(d.t==='_nohost'){ c.kill(); return; }
       if(typeof d.t==='string' && d.t[0]==='_') return; if(d.t==='hb') return; c.emit('data', d); };
     w.onclose=()=>{ if(!c.open || ws!==w) return; if(!lostAt) lostAt=performance.now(); V.netLost=true; setTimeout(retry, 600); }; };
   const retry=()=>{ if(!c.open) return;
     if(performance.now()-lostAt>15000){ V.netLost=false; c.kill(); return; }
     let w; try{ w=new WebSocket(srvRoom(code)+'?role=c&id='+rid); }catch(e){ setTimeout(retry,1200); return; }
     w.onmessage=ev=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
-      if(d.t==='_hosthere'){ lostAt=0; V.netLost=false; attach(w); c.lastIn=performance.now(); c.send({t:'ping', ts:performance.now()}); }
+      if(d.t==='_hosthere'){ lostAt=0; hostAway=0; V.netLost=false; attach(w); c.lastIn=performance.now(); c.send({t:'ping', ts:performance.now()}); }
       else if(d.t==='_nohost'){ again(); } };   // host may be reconnecting too: keep trying until 15s
     let next=false; const again=()=>{ if(next || ws===w || !c.open) return; next=true; try{ w.onclose=w.onerror=w.onmessage=null; w.close(); }catch(e){} setTimeout(retry,800); };
     w.onclose=w.onerror=again; setTimeout(again, 3000); };   // each attempt gets 3s, then we try again
@@ -1435,6 +1453,7 @@ function ServerClientConn(ws0, code, rid){
   // phones often don't notice a dead Wi-Fi connection for ages. The host talks at least every 2s,
   // so 3.5s of silence = the link is dead: drop it and reconnect ourselves.
   c.hb=setInterval(()=>{ if(!c.open) return; const quiet=performance.now()-c.lastIn;
+    if(hostAway){ if(performance.now()-hostAway>15000){ V.netLost=false; c.kill(); } return; }   // give a dropped host 15s to come back
     if(!lostAt && quiet>3500){ lostAt=performance.now(); V.netLost=true; const dead=ws; ws=null; try{ dead.onclose=null; dead.onmessage=null; dead.close(); }catch(e){} retry(); } }, 500);
   return c;
 }
