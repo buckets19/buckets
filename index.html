@@ -131,6 +131,7 @@
   #home .hRankBtns .grandBtn b{font-size:30px}
   #home .hLadder,#home .hPractice{width:100%;font-size:15px;padding:9px}
   #home .hLadder{background:#ffd23f}
+  #home .hParty{width:100%;font-size:15px;padding:9px;background:linear-gradient(90deg,#c77dff,#ff6fb5);color:#fff;-webkit-text-stroke:0}
   #home .how{margin:0;font-size:12px}
   #home .hBottom{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
   #home .hTile{position:relative;overflow:hidden;border:3px solid var(--ink);border-radius:16px;padding:10px 6px;font:inherit;color:#fff;cursor:pointer;
@@ -140,6 +141,14 @@
   #home .hTile .qBadge{position:absolute;top:4px;right:6px;font-style:normal}
   #home .hTile::after{content:'';position:absolute;top:-50%;left:-60%;width:40%;height:200%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45),transparent);transform:rotate(20deg);animation:gshine 3.2s ease-in-out infinite}
   .gQuest{background:linear-gradient(135deg,#1e9e4a,#47e27a)}
+  .nameStat{display:block;font-size:12px;font-weight:700;min-height:15px;margin-top:3px}
+  .nameStat.mine{color:#1e9e4a} .nameStat.taken{color:#e0352b} .nameStat.checking{opacity:.5}
+  #home .hFoot{gap:8px}
+  #acctPanel{z-index:9;left:50%;top:50%;transform:translate(-50%,-50%);width:min(460px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto}
+  #acctPanel h2{margin:0 0 6px;font-size:24px} #acctPanel h4{margin:14px 0 6px;font-size:12px;letter-spacing:2px;opacity:.6}
+  #acctBody .acRow{font-weight:700;font-size:15px;margin:4px 0}
+  #acctBody .acCode{font:700 22px ui-monospace,Menlo,monospace;letter-spacing:2px;text-align:center;padding:10px;border:3px dashed var(--ink);border-radius:12px;background:#fff;margin-bottom:6px;user-select:text;-webkit-user-select:text}
+  #acctBody .btn{width:100%;margin-top:4px} #acctBody .row .btn{width:auto;flex:0 0 auto;margin:0} #acctBody input{margin:0;text-transform:uppercase}
   #home .hFoot{display:flex;justify-content:center;margin-top:8px}
   #home .msg:empty{display:none}
   @media (max-width:700px){ #home .hGrid{grid-template-columns:1fr} #home .hTop{flex-wrap:wrap;padding-right:34px} #home .hTop .logo{font-size:36px} #home .hRankBtns .grandBtn b{font-size:24px} }
@@ -326,7 +335,7 @@
   <div class="hGrid">
     <section class="hCard hFriends">
       <h4>🏀 PLAY WITH FRIENDS</h4>
-      <label>Your name<input id="name" maxlength="12" placeholder="e.g. Splash" autocomplete="off"></label>
+      <label>Your name<input id="name" maxlength="12" placeholder="e.g. Splash" autocomplete="off"><span id="nameStat" class="nameStat"></span></label>
       <button id="hostBtn" class="btn big orange">Host a game</button>
       <div class="or">— or join a friend —</div>
       <div class="row"><input id="code" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters"><button id="joinBtn" class="btn yellow">Join</button></div>
@@ -335,6 +344,7 @@
     <section class="hCard hRanked">
       <h4>🏆 RANKED</h4>
       <div class="grandRow hRankBtns"><button id="rankedHome1" class="grandBtn gR1"><span class="gi">🏆</span><b>1v1</b><small>Climb the ladder</small></button><button id="rankedHome2" class="grandBtn gR2"><span class="gi">👥</span><b>2v2</b><small>Solo queue</small></button></div>
+      <button id="partyBtn" class="btn hParty">👫 Ranked 2v2 with a friend</button>
       <button id="rankedBtn" class="btn hLadder">📊 My rank &amp; leaderboard</button>
       <p class="how">Hold <b>SHOOT</b>, let go in the <b style="color:#1e9e4a">green</b> = bucket. Smother shooters to take their green away. <b>CROSS</b> + stick = crossover · spin · stepback · hesi.</p>
     </section>
@@ -345,7 +355,7 @@
     <button class="hTile gQuest openQuests"><span>📜</span><b>QUESTS</b><i class="qBadge hidden">0</i></button>
   </div>
   <p id="homeMsg" class="msg"></p>
-  <div class="hFoot"><button id="netTestBtn" class="btn tiny ghost">📶 Test connection</button></div>
+  <div class="hFoot"><button id="acctBtn" class="btn tiny ghost">👤 Account &amp; backup</button><button id="netTestBtn" class="btn tiny ghost">📶 Test connection</button></div>
 </div>
 
 <div id="lobby" class="panel center hidden">
@@ -359,7 +369,7 @@
     <div class="row seg" id="toWin"><span>Game to</span><button data-v="11">11</button><button data-v="15">15</button><button data-v="21">21</button></div>
   </div>
   <div class="lobbyRow"><div class="row seg" id="botDiff"><span>Bots</span><button data-d="rookie">Rookie</button><button data-d="pro">Pro</button><button data-d="legend">Legend</button></div><button id="winBy2" class="btn tiny">Win by 2: OFF</button><button id="rankedToggle" class="btn tiny hidden">🏆 Ranked: OFF</button></div>
-  <div class="lobbyRow hidden" id="duoRow"><button id="duoBtn" class="btn tiny" style="background:#ffd23f">🏆 Ranked 2v2 (duo queue)</button><span id="duoStatus" style="font-weight:700;font-size:14px"></span><button id="duoCancel" class="btn tiny hidden">Cancel</button></div>
+  <div class="lobbyRow hidden" id="duoRow"><button id="duoBtn" class="btn" style="background:#ffd23f;font-size:17px;padding:10px 16px">🏆 FIND RANKED 2v2 (you + friend)</button><span id="duoStatus" style="font-weight:700;font-size:14px"></span><button id="duoCancel" class="btn tiny hidden">Cancel</button></div>
   <button id="startBtn" class="btn big orange">Start game</button>
   <p id="waitMsg" class="hidden">Waiting for the host to start…</p>
   <p class="how" id="needMsg"></p>
@@ -391,6 +401,12 @@
   <div class="head"><h2>📜 Daily Quests</h2><span class="coinPill">💰 <span class="coinCount">0</span></span></div>
   <div id="questList"></div>
   <button id="questClose" class="btn big orange">Done</button>
+</div>
+
+<div id="acctPanel" class="panel hidden">
+  <div class="head"><h2>👤 Account</h2></div>
+  <div id="acctBody"></div>
+  <button id="acctClose" class="btn big orange" style="margin-top:10px">Done</button>
 </div>
 
 <div id="netPanel" class="panel hidden">
@@ -785,8 +801,9 @@ function doPass(M,p){
     if(s>best){ best=s; pick=q; }
   }
   const sx=p.x+p.face*18, sy=p.y+100, sz=p.z;
-  const tx=pick.x+pick.vx*0.25, ty=pick.y+100, tz=pick.z+pick.vz*0.25;
-  const T=clamp(hyp(tx-sx,tz-sz)/950,0.2,0.85);
+  // lead the receiver: aim where they'll BE when the ball gets there, not where they are now
+  let T=0.45, tx=pick.x, tz=pick.z; const ty=pick.y+100;
+  for(let k=0;k<4;k++){ tx=clamp(pick.x+pick.vx*T, COURT_L+30, COURT_R-30); tz=clamp(pick.z+pick.vz*T, -HALF_D+18, HALF_D-18); T=clamp(hyp(tx-sx,tz-sz)/1050, 0.18, 0.75); }
   Object.assign(M.ball,{st:'pass',holder:null,x:sx,y:sy,z:sz,vx:(tx-sx)/T,vz:(tz-sz)/T,vy:(ty-sy+0.5*GRAV*T*T)/T,
     passTo:pick.id,passTeam:p.team,passTry:{},t:0,touchedRim:false,reb:false,lastTeam:p.team});
   p.noGrabT=0.3; if(Math.abs(tx-sx)>10) p.face=Math.sign(tx-sx);
@@ -920,8 +937,12 @@ function updateBall(M,dt){
     b.vx=h.vx; b.vz=h.vz; b.vy=0; return;
   }
   const N=4, sdt=dt/N;
+  // passes bend gently toward the receiver if they change direction (like a real pass to a cutter)
+  const rcv = b.st==='pass' ? findP(M,b.passTo) : null;
   for(let s=0;s<N;s++){
     const py=b.y;
+    if(rcv && b.st==='pass'){ const dx=rcv.x-b.x, dz=rcv.z-b.z, d=hyp(dx,dz);
+      if(d>8){ b.vx+=dx/d*1100*sdt; b.vz+=dz/d*1100*sdt; const sp=hyp(b.vx,b.vz); if(sp>1300){ b.vx*=1300/sp; b.vz*=1300/sp; } } }
     b.vy-=GRAV*sdt; b.x+=b.vx*sdt; b.y+=b.vy*sdt; b.z+=b.vz*sdt;
     if(b.y<BALL_R){
       b.y=BALL_R;
@@ -985,10 +1006,12 @@ function updateBall(M,dt){
     // basket interference: hands off while the ball is on the rim / over the cylinder
     if(HOOPS.some(h=>hyp(b.x-h.cx,b.z)<RIM_R+22 && b.y>RIM_Y-18)) break;
     const yy=b.y-p.y;
-    if(hyp(b.x-p.x,b.z-p.z)>P_R+BALL_R+10 || yy<8 || yy>REACH+32) continue;
+    // the player the pass is meant for gets a much bigger catch zone (hands out, step to the ball)
+    const forMe = b.st==='pass' && p.id===b.passTo;
+    if(hyp(b.x-p.x,b.z-p.z)>(forMe?P_R+BALL_R+50:P_R+BALL_R+10) || yy<(forMe?-30:8) || yy>REACH+(forMe?80:32)) continue;
     if(b.st==='pass' && p.team!==b.passTeam){
       if(b.passTry[p.id]) continue; b.passTry[p.id]=1;
-      if(Math.random()>0.25) continue;
+      if(Math.random()>0.15) continue;             // a defender in the lane only picks it off sometimes
     }
     if(b.st==='shot') missShot(M);
     const prev=b.st, wasReb=b.reb, shotTeam=b.shotTeam, passTo=b.passTo, passTeam=b.passTeam;
@@ -1643,6 +1666,8 @@ function onHostData(conn,d){
     const r=addRosterPlayer(id, d.name, false);
     setGear(r, d); r.rr=clamp(Math.round(+d.rr||0),0,5000);
     if(d.duo) r.team=1;
+    if(d.r2 && V.party2) r.team=1;                                  // solo 2v2 queuers join a party's game as the other team
+    if(!d.r2 && !d.duo && V.partyMode && r.team!==0 && teamCount(0)<2) r.team=0;   // your friend lands on your team
     conn.send({t:'welcome', id});
     toast(r.name+' joined!');
     broadcastRoster();
@@ -2027,7 +2052,7 @@ for(const k in KINDS){
 }
 SAVE.stats=SAVE.stats||{games:0,wins:0,pts:0,greens:0};
 function myGear(){ const g={}; for(const k in KINDS) g[k]=SAVE[k]; if(SAVE.look) g.lk=SAVE.look; return g; }
-function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }catch(e){} updateCoinUI(); }
+function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }catch(e){} updateCoinUI(); if(typeof scheduleBackup==='function') try{ scheduleBackup(); }catch(e){} }
 function earn(n, why){ if(!V.inRoom || V.phase!=='game') return; SAVE.coins+=n; persist(); V.coinPops.push({n, why, t:1.8});
   if(typeof questProgress==='function'){ questProgress(why==='TIP'?'BLOCK_TIP':why); if(why==='DUNK'||why==='THREE'||why==='BUCKET') questProgress('PTS', n/2); if(why==='THREE'||why==='DUNK') questProgress('BUCKET_ANY'); } }
 V.coinPops=[]; V.rings=[]; V.bolts=[]; V.celly=null; V.beams=[]; V.arcs=[]; V.timers=[]; V.scr=[]; V.vortex=null;
@@ -3746,8 +3771,8 @@ $('#name').value=store('buckets-name')||'';
 const qp=new URLSearchParams(location.search).get('join');
 if(qp) $('#code').value=qp.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);
 $('#code').addEventListener('input', e=>{ e.target.value=e.target.value.toUpperCase().replace(/[^A-Z]/g,''); });
-$('#hostBtn').onclick=()=>{ initAudio(); goFull(); hostGame(getName()); };
-$('#joinBtn').onclick=()=>{ initAudio(); const c=$('#code').value.trim().toUpperCase(); if(c.length!==4){ homeMsg('Enter the 4-letter room code.'); return; } goFull(); joinGame(getName(), c); };
+$('#hostBtn').onclick=()=>{ if(nameBlocked()) return; initAudio(); goFull(); hostGame(getName()); };
+$('#joinBtn').onclick=()=>{ if(nameBlocked()) return; initAudio(); const c=$('#code').value.trim().toUpperCase(); if(c.length!==4){ homeMsg('Enter the 4-letter room code.'); return; } goFull(); joinGame(getName(), c); };
 $('#leaveBtn').onclick=()=>{ try{net.peer&&net.peer.destroy()}catch(e){} location.href=location.pathname; };
 $('#copyBtn').onclick=()=>{
   const link=location.origin+location.pathname+'?join='+net.code;
@@ -3845,10 +3870,12 @@ setInterval(()=>{ const n=$('#netInfo'); if(!n || !V.inRoom || V.practice) retur
   else if(net.role==='client') t=net.via==='server'?'🟢 Connected through the Buckets server':isRelay()?'🟡 Connected through backup relay ('+net.via+')':'🟢 Connected direct';
   if(n.textContent!==t) n.textContent=t; },1000);
 $('#rankedClose').onclick=closeRanked;
-$('#rankedPlay').onclick=()=>findRankedMatch('1v1');
-$('#rankedPlay2').onclick=()=>findRankedMatch('2v2');
-$('#rankedHome1').onclick=()=>{ openRanked(); findRankedMatch('1v1'); };
-$('#rankedHome2').onclick=()=>{ openRanked(); findRankedMatch('2v2'); };
+$('#rankedPlay').onclick=()=>{ if(!nameBlocked()) findRankedMatch('1v1'); };
+$('#rankedPlay2').onclick=()=>{ if(!nameBlocked()) findRankedMatch('2v2'); };
+$('#rankedHome1').onclick=()=>{ if(nameBlocked()) return; openRanked(); findRankedMatch('1v1'); };
+$('#rankedHome2').onclick=()=>{ if(nameBlocked()) return; openRanked(); findRankedMatch('2v2'); };
+$('#partyBtn').onclick=()=>{ if(nameBlocked()) return; initAudio(); goFull(); V.partyMode=true; hostGame(getName());
+  setTimeout(()=>toast('👫 Send your friend the room code. Once they join, tap FIND RANKED 2v2'), 1500); };
 $('#duoBtn').onclick=()=>duoSearch();
 $('#duoCancel').onclick=()=>{ if(V.duoState) V.duoState.cancel=true; duoStatus('Cancelling…'); };
 $('#rankedCancel').onclick=()=>{ if(qState) qState.cancel=true; qStatus('Cancelling…'); };
@@ -4254,6 +4281,20 @@ const DUO_WAIT=20000;
 function duoStatus(t){ $('#duoStatus').textContent=t||''; $('#duoCancel').classList.toggle('hidden', !V.duoState); $('#duoBtn').disabled=!!V.duoState; }
 function duoEnd(){ const s=V.duoState; V.duoState=null; V.duoWaiting=false; V.duoTaken=false;
   if(s){ clearInterval(s.tick); for(const p of [s.cp, s.sign]) if(p){ try{p.destroy()}catch(e){} } try{s.signHub&&s.signHub.close()}catch(e){} try{s.signSrv&&s.signSrv.close()}catch(e){} } duoStatus(''); renderLobby(); }
+// while our duo searches, also host a solo-2v2 lobby slot: solo players who hit RANKED 2v2 join us as the other team.
+// (Its connections carry those players for the whole game, so it stays open until the game ends.)
+function duo2Claim(s){
+  return new Promise(res=>{ let i=0;
+    const tryI=()=>{ if(i>=QSLOTS || s.cancel) return res(false);
+      const slot='r2q'+i, sp=new Peer(PREFIX+slot,{debug:0}); let done=false; const fin=v=>{ if(done) return; done=true; res(v); };
+      sp.on('error',e=>{ if(e.type==='unavailable-id' && !done){ done=true; try{sp.destroy()}catch(_){} i++; tryI(); } });
+      sp.on('open',()=>{ if(s.cancel || V.duoState!==s){ try{sp.destroy()}catch(_){} return fin(false); }
+        s.r2Peer=sp; sp.on('connection', acceptConn); s.r2Hub=RelayHub(slot, acceptConn); s.r2Srv=ServerHub(slot, acceptConn);
+        V.q2Waiting=true; V.party2=true; fin(true); });
+      setTimeout(()=>{ if(!sp.open && !done){ done=true; try{sp.destroy()}catch(_){} i++; tryI(); } },6000); };
+    tryI(); });
+}
+function duo2Close(s){ V.q2Waiting=false; V.party2=false; if(!s) return; try{s.r2Peer&&s.r2Peer.destroy()}catch(e){} try{s.r2Hub&&s.r2Hub.close()}catch(e){} try{s.r2Srv&&s.r2Srv.close()}catch(e){} }
 function duoTempPeer(s){ return new Promise(res=>{ const p=new Peer({debug:0}); s.cp=p; let ok=false; p.on('open',()=>{ ok=true; res(p); }); p.on('error',e=>{ if(s.onErr) s.onErr(e); }); setTimeout(()=>{ if(!ok) res(null); },8000); }); }
 async function duoAsk(s, i){
   const r=await dial('rq2'+i, {unavailWait:600, timeout:8000, cancel:()=>s.cancel});
@@ -4302,13 +4343,15 @@ async function duoSearch(){
     }
     if(!s.cancel && empty>=0 && await duoClaim(s,empty)){
       V.duoWaiting=true;
-      while(!s.cancel && V.duoState===s && V.duoWaiting && performance.now()-s.t0<DUO_WAIT) await new Promise(r=>setTimeout(r,250));
+      duo2Claim(s);                                                   // also let solo 2v2 queuers find us
+      const oppHumans=()=>[...G.players.values()].filter(p=>!p.bot && p.team===1).length;
+      while(!s.cancel && V.duoState===s && V.duoWaiting && performance.now()-s.t0<DUO_WAIT && oppHumans()<2) await new Promise(r=>setTimeout(r,250));
       if(V.duoState!==s) return;                                   // matched (duoMatchReady took over)
     }
   }catch(e){ console.warn(e); }
   if(V.duoState!==s) return;
   const cancelled=s.cancel; duoEnd();
-  if(!cancelled) duoVsBots();
+  if(!cancelled) duoVsBots(); else duo2Close(s);
 }
 // we found a waiting duo: send my friend over, then go myself
 function duoJoinOther(code){
@@ -4336,21 +4379,23 @@ function migrateTo(code, tag){
 }
 // the other duo arrived in my room: 2v2 ranked, go
 function duoMatchReady(){
-  const s=V.duoState; V.duoWaiting=false; V.duoState=null;
+  const s=V.duoState; V.duoWaiting=false; V.duoState=null; V.q2Waiting=false;
   if(s){ clearInterval(s.tick); for(const p of [s.cp, s.sign]) if(p){ try{p.destroy()}catch(e){} } try{s.signHub&&s.signHub.close()}catch(e){} try{s.signSrv&&s.signSrv.close()}catch(e){} }
   duoStatus(''); G.ranked2=true; G.toWin=11; G.winBy2=true; G.diff='pro';
   RM=newMatch([...G.players.values()], 11, false, 'pro', true); G.phase='game'; broadcastRoster();
   V.banner={text:'RANKED 2v2', sub:'vs a real duo', c:'#ffd23f', t:2.4};
 }
-// nobody searching: two ranked bots near your duo's rating
+// no other duo: your duo vs whoever solo-queued into your game, Ranked Rivals fill the rest
 function duoVsBots(){
-  toast('No duos in queue — two Ranked Rivals took the game');
+  V.q2Waiting=false;
   const hum=[...G.players.values()].filter(p=>!p.bot), avg=hum.reduce((s,p)=>s+(p.rr||0),0)/Math.max(1,hum.length);
+  const soloOpp=hum.filter(p=>p.team===1).length;
+  toast(soloOpp ? 'Match found: '+soloOpp+' real player'+(soloOpp>1?'s':'')+' vs your duo' : 'No duos in queue: two Ranked Rivals took the game');
   const pool=RIVALS.map(R=>({R,rr:rivalRR(R)})).sort((a,b)=>Math.abs(a.rr-avg)-Math.abs(b.rr-avg)).slice(0,5);
-  const duo=[]; for(let i=0;i<2;i++){ const o=pool.splice(Math.floor(Math.random()*pool.length),1)[0]; addRivalToRoster(o.R, 1); duo.push(o.R.n); }
+  const duo=[]; for(const t of [0,1]) while(teamCount(t)<2 && pool.length){ const o=pool.splice(Math.floor(Math.random()*pool.length),1)[0]; addRivalToRoster(o.R, t); duo.push(o.R.n); }
   G.ranked2=true; G.toWin=11; G.winBy2=true; G.diff=diffForRR(avg);
   RM=newMatch([...G.players.values()], 11, false, G.diff, true); G.phase='game'; broadcastRoster();
-  V.banner={text:'RANKED 2v2', sub:'vs '+duo.join(' & ')+' (CPU rivals)', c:'#ffd23f', t:2.6};
+  V.banner={text:'RANKED 2v2', sub: soloOpp ? 'your duo vs '+hum.filter(p=>p.team===1).map(p=>p.name).join(' & ')+(duo.length?' + '+duo.join(' & '):'') : 'your duo vs '+duo.join(' & ')+' (CPU rivals)', c:'#ffd23f', t:2.6};
 }
 
 // ---------------------------------------------------------------- crates + locker
@@ -4633,6 +4678,87 @@ document.querySelectorAll('.openQuests').forEach(b=>b.onclick=openQuests);
 $('#questClose').onclick=closeQuests;
 updateQuestBadge();
 
+
+// =====================================================================
+//  👤 ACCOUNT: one name per player + cloud save (on our Cloudflare server)
+//  Each device gets a secret account code (like BK-7QX2-M9TA-K4PD). The server only stores a scrambled
+//  fingerprint of it. Names are first-come: once yours, nobody else can use it until you change yours.
+//  Your save backs up automatically; type your code on any iPad to get everything back.
+// =====================================================================
+var API=SERVER_URL.replace(/^wss:/,'https:')+'/api', bkTimer=0, bkDirty=false, nameTimer=0, NAMEST={name:'', state:''};
+function acctCode(){
+  let k=store('buckets-acct');
+  if(!k || !/^[A-Z0-9-]{12,40}$/.test(k)){
+    const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789', r=crypto.getRandomValues(new Uint32Array(12)); k='BK';
+    for(let i=0;i<12;i++){ if(i%4===0) k+='-'; k+=A[r[i]%A.length]; }
+    store('buckets-acct',k);
+  }
+  return k;
+}
+async function api(path, body, key){
+  const ac=new AbortController(), to=setTimeout(()=>ac.abort(),7000);
+  try{ const r=await fetch(API+path,{method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({key:key||acctCode(), ...body}), signal:ac.signal});
+    return await r.json(); }catch(e){ return null; } finally{ clearTimeout(to); }
+}
+// ---- names
+function setNameStatus(state, n){ NAMEST={name:n, state}; const s=$('#nameStat'); if(!s) return;
+  s.textContent = state==='mine' ? '✅ this name is yours' : state==='taken' ? '❌ taken: pick another name' : state==='checking' ? '…' : '';
+  s.className='nameStat '+state; }
+async function claimName(n){
+  n=cleanName(n); if(!n || n==='Player'){ setNameStatus('',n); return true; }
+  setNameStatus('checking', n);
+  const r=await api('/name/claim',{name:n});
+  if(!r){ setNameStatus('', n); return true; }                       // can't reach the server: don't block play
+  if(cleanName($('#name').value)!==n) return true;                    // they kept typing
+  setNameStatus(r.taken?'taken':'mine', n); return !r.taken;
+}
+function nameBlocked(){ const n=cleanName($('#name').value); if(NAMEST.name===n && NAMEST.state==='taken'){ homeMsg('"'+n+'" is already taken by another player. Pick a different name.'); toast('❌ That name is taken'); return true; } return false; }
+$('#name').addEventListener('input', ()=>{ clearTimeout(nameTimer); setNameStatus('', ''); nameTimer=setTimeout(()=>claimName($('#name').value), 900); });
+$('#name').addEventListener('blur', ()=>{ clearTimeout(nameTimer); claimName($('#name').value); });
+setTimeout(()=>{ if(store('buckets-name')) claimName(store('buckets-name')); }, 1500);
+// ---- cloud save: back up a few seconds after anything changes, and when the app is closed
+function scheduleBackup(){ bkDirty=true; clearTimeout(bkTimer); bkTimer=setTimeout(doBackup, 6000); }
+function backupBody(){ return {save:{...SAVE, _name:store('buckets-name')||''}}; }
+async function doBackup(){ if(!SERVER_URL) return false; bkDirty=false; const r=await api('/save/put', backupBody());
+  if(r && r.ok){ store('buckets-lastbk', String(Date.now())); return true; } bkDirty=true; return false; }
+addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && bkDirty && SERVER_URL){
+  try{ navigator.sendBeacon(API+'/save/put', new Blob([JSON.stringify({key:acctCode(), ...backupBody()})],{type:'text/plain'})); bkDirty=false; }catch(e){} } });
+// ---- account screen
+function ago(t){ if(!t) return 'never'; const s=Math.round((Date.now()-t)/1000); return s<60?'just now':s<3600?Math.round(s/60)+' min ago':s<86400?Math.round(s/3600)+' h ago':Math.round(s/86400)+' days ago'; }
+function renderAcct(){
+  const b=$('#acctBody'); b.innerHTML='';
+  const n=store('buckets-name')||'(no name yet)';
+  b.append(el('div','acRow', '🏷️ Name: '+n+(NAMEST.name===n&&NAMEST.state==='mine'?'  ✅ yours':'')));
+  const codeBox=el('div','acCode','••••-••••-••••'), show=el('button','btn tiny','👁 Show my code');
+  show.onclick=()=>{ codeBox.textContent=acctCode(); show.textContent='📋 Copy'; show.onclick=()=>{ try{ navigator.clipboard.writeText(acctCode()); toast('Copied'); }catch(e){} }; };
+  b.append(el('h4','','YOUR ACCOUNT CODE'), codeBox, show,
+    el('p','how','Screenshot this code or write it down. It\'s the only way to get your coins, items and rank back if this iPad loses its data or you switch iPads. Don\'t share it: anyone with it can load your stuff.'));
+  const st=el('div','acRow','☁️ Cloud backup: '+ago(+store('buckets-lastbk')||0)), now=el('button','btn yellow','Back up now');
+  now.onclick=async()=>{ now.disabled=true; now.textContent='Backing up…'; const ok=await doBackup(); now.disabled=false; now.textContent=ok?'✅ Backed up':'❌ Couldn\'t reach the server'; renderAcctStatus(st); };
+  b.append(el('h4','','BACKUP'), st, now);
+  const inp=el('input'), go=el('button','btn orange','Restore');
+  inp.placeholder='BK-XXXX-XXXX-XXXX'; inp.setAttribute('autocapitalize','characters'); inp.setAttribute('autocomplete','off'); inp.maxLength=20;
+  inp.addEventListener('keydown',e=>e.stopPropagation());
+  go.onclick=async()=>{ const code=inp.value.trim().toUpperCase().replace(/\s+/g,'');
+    if(!/^[A-Z0-9-]{12,40}$/.test(code)){ toast('That doesn\'t look like an account code'); return; }
+    go.disabled=true; go.textContent='Looking…'; const r=await api('/save/get',{},code); go.disabled=false; go.textContent='Restore';
+    if(!r){ toast('Couldn\'t reach the server. Try again'); return; }
+    if(!r.save){ toast('No backup found for that code'); return; }
+    const s=r.save, rk=rankOf((s.rank&&s.rank.rr)||0);
+    if(!confirm('Restore this account?\n\n'+(s._name||r.name||'Player')+' · 💰'+(s.coins||0)+' · '+rk.short+'\nbacked up '+ago(r.t)+'\n\nThis replaces everything on this iPad.')) return;
+    const name=s._name||''; delete s._name;
+    try{ localStorage.setItem(SAVE_KEY, JSON.stringify(s)); }catch(e){}
+    store('buckets-acct', code); if(name) store('buckets-name', name); store('buckets-lastbk', String(r.t||Date.now()));
+    toast('✅ Restored!'); setTimeout(()=>location.reload(), 600); };
+  const row=el('div','row'); row.append(inp, go);
+  b.append(el('h4','','GET YOUR STUFF BACK'), el('p','how','On a new iPad (or if your data got wiped), type your code here.'), row);
+}
+function renderAcctStatus(st){ st.textContent='☁️ Cloud backup: '+ago(+store('buckets-lastbk')||0); }
+function openAcct(){ $('#home').classList.add('hidden'); $('#acctPanel').classList.remove('hidden'); renderAcct(); }
+$('#acctBtn').onclick=openAcct;
+$('#acctClose').onclick=()=>{ $('#acctPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); };
+// first backup shortly after opening the game
+setTimeout(()=>{ if(SERVER_URL && Date.now()-(+store('buckets-lastbk')||0)>60000) scheduleBackup(); }, 4000);
 requestAnimationFrame(frame);
 </script>
 </body>

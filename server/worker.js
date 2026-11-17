@@ -9,10 +9,20 @@
 //   player<-> server: "<json>"
 // Server-only notices: {"t":"_hosthere"} {"t":"_nohost"} {"t":"_hostgone"} {"t":"_taken"} {"t":"_left"}
 
+const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, GET, OPTIONS', 'access-control-allow-headers': 'content-type', 'cache-control': 'no-store' };
+
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
-    if (url.pathname === '/ping') return new Response('ok', { headers: { 'access-control-allow-origin': '*', 'cache-control': 'no-store' } });
+    if (url.pathname === '/ping') return new Response('ok', { headers: CORS });
+    // accounts: unique names + cloud saves (one Durable Object holds them all)
+    if (url.pathname.startsWith('/api/')) {
+      if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+      const stub = env.ACCOUNTS.get(env.ACCOUNTS.idFromName('global'));
+      const res = await stub.fetch(req);
+      const h = new Headers(res.headers); for (const k in CORS) h.set(k, CORS[k]);
+      return new Response(res.body, { status: res.status, headers: h });
+    }
     const m = url.pathname.match(/^\/room\/([A-Za-z0-9_.-]{1,48})$/);
     if (!m) return new Response('buckets game server', { status: 200 });
     if ((req.headers.get('Upgrade') || '').toLowerCase() !== 'websocket') return new Response('websocket only', { status: 426 });
@@ -86,5 +96,50 @@ export class Room {
     } else if (a.role === 'c') {
       for (const h of this.state.getWebSockets('host')) { try { h.send(a.id + '|{"t":"_left"}'); } catch (e) {} }
     }
+  }
+}
+
+// ---------------------------------------------------------------- ACCOUNTS
+// One global Durable Object. Each device has a secret account code (only its SHA-256 is stored here).
+//   names: "n:<name>" -> owner id        (one name per account; changing your name frees the old one)
+//   saves: "s:<owner id>" -> {save, t}   (cloud backup of the whole save file)
+const okKey = k => typeof k === 'string' && /^[A-Z0-9-]{12,40}$/.test(k);
+const normName = n => String(n || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 16);
+async function sha(s) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('bk19acct|' + s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+const J = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { 'content-type': 'application/json' } });
+
+export class Accounts {
+  constructor(state) { this.state = state; this.st = state.storage; }
+  async fetch(req) {
+    if (req.method !== 'POST') return J({ error: 'post only' }, 405);
+    const path = new URL(req.url).pathname;
+    let b; try { b = await req.json(); } catch (e) { return J({ error: 'bad json' }, 400); }
+    if (!b || !okKey(b.key)) return J({ error: 'bad key' }, 400);
+    const id = await sha(b.key);
+
+    if (path === '/api/name/claim' || path === '/api/name/check') {
+      const n = normName(b.name);
+      if (n.length < 2) return J({ ok: false, error: 'short' });
+      const owner = await this.st.get('n:' + n);
+      if (owner && owner !== id) return J({ ok: false, taken: true });
+      if (path === '/api/name/check') return J({ ok: true, mine: owner === id });
+      const old = await this.st.get('k:' + id + ':name');
+      if (old && old !== n) await this.st.delete('n:' + old);
+      await this.st.put({ ['n:' + n]: id, ['k:' + id + ':name']: n });
+      return J({ ok: true });
+    }
+    if (path === '/api/save/put') {
+      const s = JSON.stringify(b.save || null);
+      if (s.length > 120000) return J({ error: 'too big' }, 413);
+      const t = Date.now();
+      await this.st.put('s:' + id, { save: b.save, t });
+      return J({ ok: true, t });
+    }
+    if (path === '/api/save/get') {
+      const v = await this.st.get('s:' + id);
+      const name = await this.st.get('k:' + id + ':name');
+      return J({ ok: true, save: v ? v.save : null, t: v ? v.t : 0, name: name || null });
+    }
+    return J({ error: 'unknown' }, 404);
   }
 }
