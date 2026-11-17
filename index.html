@@ -1355,7 +1355,7 @@ function relayDial(code, onAck){
 //  first choice: one fast websocket to a server we control, no public relays, no throttling.
 //  The public relays stay as a backup if the server can't be reached.
 // =====================================================================
-const SERVER_URL='';                                        // set after deploy, e.g. 'wss://buckets-server.NAME.workers.dev'
+const SERVER_URL='wss://buckets-server.buckets19.workers.dev';   // our Cloudflare game server (server/worker.js)
 const SERVER_SNAP_MS=50;                                     // 20 snapshots/s through our server
 const srvRoom=code=>SERVER_URL+'/room/'+encodeURIComponent(PREFIX+code);
 function connObj(extra){ const c=Object.assign({open:true, _h:{}, lastIn:performance.now()}, extra);
@@ -1385,12 +1385,13 @@ function ServerHub(code, onConn){
     ws.onclose=()=>{ S.open=false; if(S.dead) return; S.fails++; setTimeout(connect, Math.min(8000, 600*S.fails)); };
     ws.onerror=()=>{}; };
   connect();
+  S.tick=setInterval(()=>{ for(const c of S.conns.values()) if(c.open) c.raw({t:'hb'}); }, 2000);   // keep quiet lobbies alive
   // one broadcast per snapshot for the whole room
   S.snap=s=>{ if(!S.open || !S.conns.size) return; const now=performance.now();
     if(now-S.last<SERVER_SNAP_MS-4){ if(s.ev && s.ev.length) S.pend.push(...s.ev); return; }
     S.last=now; const d=S.pend.length?{...s, ev:[...S.pend, ...(s.ev||[])]}:s; S.pend=[];
     try{ S.ws.send('*|'+JSON.stringify(d)); }catch(e){} };
-  S.close=()=>{ S.dead=true; for(const c of S.conns.values()) c.raw({t:'bye'}); try{ S.ws && S.ws.close(); }catch(e){} };
+  S.close=()=>{ S.dead=true; clearInterval(S.tick); for(const c of S.conns.values()) c.raw({t:'bye'}); try{ S.ws && S.ws.close(); }catch(e){} };
   return S;
 }
 // player side: is the room's host on our server? resolves {ws, rtt} or null
@@ -1412,7 +1413,7 @@ function ServerClientConn(ws){
   ws.onmessage=ev=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; } if(!d || typeof d!=='object') return; c.lastIn=performance.now();
     if(d.t==='_hostgone' || d.t==='bye'){ c.kill(); return; } if(typeof d.t==='string' && d.t[0]==='_') return; if(d.t==='hb') return; c.emit('data', d); };
   ws.onclose=()=>c.kill();
-  c.hb=setInterval(()=>{ if(c.open && performance.now()-c.lastIn>12000) c.kill(); }, 2000);
+  c.hb=setInterval(()=>{ if(c.open && performance.now()-c.lastIn>20000) c.kill(); }, 2000);
   return c;
 }
 
