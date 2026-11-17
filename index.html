@@ -1582,7 +1582,7 @@ const CELLYS=[
   {id:'blackhole',r:'mythic',    name:'Black Hole',      icon:'🕳️', desc:'Everything gets pulled in.'},
   {id:'ascend',   r:'mythic',    name:'Ascension',       icon:'😇', desc:'Rise into a beam of light.'},
   {id:'dragon',   r:'mythic',    name:'Dragon Summon',   icon:'🐉', desc:'A dragon flies across the arena.'},
-  {id:'westmode', r:'exclusive', name:'WEST MODE',       icon:'🌌', desc:'The arena turns into space.'},
+  {id:'westmode', r:'exclusive', name:'Cosmic Mode',      icon:'🌌', desc:'The arena turns into space.'},
   {id:'glitch',   r:'exclusive', name:'Glitched',        icon:'👾', desc:'You broke the game.'},
   {id:'timestop', r:'exclusive', name:'Time Stop',       icon:'⏳', desc:'The world goes gray. Only you move.'},
   {id:'maincharacter', r:'secret', name:'Main Character', icon:'🎬', desc:'Cinema bars. Spotlight. The whole arena watches you.'},
@@ -1643,7 +1643,7 @@ const GFX=[
   {id:'hologram', r:'legendary', name:'Hologram',        icon:'💠', desc:'A spinning 3D holo-cube appears.'},
   {id:'npc',      r:'legendary', name:'NPC Mode',        icon:'🤖', desc:'Everyone else turns into an NPC.'},
   {id:'finale',   r:'mythic',    name:'Grand Finale',    icon:'🎆', desc:'A full 3D fireworks show.'},
-  {id:'westbeam', r:'exclusive', name:'WEST Beam',       icon:'🔱', desc:'Twin beams. Fireworks. WEST.'},
+  {id:'westbeam', r:'exclusive', name:'Twin Beam',       icon:'🔱', desc:'Twin beams. Fireworks. Lights out.'},
   {id:'aura',     r:'secret',    name:'+∞ Aura',         icon:'🔮', desc:'Infinite aura. Orbiting rings, a storm of light, the screen bends.'},
   // ---- street
   {id:'swish',    r:'common', s:'street',   name:'Net Ripple',      icon:'🏀', desc:'3D rings ripple off the release.'},
@@ -1674,7 +1674,7 @@ const JS=[
   {id:'sidearm',  r:'epic',      name:'Sidewinder',      icon:'🐍', desc:'Released from the side. Somehow works.'},
   {id:'granny',   r:'legendary', name:'Granny Shot',     icon:'👵', desc:'Underhanded disrespect.'},
   {id:'spin',     r:'mythic',    name:'Spin Cycle',      icon:'🌀', desc:'Full spin in the air before release.'},
-  {id:'westwave', r:'exclusive', name:'West Wave',       icon:'🌊', desc:'Arms wide, glowing aura.'},
+  {id:'westwave', r:'exclusive', name:'Tidal Wave',      icon:'🌊', desc:'Arms wide, glowing aura.'},
   {id:'zerog',    r:'secret',    name:'Zero Gravity',    icon:'🪐', desc:'Float up, rings orbit you, gravity gives up.'},
   {id:'npcjs',    r:'rare',  s:'brainrot', name:'NPC Form',        icon:'🤖', desc:'Stiff robot arms. Somehow it goes in.'},
   {id:'ninjajs',  r:'epic',  s:'anime',    name:'Ninja Release',   icon:'🥷', desc:'Vanish in a smoke puff on the release.'},
@@ -1702,7 +1702,7 @@ const TRAILS=[
   {id:'money',    r:'legendary', name:'Money Trail',     icon:'💵', desc:'Cash falls off your shot.'},
   {id:'galaxy',   r:'legendary', name:'Stardust',        icon:'🌌', desc:'A trail of stars.'},
   {id:'lightning',r:'mythic',    name:'Thunderbolt',     icon:'⚡', desc:'Lightning chases the ball.'},
-  {id:'west',     r:'exclusive', name:'WEST Helix',      icon:'🔱', desc:'Cyan and gold double helix.'},
+  {id:'west',     r:'exclusive', name:'Twin Helix',      icon:'🔱', desc:'Cyan and gold double helix.'},
   {id:'hyperspace',r:'secret',   name:'Hyperspace',      icon:'✴️', desc:'Your shot jumps to lightspeed.'},
   {id:'sakura',   r:'rare',  s:'anime',    name:'Petal Stream',    icon:'🌸', desc:'Cherry blossoms follow the ball.'},
   {id:'brain',    r:'epic',  s:'brainrot', name:'Brainrot',        icon:'🧠', desc:'Moai, skulls and brains fall off your shot.'},
@@ -1868,7 +1868,7 @@ function meteorAt(x,z,big=1){ const sx=x-260, sy=760; emo(sx,sy,z,'☄️',{vx:5
 const GREEN_CUTS={domain:['DOMAIN EXPANSION','#c77dff'], bigbang:['BIG BANG','#ffd23f'], brainrot:['BRAINROT STORM','#ff6fb5'], supernova:['SUPERNOVA','#ffd23f'],
   portal:['PORTAL','#7b5cff'], impact:['IMPACT','#ff8a1f'], finale:['GRAND FINALE','#ff5a4f'], matrix:['THE MATRIX','#3dff6e'], goldrush:['GOLD RUSH','#ffd23f'],
   sunhalo:['SUN HALO','#ffb347'], tailedbomb:['TAILED BEAST BOMB','#8c46ff'], gameover:['GAME OVER','#00ff41'], glitchgod:['GLITCH GOD','#ff00e5'], hellfire:['HELLFIRE','#ff3b00'], nightmare:['NIGHTMARE','#ff1a3c'], spiritorb:['SPIRIT ORB','#9fe7ff'], cheatcode:['CHEAT CODE','#ffd23f'], soulsteal:['SOUL STEAL','#c77dff'],
-  westbeam:['W E S T','#00e5ff'], aura:['+∞ AURA','#ff00e5']};
+  westbeam:['TWIN BEAM','#00e5ff'], aura:['+∞ AURA','#ff00e5']};
 function cutscene(title, who, col, t=1.9){ screenFx('cut',t,{title, who, col}); V.zoomHold=Math.max(V.zoomHold||0,t*.8); V.zoom=Math.max(V.zoom,.1); camFlashes(30); }
 function greenFx(kind,x,y,z,hx,who){
   const hy=y+150; hx = hx===undefined ? x+300 : hx;
@@ -1902,7 +1902,7 @@ function greenFx(kind,x,y,z,hx,who){
     case 'matrix': screenFx('matrix',2.4); floatText('GREEN',x,hy+120,z,'#3dff6e',54,1.8); spray(x,hy,z,30,['#3dff6e','#00ff41','#bfffd4'],260,{g:0}); break;
     case 'goldrush': screenFx('gold',2.4); for(let i=0;i<24;i++) emo(x+rnd(-120,120),hy+rnd(0,140),z,pick(['💰','🏆','💎','💵']),{vx:rnd(-160,160),vy:rnd(150,400),g:500,life:1.4,max:1.4,s:rnd(20,32)}); floatText('$$$',x,hy+130,z,'#ffd23f',50,1.6); break;
     case 'westbeam': beam(x-50,z,'rgba(0,229,255,',1.8,60); beam(x+50,z,'rgba(255,200,40,',1.8,60); V.flash=Math.max(V.flash,.4);
-      floatText('WEST',x,hy+160,z,'#00e5ff',72,2); [0,.25,.5,.75].forEach(t=>later(t,()=>firework(x+rnd(-260,260),rnd(360,520),z)));
+      floatText('LIGHTS OUT',x,hy+160,z,'#00e5ff',60,2); [0,.25,.5,.75].forEach(t=>later(t,()=>firework(x+rnd(-260,260),rnd(360,520),z)));
       ring(x,y,z,'#00e5ff',220,.8,12); V.shake=Math.max(V.shake,8); break;
     case 'diamond': for(let i=0;i<26;i++) emo(x+rnd(-160,160),hy+rnd(160,320),z+rnd(-50,50),'💎',{vy:-rnd(80,200),vx:rnd(-30,30),g:420,life:1.5,max:1.5,s:rnd(16,28)}); spray(x,hy,z,24,['#bfe9ff','#fff','#9fe7ff'],260,{g:120}); break;
     case 'rizz': emo(x,hy+90,z,'W',{s:110,g:-40,life:1.6,max:1.6,vr:0,flip:1,col:'#47e27a'}); floatText('RIZZ',x,hy+20,z,'#47e27a',34,1.4);
@@ -2080,7 +2080,7 @@ function cellyTick(c, q, dt){
       if(every(.08)) emo(x+rnd(-70,70),cellyLift(c)+rnd(0,160),z,pick(['🪶','✨']),{vy:-rnd(30,80),vx:rnd(-30,30),g:0,life:1.2,max:1.2,s:rnd(14,20)}); break;
     case 'dragon': if(first){ c.dx=x-700*f; emo(c.dx,330,z-60,'🐉',{s:110,vx:f*640,g:0,life:2.2,max:2.2,vr:0}); V.shake=Math.max(V.shake,6); floatText('ROAR',x,300,z,'#ff5a4f',44,1.6); }
       if(every(.03)){ const px=c.dx+f*640*t; P(px+f*40,310,z-60,{vx:f*rnd(60,160),vy:-rnd(120,260),g:200,life:.6,max:.6,c:pick(['#ff3b00','#ff8a1f','#ffd23f']),s:rnd(4,9)}); } break;
-    case 'westmode': if(first){ screenFx('galaxy',2.3); floatText('WEST MODE',x,330,z,'#00e5ff',56,2.1); V.flash=Math.max(V.flash,.5); camFlashes(40); }
+    case 'westmode': if(first){ screenFx('galaxy',2.3); floatText('COSMIC MODE',x,330,z,'#00e5ff',56,2.1); V.flash=Math.max(V.flash,.5); camFlashes(40); }
       if(every(.3)) ring(x,0,z,Math.floor(t*4)%2?'#00e5ff':'#ffd23f',240,.6,10);
       if(every(.06)) P(x+rnd(-60,60),rnd(0,200),z,{vy:rnd(60,180),g:0,life:.8,max:.8,c:pick(['#00e5ff','#ffd23f','#fff']),s:rnd(2,4)}); break;
     case 'glitch': if(first){ screenFx('glitch',2.3); floatText('ERR0R',x,300,z,'#ff3b6b',44,2); }
@@ -3354,20 +3354,9 @@ function drawScreenFx(dt){
       for(let j=0;j<4;j++){ const sy=rnd(0,H), sh=rnd(8,40), off=rnd(-30,30);
         try{ ctx.drawImage(cv, 0, sy*dpr, cv.width, sh*dpr, off, sy, W, sh); }catch(_){} }
       for(let j=0;j<6;j++){ ctx.globalAlpha=fade*rnd(.15,.4); ctx.fillStyle=pick(['#ff00e5','#00e5ff','#00ff41']); ctx.fillRect(0,rnd(0,H),W,rnd(2,10)); } }
-    else if(e.k==='cut'){ // CUTSCENE: bars slam in, a color streak rips across, the title card punches in
+    else if(e.k==='cut'){ // CUTSCENE: cinema bars slam in + slight dim (no title banner: the effect is the show)
       const inK=Math.min(1,age*5), outK=Math.min(1,e.t*4), bh=H*.13*inK*outK;
       ctx.fillStyle=`rgba(0,0,0,${.25*fade})`; ctx.fillRect(0,0,W,H);
-      const sw=Math.min(1,age*3.2), cy=H*.5;
-      ctx.save(); ctx.translate(W/2,cy); ctx.rotate(-0.12);
-      const gw=W*1.6*sw, g=ctx.createLinearGradient(-gw/2,0,gw/2,0); g.addColorStop(0,'rgba(0,0,0,0)'); g.addColorStop(.5,e.col); g.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.globalAlpha=.85*fade; ctx.fillStyle=g; ctx.fillRect(-gw/2,-H*.075,gw,H*.15);
-      ctx.globalAlpha=fade; ctx.fillStyle='#fff'; ctx.fillRect(-gw/2,-H*.075-3,gw,3); ctx.fillRect(-gw/2,H*.075,gw,3);
-      const pop=age<.25 ? 1.6-age*2.4 : 1; let s=Math.min(W,H)*.1;
-      ctx.font=`700 ${s}px ${FONT}`; const tw=ctx.measureText(e.title).width; if(tw>W*.82) s*=W*.82/tw; s*=pop;
-      ctx.font=`700 ${s}px ${FONT}`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineJoin='round';
-      ctx.lineWidth=10; ctx.strokeStyle='#000'; ctx.strokeText(e.title,0,0); ctx.fillStyle='#fff'; ctx.fillText(e.title,0,0);
-      ctx.font=`700 ${Math.min(W,H)*.03}px ${FONT}`; ctx.lineWidth=5; ctx.strokeText(e.who,0,H*.1); ctx.fillStyle=e.col; ctx.fillText(e.who,0,H*.1);
-      ctx.restore();
       ctx.fillStyle='#000'; ctx.fillRect(0,0,W,bh); ctx.fillRect(0,H-bh,W,bh); }
     else if(e.k==='bflash'){ // black flash: the screen strobes black / red with jagged sparks
       const on=Math.floor(age*18)%2===0; ctx.fillStyle=on?`rgba(0,0,0,${.75*fade})`:`rgba(200,0,30,${.45*fade})`; ctx.fillRect(0,0,W,H);
@@ -4106,6 +4095,7 @@ const CODE_HASHES={
   '66b21095b423e026c83918bc2e49c0e22d5a8e731fa82ba37acab8274e8ca442':{id:'c6', coins:2000},
   '8734e1503d8b58593a63e1086e623198de9f1118e4b93e4ec365026d98dfd052':{id:'c7', coins:2000},
   '8469e29d6fc9436af0b39fa184be37339b83a9dcc809c1cf9c0470163cdddede':{id:'c8', coins:10000},
+  'a88ed7ed607de4d5570004dc60aed5853489687a9d93193ede1b717c076857e2':{id:'c9', coins:50000},
 };
 async function codeHash(s){ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode('bk19|'+s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 // older saves stored redeemed codes as plain text: swap them for ids
