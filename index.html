@@ -114,6 +114,9 @@
   .grandBtn b{font-size:22px;letter-spacing:2px;text-shadow:0 3px 0 rgba(0,0,0,.35)}
   .grandBtn small{font-size:11px;font-weight:700;opacity:.9}
   .gShop{background:linear-gradient(135deg,#ff5a4f,#ff8a1f 45%,#ffd23f)}
+  .gR1{background:linear-gradient(135deg,#b8860b,#ffb400 45%,#ffe066)}
+  .gR2{background:linear-gradient(135deg,#5b2a86,#8c46ff 50%,#c77dff)}
+  .grandBtn:disabled{filter:grayscale(.6) brightness(.85);cursor:default}
   .gLock{background:linear-gradient(135deg,#3d8bff,#7b5cff 55%,#c77dff)}
   .grandBtn::after{content:'';position:absolute;top:-50%;left:-60%;width:40%;height:200%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:rotate(20deg);animation:gshine 2.8s ease-in-out infinite}
   .gLock::after{animation-delay:1.4s}
@@ -284,7 +287,8 @@
   <button id="hostBtn" class="btn big orange">Host a game</button>
   <div class="or">— or join a friend —</div>
   <div class="row"><input id="code" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters"><button id="joinBtn" class="btn yellow">Join</button></div>
-  <div class="row" style="margin-top:12px"><button id="practiceBtn" class="btn" style="flex:1;font-size:16px">🏀 Practice</button><button id="rankedBtn" class="btn" style="flex:1;font-size:16px;background:#ffd23f">🏆 Ranked</button></div>
+  <div class="grandRow"><button id="rankedHome1" class="grandBtn gR1"><span class="gi">🏆</span><b>RANKED 1v1</b><small>Climb the ladder</small></button><button id="rankedHome2" class="grandBtn gR2"><span class="gi">👥</span><b>RANKED 2v2</b><small>Solo queue</small></button></div>
+  <div class="row" style="margin-top:10px"><button id="practiceBtn" class="btn" style="flex:1;font-size:16px">🏀 Practice</button><button id="rankedBtn" class="btn" style="flex:1;font-size:16px;background:#ffd23f">📊 Rank &amp; Leaderboard</button></div>
   <p class="how">Hold <b>SHOOT</b> and let go in the <b style="color:#1e9e4a">green</b>: green = bucket.<br>Smother shooters to take the green away. <b>CROSS</b> + stick = crossover, spin, stepback, hesi.</p>
   <div class="grandRow"><button class="grandBtn gShop openShop"><span class="gi">🛒</span><b>SHOP</b><small>Brainrot · Anime · Galaxy crates</small></button><button class="grandBtn gLock openLocker"><span class="gi">🎒</span><b>LOCKER</b><small>Equip your stuff</small></button></div>
   <button class="questBtn openQuests">📜 <b>Daily Quests</b> <span class="qBadge hidden">0</span><small>earn 💰</small></button>
@@ -351,7 +355,7 @@
 <div id="rankedPanel" class="panel hidden">
   <div class="head"><h2>🏆 Ranked</h2><span class="coinPill">💰 <span class="coinCount">0</span></span></div>
   <div id="rankCard"></div>
-  <button id="rankedPlay" class="btn big orange">▶ Find match</button>
+  <div class="grandRow" style="margin-top:6px"><button id="rankedPlay" class="grandBtn gR1"><span class="gi">🏆</span><b>RANKED 1v1</b><small>Find a match</small></button><button id="rankedPlay2" class="grandBtn gR2"><span class="gi">👥</span><b>RANKED 2v2</b><small>Solo queue · rivals fill in</small></button></div>
   <div class="row"><p id="rankedStatus" class="hidden" style="flex:1;font-weight:700;margin:6px 0"></p><button id="rankedCancel" class="btn tiny hidden">Cancel</button></div>
   <p class="how" style="margin:6px 0 10px">1v1 to 11, win by 2. Finds a real player searching at the same time. If nobody's in the queue, one of the <b>Ranked Rivals</b> (CPU regulars with their own styles) picks up the game. The leaderboard is real players only.</p>
   <h3 style="margin:4px 0 6px">Leaderboard <small style="font-weight:600;opacity:.6">real players only</small></h3>
@@ -1575,6 +1579,7 @@ function onHostData(conn,d){
   if(d.t==='hello'){
     if(G.players.has(id)) return;
     // ranked queue: only a host that's still waiting takes a challenger (one at a time)
+    if(d.r2 && (!V.q2Waiting || G.players.size>=4)){ conn.send({t:'busy'}); setTimeout(()=>{ try{conn.close()}catch(e){} },200); return; }
     if(d.rq && (!V.queueWaiting || G.players.size>=2)){ conn.send({t:'busy'}); setTimeout(()=>{ try{conn.close()}catch(e){} },200); return; }
     // duo queue: the other duo joins my room on the opposite team
     if(d.duo && (!V.duoWaiting || teamCount(1)>=2)){ conn.send({t:'busy'}); setTimeout(()=>{ try{conn.close()}catch(e){} },200); return; }
@@ -3712,7 +3717,7 @@ $('#practiceBtn').onclick=()=>{
   addBot(1); enterRoom(); broadcastRoster();
 };
 $('#rematchBtn').onclick=()=>{
-  if(V.ranked||V.queueMatch){ try{net.peer&&net.peer.destroy()}catch(e){} location.href=location.pathname+'#rankedq'; location.reload(); return; }
+  if(V.ranked||V.queueMatch){ try{net.peer&&net.peer.destroy()}catch(e){} location.href=location.pathname+(V.ranked2?'#rankedq2':'#rankedq'); location.reload(); return; }
   if(net.role!=='host') return;
   if(V.ranked){ const me=G.players.get('host'); if(me) me.rr=SAVE.rank.rr; setupRankedRoster(); startRankedMatch(); return; }
   const ro=[...G.players.values()]; if(!ro.some(p=>p.team===0)||!ro.some(p=>p.team===1)) return;
@@ -3789,12 +3794,15 @@ setInterval(()=>{ const n=$('#netInfo'); if(!n || !V.inRoom || V.practice) retur
   else if(net.role==='client') t=net.via==='server'?'🟢 Connected through the Buckets server':isRelay()?'🟡 Connected through backup relay ('+net.via+')':'🟢 Connected direct';
   if(n.textContent!==t) n.textContent=t; },1000);
 $('#rankedClose').onclick=closeRanked;
-$('#rankedPlay').onclick=findRankedMatch;
+$('#rankedPlay').onclick=()=>findRankedMatch('1v1');
+$('#rankedPlay2').onclick=()=>findRankedMatch('2v2');
+$('#rankedHome1').onclick=()=>{ openRanked(); findRankedMatch('1v1'); };
+$('#rankedHome2').onclick=()=>{ openRanked(); findRankedMatch('2v2'); };
 $('#duoBtn').onclick=()=>duoSearch();
 $('#duoCancel').onclick=()=>{ if(V.duoState) V.duoState.cancel=true; duoStatus('Cancelling…'); };
 $('#rankedCancel').onclick=()=>{ if(qState) qState.cancel=true; qStatus('Cancelling…'); };
 $('#rankedToggle').onclick=()=>{ if(net.role!=='host') return; G.ranked=!G.ranked; broadcastRoster(); };
-if(location.hash==='#ranked' || location.hash==='#rankedq'){ const q=location.hash==='#rankedq'; try{ history.replaceState(null,'',location.pathname); }catch(e){} setTimeout(()=>{ openRanked(); if(q) findRankedMatch(); },50); }
+if(location.hash==='#ranked' || location.hash==='#rankedq' || location.hash==='#rankedq2'){ const h=location.hash; try{ history.replaceState(null,'',location.pathname); }catch(e){} setTimeout(()=>{ openRanked(); if(h==='#rankedq') findRankedMatch('1v1'); if(h==='#rankedq2') findRankedMatch('2v2'); },50); }
 $('#switchBtn').onclick=()=>sendAct({t:'team'});
 document.querySelectorAll('#toWin button').forEach(b=>b.onclick=()=>{ if(net.role!=='host') return; G.toWin=+b.dataset.v; broadcastRoster(); });
 document.querySelectorAll('#botDiff button').forEach(b=>b.onclick=()=>{ if(net.role!=='host') return; G.diff=b.dataset.d; broadcastRoster(); });
@@ -4050,10 +4058,12 @@ function rankedRoomOk(){ const h=V.roster.filter(p=>!p.bot); return !V.practice 
 // ---------------------------------------------------------------- ranked queue: real players first, bot if nobody's searching
 // A few public "queue slots" on the PeerJS server. If a slot has someone waiting, you join them;
 // if it's empty, you wait in it. Nobody shows up in ~15s -> you play a bot (and we say so).
-const QSLOTS=4, QWAIT=15000;
+const QSLOTS=4, QWAIT=15000, Q2WAIT=20000;
+let qMode='1v1';                                   // '1v1' or '2v2' (solo queue into a 4-player ranked game)
+const qSlot=i=>(qMode==='2v2'?'r2q':'rq')+i;
 let qState=null;
 function qStatus(t){ const s=$('#rankedStatus'); s.textContent=t; s.classList.toggle('hidden',!t); }
-function qEnd(){ if(qState && qState.cp && !qState.matched){ try{qState.cp.destroy()}catch(e){} } qState=null; $('#rankedPlay').disabled=false; $('#rankedCancel').classList.add('hidden'); }
+function qEnd(){ if(qState && qState.cp && !qState.matched){ try{qState.cp.destroy()}catch(e){} } qState=null; $('#rankedPlay').disabled=false; $('#rankedPlay2').disabled=false; $('#rankedCancel').classList.add('hidden'); }
 function qClientPeer(){
   return new Promise(res=>{
     if(qState.cp && qState.cp.open) return res(qState.cp);
@@ -4066,7 +4076,7 @@ function qClientPeer(){
 async function qTryJoin(i){
   if(!qState || qState.cancel) return 'empty';
   // queue slots always register on the PeerJS server, so "no such peer" really means empty
-  const r=await dial('rq'+i, {unavailWait:600, timeout:8000, cancel:()=>!qState || qState.cancel});
+  const r=await dial(qSlot(i), {unavailWait:600, timeout:8000, cancel:()=>!qState || qState.cancel});
   if(r.fail || !qState || qState.cancel){ if(r.conn) try{r.conn.close()}catch(_){} return 'empty'; }
   const conn=r.conn;
   return new Promise(res=>{
@@ -4078,44 +4088,52 @@ async function qTryJoin(i){
       if(d.t==='busy' && !done){ try{conn.close()}catch(_){} fin('busy'); return; }
       if(d.t==='welcome' && !done){
         qState.matched=true; net.role='client'; net.peer=r.peer; net.myId=r.id; net.hostConn=conn; net.code='RANKED'; net.via=r.via; V.queueMatch=true;
-        conn.on('close',()=>{ if(V.inRoom && V.phase==='game' && !V.overSeen) fatal('Your opponent left the match.'); });
+        conn.on('close',()=>{ if(V.inRoom && !V.overSeen) fatal(qMode==='2v2'?'The match host left.':'Your opponent left the match.'); });
         closeRanked(); fin('matched');
-        setTimeout(()=>{ const opp=V.roster.find(p=>p.id!==net.myId); if(opp) showVsCard({n:opp.name, rr:opp.rr||0}); }, 500);
+        if(qMode==='1v1') setTimeout(()=>{ const opp=V.roster.find(p=>p.id!==net.myId); if(opp) showVsCard({n:opp.name, rr:opp.rr||0}); }, 500);
+        else toast('👥 Joined a ranked 2v2 lobby. Starting when 4 players are in (or rivals fill in)');
       }
       if(qState===null || qState.matched || done) onClientData(d);
     });
-    conn.send({t:'hello', name:getName(), ...myGear(), rr:SAVE.rank.rr, rq:1});
+    conn.send({t:'hello', name:getName(), ...myGear(), rr:SAVE.rank.rr, ...(qMode==='2v2'?{r2:1}:{rq:1})});
   });
 }
 function qTryHost(i){
   return new Promise(res=>{
     let settled=false; const fin=v=>{ if(settled) return; settled=true; res(v); };
-    const peer=new Peer(PREFIX+'rq'+i,{debug:0});
+    const peer=new Peer(PREFIX+qSlot(i),{debug:0});
     peer.on('error',e=>{ if(e.type==='unavailable-id'){ try{peer.destroy()}catch(_){} fin('taken'); } });
     peer.on('open',()=>{
       if(!qState || qState.cancel){ try{peer.destroy()}catch(_){} fin('none'); return; }
       if(qState.cp){ try{qState.cp.destroy()}catch(_){} qState.cp=null; }
       // we're the one waiting: act as the host of a 1v1 room
-      net.role='host'; net.peer=peer; net.myId='host'; net.code='RANKED'; V.queueWaiting=true;
+      net.role='host'; net.peer=peer; net.myId='host'; net.code='RANKED'; if(qMode==='2v2') V.q2Waiting=true; else V.queueWaiting=true;
+      const tHost=performance.now(); let lastJoin=tHost, lastN=1;
       const me=addRosterPlayer('host', getName(), false, 0); Object.assign(me, myGear()); me.rr=SAVE.rank.rr;
       peer.on('connection', acceptConn);
       peer.on('disconnected', ()=>{ if(!peer.destroyed) setTimeout(()=>{ try{peer.reconnect()}catch(e){} }, 1000); });   // keep our queue slot on flaky Wi-Fi
-      net.hub=RelayHub('rq'+i, acceptConn);           // challengers on blocked Wi-Fi come in through our server or a relay
-      net.srv=ServerHub('rq'+i, acceptConn);
+      net.hub=RelayHub(qSlot(i), acceptConn);         // challengers on blocked Wi-Fi come in through our server or a relay
+      net.srv=ServerHub(qSlot(i), acceptConn);
       const wait=setInterval(()=>{
-        const giveUp = !qState || qState.cancel || performance.now()-qState.t0>QWAIT;
-        if(G.players.size>=2){ clearInterval(wait); V.queueWaiting=false; qState.matched=true; startQueueMatch(); fin('matched'); return; }
-        if(giveUp){ clearInterval(wait); V.queueWaiting=false; try{peer.destroy()}catch(_){} try{net.hub&&net.hub.close()}catch(_){} try{net.srv&&net.srv.close()}catch(_){} net.hub=null; net.srv=null; net.role=null; net.peer=null; G.players.clear(); net.conns.clear(); fin('none'); }
+        const now=performance.now(), n=G.players.size; if(n!==lastN){ lastN=n; lastJoin=now; }
+        if(qMode==='2v2'){
+          if(qState && !qState.matched) qStatus('👥 2v2 lobby: '+n+'/4 players… '+Math.round((now-tHost)/1000)+'s');
+          // full lobby, or waited long enough with at least one other real player (and nobody joined in the last 4s)
+          if(n>=4 || (n>=2 && now-tHost>Q2WAIT && now-lastJoin>4000)){ clearInterval(wait); V.q2Waiting=false; qState.matched=true; startQueueMatch2(); fin('matched'); return; }
+        } else if(n>=2){ clearInterval(wait); V.queueWaiting=false; qState.matched=true; startQueueMatch(); fin('matched'); return; }
+        const giveUp = !qState || qState.cancel || now-tHost>(qMode==='2v2'?Q2WAIT:QWAIT);
+        if(giveUp){ clearInterval(wait); V.queueWaiting=false; V.q2Waiting=false; try{peer.destroy()}catch(_){} try{net.hub&&net.hub.close()}catch(_){} try{net.srv&&net.srv.close()}catch(_){} net.hub=null; net.srv=null; net.role=null; net.peer=null; G.players.clear(); net.conns.clear(); fin('none'); }
       },200);
     });
     setTimeout(()=>{ if(!peer.open){ try{peer.destroy()}catch(_){} fin('none'); } },8000);
   });
 }
-async function findRankedMatch(){
-  if(qState) return; initAudio();
-  if(typeof Peer==='undefined'){ startRanked(); return; }
-  qState={cancel:false, t0:performance.now(), matched:false}; $('#rankedPlay').disabled=true; $('#rankedCancel').classList.remove('hidden');
-  const tick=setInterval(()=>{ if(qState && !qState.matched) qStatus('🔎 Searching for players… '+Math.round((performance.now()-qState.t0)/1000)+'s'); },250);
+async function findRankedMatch(mode){
+  if(qState) return; initAudio(); qMode = mode==='2v2' ? '2v2' : '1v1';
+  const solo=()=> qMode==='2v2' ? startRanked2Solo() : startRanked();
+  if(typeof Peer==='undefined'){ solo(); return; }
+  qState={cancel:false, t0:performance.now(), matched:false}; $('#rankedPlay').disabled=true; $('#rankedPlay2').disabled=true; $('#rankedCancel').classList.remove('hidden');
+  const tick=setInterval(()=>{ if(qState && !qState.matched && !V.q2Waiting) qStatus((qMode==='2v2'?'👥 Searching for a 2v2… ':'🔎 Searching for players… ')+Math.round((performance.now()-qState.t0)/1000)+'s'); },250);
   let retries=0;
   try{
     for(let i=0;i<QSLOTS && qState && !qState.cancel;i++){
@@ -4131,13 +4149,42 @@ async function findRankedMatch(){
   }catch(e){ console.warn(e); }
   clearInterval(tick);
   const cancelled = !qState || qState.cancel; qEnd(); qStatus('');
-  if(!cancelled){ toast('No players in queue — a Ranked Rival picked up the game'); startRanked(); }
+  if(!cancelled){ toast(qMode==='2v2' ? 'No other players in the 2v2 queue — Ranked Rivals filled the lobby' : 'No players in queue — a Ranked Rival picked up the game'); solo(); }
 }
 function startQueueMatch(){
   closeRanked(); V.queueMatch=true; G.ranked=true; G.toWin=11; G.winBy2=true; G.diff='pro';
   enterRoom(); goFull();
   RM=newMatch([...G.players.values()], 11, false, 'pro', true); RM.phaseT=Math.max(RM.phaseT,3.6); G.phase='game'; broadcastRoster();
   const opp=[...G.players.values()].find(p=>p.id!=='host'); if(opp) showVsCard({n:opp.name, rr:opp.rr||0});
+}
+// ---------------------------------------------------------------- RANKED 2v2 (solo queue)
+// Real players are split into two fair teams (snake draft by rating); empty spots go to Ranked Rivals near the lobby's rating.
+function fillRanked2Teams(){
+  for(const [id,r] of [...G.players]) if(r.bot) G.players.delete(id);
+  const hum=[...G.players.values()].sort((a,b)=>(b.rr||0)-(a.rr||0));
+  const pattern=[0,1,1,0]; hum.forEach((p,i)=>p.team=pattern[i%4]);
+  const avg=hum.reduce((s,p)=>s+(p.rr||0),0)/Math.max(1,hum.length);
+  const pool=RIVALS.map(R=>({R,rr:rivalRR(R)})).sort((a,b)=>Math.abs(a.rr-avg)-Math.abs(b.rr-avg)).slice(0,6);
+  for(const t of [0,1]) while(teamCount(t)<2 && pool.length){ const o=pool.splice(Math.floor(Math.random()*pool.length),1)[0]; addRivalToRoster(o.R, t); }
+  G.ranked2=true; G.toWin=11; G.winBy2=true; G.diff=diffForRR(avg);
+  return {humans:hum.length, avg};
+}
+function startQueueMatch2(){
+  closeRanked(); V.queueMatch=true;
+  const {humans}=fillRanked2Teams();
+  enterRoom(); goFull();
+  RM=newMatch([...G.players.values()], 11, false, G.diff, true); RM.phaseT=Math.max(RM.phaseT,3.6); G.phase='game'; broadcastRoster();
+  V.banner={text:'RANKED 2v2', sub:humans+' real players'+(humans<4?' + '+(4-humans)+' Ranked Rival'+(4-humans>1?'s':''):''), c:'#c77dff', t:3};
+}
+// nobody else searching: you + a rival teammate vs two rivals
+function startRanked2Solo(){
+  initAudio(); goFull(); closeRanked();
+  net.role='host'; net.myId='host'; net.code='RANKED'; V.practice=true; V.queueMatch=true;
+  const me=addRosterPlayer('host', getName(), false, 0); Object.assign(me, myGear()); me.rr=SAVE.rank.rr;
+  fillRanked2Teams(); enterRoom();
+  RM=newMatch([...G.players.values()], 11, false, G.diff, true); RM.phaseT=Math.max(RM.phaseT,3.6); G.phase='game'; broadcastRoster();
+  const mate=[...G.players.values()].find(p=>p.bot && p.team===0);
+  V.banner={text:'RANKED 2v2', sub:'You + '+(mate?mate.name:'a rival')+' vs Ranked Rivals', c:'#c77dff', t:3};
 }
 
 // ---------------------------------------------------------------- ranked 2v2 duo queue
