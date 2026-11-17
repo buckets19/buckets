@@ -528,24 +528,7 @@ const gauss = () => (Math.random()+Math.random()+Math.random()-1.5)*2;
 const approach = (v,t,d) => v<t ? Math.min(t, v+d) : Math.max(t, v-d);
 const hyp = Math.hypot;
 const hash = s => { let h=7; for(const c of String(s)) h=(h*31+c.charCodeAt(0))|0; return Math.abs(h); };
-// ---- name filter: no inappropriate names. Catches l33t-speak (5h1t), stretched letters (fuuuck) and
-//      symbols in between (f_u.c-k). The server runs the same check, so it can't be skipped.
-const BAD_IN=['fuck','fuk','fck','fvck','shit','sht','bitch','btch','cunt','dick','cock','pussy','penis','vagina','porn',
-  'nigg','niga','nigr','faggot','fagot','retard','rape','rapist','whore','slut','hitler','nazi','molest','pedophile','dildo','jizz',
-  'boob','tits','titty','horny','nude','naked','asshole','arsehole','bastard','wank','twat','killyourself','chink','kike',
-  'tranny','sexy','sexx','blowjob','handjob','cumshot','orgasm','semen','testicle','anus','butthole','buttsex','milf',
-  'stfu','gtfo','wtf','kms','suicide','terrorist','isis','heil'];
-const BAD_EXACT=['spic','coon','pedo','ass','cum','sex','fag','kys','kkk','hoe','hoes','tit','anal','nut','nuts','pee','poop','bum'];
-function nameBad(s){
-  const low=String(s||'').toLowerCase();
-  const leet=low.replace(/[0@4]/g,m=>m==='0'?'o':'a').replace(/[1!|]/g,'i').replace(/3/g,'e').replace(/[5$]/g,'s').replace(/7/g,'t').replace(/8/g,'b').replace(/9/g,'g');
-  const a=leet.replace(/[^a-z]/g,''), b=a.replace(/(.)\1+/g,'$1');
-  const a2=leet.replace(/l/g,'i').replace(/[^a-z]/g,'');               // l and 1 swapped for i
-  for(const w of BAD_IN) if(a.includes(w) || b.includes(w) || a2.includes(w)) return true;
-  if(BAD_EXACT.includes(a) || BAD_EXACT.includes(b)) return true;
-  return false;
-}
-const cleanName = s => { const n=String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,12); return (!n || nameBad(n)) ? 'Player' : n; };
+const cleanName = s => (String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,12)) || 'Player';
 function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
 const outOfCourt = (x,z) => x<COURT_L || x>COURT_R || Math.abs(z)>HALF_D;
 
@@ -4719,10 +4702,9 @@ async function api(path, body, key){
 }
 // ---- names
 function setNameStatus(state, n){ NAMEST={name:n, state}; const s=$('#nameStat'); if(!s) return;
-  s.textContent = state==='bad' ? '🚫 not allowed: pick another name' : state==='mine' ? '✅ this name is yours' : state==='taken' ? '❌ taken: pick another name' : state==='checking' ? '…' : '';
+  s.textContent = state==='mine' ? '✅ this name is yours' : state==='taken' ? '❌ taken: pick another name' : state==='checking' ? '…' : '';
   s.className='nameStat '+state; }
 async function claimName(n){
-  if(nameBad(n)){ setNameStatus('bad', n); return false; }
   n=cleanName(n); if(!n || n==='Player'){ setNameStatus('',n); return true; }
   setNameStatus('checking', n);
   const r=await api('/name/claim',{name:n});
@@ -4730,7 +4712,7 @@ async function claimName(n){
   if(cleanName($('#name').value)!==n) return true;                    // they kept typing
   setNameStatus(r.taken?'taken':'mine', n); return !r.taken;
 }
-function nameBlocked(){ if(nameBad($('#name').value)){ homeMsg('That name isn't allowed. Pick a different name.'); toast('🚫 Name not allowed'); return true; } const n=cleanName($('#name').value); if(NAMEST.name===n && NAMEST.state==='taken'){ homeMsg('"'+n+'" is already taken by another player. Pick a different name.'); toast('❌ That name is taken'); return true; } return false; }
+function nameBlocked(){ const n=cleanName($('#name').value); if(NAMEST.name===n && NAMEST.state==='taken'){ homeMsg('"'+n+'" is already taken by another player. Pick a different name.'); toast('❌ That name is taken'); return true; } return false; }
 $('#name').addEventListener('input', ()=>{ clearTimeout(nameTimer); setNameStatus('', ''); nameTimer=setTimeout(()=>claimName($('#name').value), 900); });
 $('#name').addEventListener('blur', ()=>{ clearTimeout(nameTimer); claimName($('#name').value); });
 setTimeout(()=>{ if(store('buckets-name')) claimName(store('buckets-name')); }, 1500);
