@@ -57,6 +57,7 @@ export class Room {
 
   webSocketMessage(ws, msg) {
     if (typeof msg !== 'string' || msg.length > 64000) return;
+    if (msg === 'ping|') { try { ws.send('{"t":"_pong"}'); } catch (e) {} return; }   // liveness check for the host
     const a = ws.deserializeAttachment() || {};
     if (a.role === 'host') {
       const i = msg.indexOf('|'); if (i < 1) return;
@@ -68,7 +69,8 @@ export class Room {
     }
   }
 
-  webSocketClose(ws) { this.gone(ws); }
+  // finish the close handshake so the other end gets its close event right away
+  webSocketClose(ws) { try { ws.close(1000, 'bye'); } catch (e) {} this.gone(ws); }
   webSocketError(ws) { this.gone(ws); }
 
   gone(ws) {

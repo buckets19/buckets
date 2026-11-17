@@ -193,7 +193,9 @@
   .rkBar{height:12px;border:2px solid var(--ink);border-radius:8px;background:#fff;overflow:hidden;margin:8px 0 4px}
   .rkFill{height:100%;background:var(--tc)}
   .rkStats{font-size:13px;font-weight:600;margin-top:4px}
-  #ladder{list-style:none;padding:0;margin:0;border:3px solid var(--ink);border-radius:14px;background:#fff;overflow:hidden}
+  /* the page blocks touch scrolling (so the court never wiggles); menus that scroll opt back in */
+  .panel, #ladder, #shopList, #questList, #netList, #rankedPanel, #shop, #questPanel, #netPanel{touch-action:pan-y}
+  #ladder{list-style:none;padding:0;margin:0;border:3px solid var(--ink);border-radius:14px;background:#fff;overflow-x:hidden;overflow-y:auto;max-height:min(52vh,420px);-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   #ladder li{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:2px dashed #eadfca;font-size:14px}
   #ladder li:last-child{border-bottom:0}
   #ladder li b{width:22px;text-align:right}
@@ -1367,13 +1369,14 @@ function connObj(extra){ const c=Object.assign({open:true, _h:{}, lastIn:perform
 function ServerHub(code, onConn){
   if(!SERVER_URL) return null;
   const S={code, key:Math.random().toString(36).slice(2,12), conns:new Map(), dead:false, ws:null, open:false, last:0, pend:[], taken:false, fails:0};
-  const connect=()=>{ if(S.dead) return; let ws; try{ ws=new WebSocket(srvRoom(code)+'?role=host&key='+S.key); }catch(e){ return; } S.ws=ws;
+  const connect=()=>{ if(S.dead) return; S.t0=performance.now(); let ws; try{ ws=new WebSocket(srvRoom(code)+'?role=host&key='+S.key); }catch(e){ return; } S.ws=ws;
     ws.onmessage=ev=>{ const str=String(ev.data);
-      if(str[0]==='{'){ try{ const m=JSON.parse(str); if(m.t==='_ok'){ S.open=true; S.fails=0; } if(m.t==='_taken'){ S.taken=true; S.dead=true; } }catch(e){} return; }
+      if(str[0]==='{'){ try{ const m=JSON.parse(str); S.pong=performance.now(); if(m.t==='_ok'){ S.open=true; S.fails=0; } if(m.t==='_taken'){ S.taken=true; S.dead=true; } }catch(e){} return; }
       const i=str.indexOf('|'); if(i<1) return; const cid=str.slice(0,i); let d; try{ d=JSON.parse(str.slice(i+1)); }catch(e){ return; }
       if(!d || typeof d!=='object') return;
       let c=S.conns.get(cid);
-      if(d.t==='_left'){ if(c) c.kill(); return; }
+      // a player dropped off the server: give them 15s to reconnect before removing them from the game
+      if(d.t==='_left'){ if(c){ const at=performance.now(); c.lastIn=at-1; setTimeout(()=>{ if(c.open && c.lastIn<at) c.kill(); }, 15000); } return; }
       if(!c){ if(d.t!=='hello' && d.t!=='duo?') return;
         c=connObj({peer:'s_'+cid, rid:cid, isRelay:true, isServer:true, relay:'server'});
         c.raw=x=>{ try{ if(S.ws && S.ws.readyState===1) S.ws.send(cid+'|'+JSON.stringify(x)); }catch(e){} };
@@ -1385,7 +1388,10 @@ function ServerHub(code, onConn){
     ws.onclose=()=>{ S.open=false; if(S.dead) return; S.fails++; setTimeout(connect, Math.min(8000, 600*S.fails)); };
     ws.onerror=()=>{}; };
   connect();
-  S.tick=setInterval(()=>{ for(const c of S.conns.values()) if(c.open) c.raw({t:'hb'}); }, 2000);   // keep quiet lobbies alive
+  // heartbeat players (keeps quiet lobbies alive) + check our own link: no reply from the server in 6s = dead, reconnect
+  S.tick=setInterval(()=>{ for(const c of S.conns.values()) if(c.open) c.raw({t:'hb'});
+    if(S.dead) return; const w=S.ws; if(w && w.readyState===1) try{ w.send('ping|'); }catch(e){}
+    if(performance.now()-(S.pong||S.t0||0)>6000){ S.open=false; try{ if(w){ w.onclose=null; w.onmessage=null; w.close(); } }catch(e){} S.pong=performance.now(); connect(); } }, 2000);
   // one broadcast per snapshot for the whole room
   S.snap=s=>{ if(!S.open || !S.conns.size) return; const now=performance.now();
     if(now-S.last<SERVER_SNAP_MS-4){ if(s.ev && s.ev.length) S.pend.push(...s.ev); return; }
@@ -1406,14 +1412,30 @@ function serverProbe(code, rid){
     const to=setTimeout(()=>{ try{ ws.close(); }catch(e){} fin(null); }, 6000);
   });
 }
-function ServerClientConn(ws){
-  const c=connObj({peer:'host', isRelay:true, isServer:true, relay:'server'});
-  c.send=d=>{ if(c.open && ws.readyState===1) try{ ws.send(JSON.stringify(d)); }catch(e){} }; c.raw=c.send;
+// a player's link to the room through our server. If school Wi-Fi drops it for a moment, it quietly
+// reconnects (same player id, same room) for up to 15s instead of kicking you out of the game.
+function ServerClientConn(ws0, code, rid){
+  const c=connObj({peer:'host', isRelay:true, isServer:true, relay:'server'}); let ws=ws0, lostAt=0; c.sockNow=()=>ws;
+  c.send=d=>{ if(c.open && ws && ws.readyState===1) try{ ws.send(JSON.stringify(d)); }catch(e){} }; c.raw=c.send;
   c.close=()=>{ if(!c.open) return; c.send({t:'bye'}); try{ ws.close(); }catch(e){} c.kill(); };
-  ws.onmessage=ev=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; } if(!d || typeof d!=='object') return; c.lastIn=performance.now();
-    if(d.t==='_hostgone' || d.t==='bye'){ c.kill(); return; } if(typeof d.t==='string' && d.t[0]==='_') return; if(d.t==='hb') return; c.emit('data', d); };
-  ws.onclose=()=>c.kill();
-  c.hb=setInterval(()=>{ if(c.open && performance.now()-c.lastIn>20000) c.kill(); }, 2000);
+  const attach=w=>{ ws=w;
+    w.onmessage=ev=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; } if(!d || typeof d!=='object') return; c.lastIn=performance.now();
+      if(d.t==='_hostgone' || d.t==='bye'){ c.kill(); return; } if(d.t==='_nohost'){ c.kill(); return; }
+      if(typeof d.t==='string' && d.t[0]==='_') return; if(d.t==='hb') return; c.emit('data', d); };
+    w.onclose=()=>{ if(!c.open || ws!==w) return; if(!lostAt) lostAt=performance.now(); V.netLost=true; setTimeout(retry, 600); }; };
+  const retry=()=>{ if(!c.open) return;
+    if(performance.now()-lostAt>15000){ V.netLost=false; c.kill(); return; }
+    let w; try{ w=new WebSocket(srvRoom(code)+'?role=c&id='+rid); }catch(e){ setTimeout(retry,1200); return; }
+    w.onmessage=ev=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
+      if(d.t==='_hosthere'){ lostAt=0; V.netLost=false; attach(w); c.lastIn=performance.now(); c.send({t:'ping', ts:performance.now()}); }
+      else if(d.t==='_nohost'){ again(); } };   // host may be reconnecting too: keep trying until 15s
+    let next=false; const again=()=>{ if(next || ws===w || !c.open) return; next=true; try{ w.onclose=w.onerror=w.onmessage=null; w.close(); }catch(e){} setTimeout(retry,800); };
+    w.onclose=w.onerror=again; setTimeout(again, 3000); };   // each attempt gets 3s, then we try again
+  attach(ws0);
+  // phones often don't notice a dead Wi-Fi connection for ages. The host talks at least every 2s,
+  // so 3.5s of silence = the link is dead: drop it and reconnect ourselves.
+  c.hb=setInterval(()=>{ if(!c.open) return; const quiet=performance.now()-c.lastIn;
+    if(!lostAt && quiet>3500){ lostAt=performance.now(); V.netLost=true; const dead=ws; ws=null; try{ dead.onclose=null; dead.onmessage=null; dead.close(); }catch(e){} retry(); } }, 500);
   return c;
 }
 
@@ -1448,7 +1470,7 @@ function dial(code, o={}){
       // our server answered and the direct link isn't up quickly: use the server
       if(srv && (el>directWait*0.6 || unavailable || peerErr || !useDirect)){
         if(D) D.close(); try{ peer&&peer.destroy(); }catch(e){}
-        fin({conn:ServerClientConn(srv.ws), peer:null, id:'s_'+srid, via:'server'}); return; }
+        fin({conn:ServerClientConn(srv.ws, code, srid), peer:null, id:'s_'+srid, via:'server'}); return; }
       // public relays: only once the server has said no (or had 4s to answer)
       // wait ~0.8s after the first answer so slower relays can report their timing too
       if(acks.size && (srvDone || el>4000) && performance.now()-firstAck>800 && (el>directWait || unavailable || peerErr || !useDirect)){
@@ -3559,6 +3581,7 @@ function drawHUD(S, dt, real){
   vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(8,4,24,.55)'); ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
   drawScreenFx(dt);
   // connection quality for players who joined (the host is always instant)
+  if(net.role==='client' && V.inRoom && V.netLost) txt('📶 Wi-Fi dropped, reconnecting…', W/2, H*.32, 26, '#ffd23f', 'center', 6);
   if(net.role==='client' && V.inRoom && V.rtt){ const r=Math.round(V.rtt), c=r<120?'#47e27a':r<250?'#ffd23f':'#ff5a4f';
     txt('📶 '+r+'ms'+(net.via==='server'?' · server':isRelay()?' · relay':''), 14, H-18, 13, c, 'left', 4); }
   // your zone: orange heat or blue frost around the screen edges
@@ -3737,9 +3760,13 @@ $$('#netMode button').forEach(b=>b.onclick=()=>{ try{ if(b.dataset.m) localStora
 // lobby line: how this device is connected
 setInterval(()=>{ const n=$('#netInfo'); if(!n || !V.inRoom || V.practice) return;
   let t='';
-  if(net.role==='host'){ const H=net.hub, up=H?H.socks.filter(s=>s.open).length:0;
-    t=(net.peer&&net.peer.open?'🟢 Direct link ready':'🟡 Direct link blocked')+(net.srv?(net.srv.open?' · 🛰️ server ready':' · 🛰️ server…'):'')+' · 🛟 backup relays '+up+'/'+RELAYS.length;
-    const rc=[...net.conns.values()].filter(c=>c.isRelay).length; if(rc) t+=' · '+rc+' via relay'; }
+  if(net.role==='host'){ const H=net.hub, up=H?H.socks.filter(s=>s.open).length:0, srvOk=net.srv&&net.srv.open, dir=net.peer&&net.peer.open;
+    // plain-English status: what matters is whether friends can get in
+    t = srvOk ? '🟢 Online · friends join through the Buckets server'+(dir?' (or direct)':'')
+      : dir ? '🟢 Online · direct link'+(up?' · '+up+' backup relays':'')
+      : up ? '🟡 Online through backup relays ('+up+')' : '🔴 Connecting…';
+    const cs=[...net.conns.values()], sc=cs.filter(c=>c.isServer).length, rc=cs.filter(c=>c.isRelay&&!c.isServer).length;
+    if(sc) t+=' · '+sc+' on server'; if(rc) t+=' · '+rc+' on relay'; }
   else if(net.role==='client') t=net.via==='server'?'🟢 Connected through the Buckets server':isRelay()?'🟡 Connected through backup relay ('+net.via+')':'🟢 Connected direct';
   if(n.textContent!==t) n.textContent=t; },1000);
 $('#rankedClose').onclick=closeRanked;
