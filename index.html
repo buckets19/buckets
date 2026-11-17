@@ -1163,7 +1163,7 @@ const RELAYS=[
   {id:'mosquitto',k:'mqtt',  url:'wss://test.mosquitto.org:8081/mqtt'},
   {id:'hivemq',   k:'mqtt',  url:'wss://broker.hivemq.com:8884/mqtt'},
 ];
-const RELAY_SNAP_MS=50;                      // relay players get 20 snapshots/s (direct gets 40)
+const RELAY_SNAP_MS=66;                      // relay players get 20 snapshots/s (direct gets 40)
 const NET_FORCE=(()=>{ try{ return localStorage.getItem('buckets-net')||''; }catch(e){ return ''; } })();   // '' | 'relay' | 'direct' (testing)
 const relayTopic=(code,k)=>'bk19.'+PREFIX+code+'.'+k;
 const isRelay=()=>!!(net.hostConn && net.hostConn.isRelay);
@@ -1262,12 +1262,12 @@ function relaySock(R){
 // ---- a "connection" over relays that looks like a PeerJS DataConnection to the rest of the game.
 // Every message goes out on up to TWO relays at once; the other side keeps whichever copy lands first
 // (messages carry a sequence number n, duplicates are dropped). Cuts lag spikes + spreads the load.
-function RelayConn(socks, me, other, topicOut){
-  const c={peer:'r_'+other, rid:other, open:true, isRelay:true, socks:new Set(socks), _h:{}, n:0, lastIn:performance.now(), lastSn:-1, lastN:0};
+function RelayConn(socks, me, other, topicOut, sid){
+  const c={peer:'r_'+other, rid:other, sid, open:true, isRelay:true, socks:new Set(socks), _h:{}, n:0, lastIn:performance.now(), lastSn:-1, lastN:0};
   c.relay=socks.map(s=>s.R.id).join('+');
   c.on=(ev,fn)=>{ (c._h[ev]=c._h[ev]||[]).push(fn); };
   c.emit=(ev,x)=>{ for(const fn of (c._h[ev]||[])) try{ fn(x); }catch(e){ console.warn(e); } };
-  c.raw=d=>{ const str=JSON.stringify({f:me, o:other, n:++c.n, d}); for(const s of c.socks) s.pub(topicOut, str); };
+  c.raw=d=>{ const str=JSON.stringify({f:me, o:other, s:c.sid, n:++c.n, d}); for(const s of c.socks) s.pub(topicOut, str); };
   c.send=d=>{ if(c.open) c.raw(d); };
   c.kill=()=>{ if(!c.open) return; c.open=false; clearInterval(c.hb); c.emit('close'); };
   c.close=()=>{ if(!c.open) return; c.raw({t:'bye'}); c.kill(); };
@@ -1279,7 +1279,8 @@ function RelayConn(socks, me, other, topicOut){
 
 // ---- host side: listen for players on every relay
 function RelayHub(code, onConn){
-  const H={code, socks:[], conns:new Map(), sn:0, last:0, pend:[], dead:false};
+  // every hosted game gets a random session id: two games that end up with the same code/slot can never mix
+  const H={code, sid:Math.random().toString(36).slice(2,9), socks:[], conns:new Map(), sn:0, last:0, pend:[], dead:false};
   const tin=relayTopic(code,'h');
   for(const R of RELAYS){
     const s=relaySock(R); H.socks.push(s); s.sub(tin);
@@ -1288,10 +1289,11 @@ function RelayHub(code, onConn){
       let m; try{ m=JSON.parse(str); }catch(e){ return; }
       if(!m || typeof m.f!=='string' || m.f.length>16 || !/^[a-z0-9]+$/.test(m.f) || !m.d || typeof m.d!=='object') return;
       const f=m.f, d=m.d;
-      if(d.t==='knock'){ s.pub(relayTopic(code,'c.'+f), JSON.stringify({f:'host', o:f, n:0, d:{t:'knockok', ts:d.ts}})); return; }
+      if(d.t==='knock'){ s.pub(relayTopic(code,'c.'+f), JSON.stringify({f:'host', o:f, n:0, d:{t:'knockok', ts:d.ts, sid:H.sid}})); return; }
+      if(m.s!==H.sid) return;                        // someone else's game on the same code
       let c=H.conns.get(f);
       if(!c){ if(d.t!=='hello' && d.t!=='duo?') return;     // a new player's first message (rooms / duo signposts)
-        c=RelayConn([s],'host',f,relayTopic(code,'c.'+f)); c.hub=H; H.conns.set(f,c);
+        c=RelayConn([s],'host',f,relayTopic(code,'c.'+f),H.sid); c.hub=H; H.conns.set(f,c);
         c.on('close',()=>{ if(H.conns.get(f)===c) H.conns.delete(f); }); onConn(c); }
       else if(!c.socks.has(s)){ if(c.socks.size>=2) return; c.socks.add(s); c.relay=[...c.socks].map(x=>x.R.id).join('+'); }   // their 2nd relay
       c.lastIn=performance.now();
@@ -1310,7 +1312,7 @@ function RelayHub(code, onConn){
     if(!used.size) return;
     if(now-H.last<RELAY_SNAP_MS-4){ if(s.ev && s.ev.length) H.pend.push(...s.ev); return; }
     H.last=now; const d=H.pend.length?{...s, ev:[...H.pend, ...(s.ev||[])]}:s; H.pend=[];
-    const str=JSON.stringify({f:'host', o:'*', n:++H.sn, d});
+    const str=JSON.stringify({f:'host', o:'*', s:H.sid, n:++H.sn, d});
     for(const sk of used) sk.pub(relayTopic(code,'c.all'), str); };
   H.anyOpen=()=>H.socks.some(s=>s.open);
   H.close=()=>{ H.dead=true; clearInterval(H.tick); for(const c of H.conns.values()) try{ c.raw({t:'bye'}); }catch(e){} for(const s of H.socks) s.close(); };
@@ -1330,14 +1332,14 @@ function relayDial(code, onAck){
     s.onmsg=(t,str)=>{
       let m; try{ m=JSON.parse(str); }catch(e){ return; }
       if(!m || m.f!=='host' || !m.d || typeof m.d!=='object') return;
-      if(!D.chosen){ if(m.d.t==='knockok' && m.o===rid){ const rtt=performance.now()-(+m.d.ts||0); if(rtt>0 && rtt<10000) s.rtt=Math.min(s.rtt??1e9, rtt); onAck(s); } return; }
+      if(!D.chosen){ if(m.d.t==='knockok' && m.o===rid && m.d.sid){ const rtt=performance.now()-(+m.d.ts||0); if(rtt>0 && rtt<10000) s.rtt=Math.min(s.rtt??1e9, rtt); s.sid=String(m.d.sid); onAck(s); } return; }
       if(D.chosen.socks.has(s)) D.chosen.got(m);
     };
   }
   D.choose=picks=>{
     for(const x of D.socks){ clearInterval(x.kt); if(!picks.includes(x)) x.close(); }
-    const c=RelayConn(picks, rid, 'host', th); c.peer='host'; D.chosen=c;
-    c.got=m=>{ c.lastIn=performance.now(); if(!c.fresh(m)) return; const d=m.d;
+    const c=RelayConn(picks, rid, 'host', th, picks[0].sid); c.peer='host'; D.chosen=c;
+    c.got=m=>{ if(m.s!==c.sid) return; c.lastIn=performance.now(); if(!c.fresh(m)) return; const d=m.d;
       if(d.t==='bye'){ c.kill(); return; }
       if(d.t==='hb' || d.t==='knockok') return;
       c.emit('data', d); };
@@ -1373,7 +1375,9 @@ function dial(code, o={}){
       const el=performance.now()-t0;
       // wait ~0.8s after the first answer so slower relays can report their timing too
       if(acks.size && performance.now()-firstAck>800 && (el>directWait || unavailable || peerErr || !useDirect)){
-        const picks=[...acks].sort((a,b)=>(a.rtt??1e9)-(b.rtt??1e9)).slice(0,2);
+        // fastest first, but Nostr relays rate-limit hard (one school = one IP), so they only win if nothing else works
+        const score=s=>(s.rtt??1e9)+(s.R.k==='nostr'?600:0);
+        const sorted=[...acks].sort((a,b)=>score(a)-score(b)), picks=sorted.filter(s=>s.sid===sorted[0].sid).slice(0,2);
         const c=D.choose(picks); try{ peer&&peer.destroy(); }catch(e){}
         fin({conn:c, peer:null, id:'r_'+D.rid, via:c.relay}); return; }
       if(unavailable && el>(o.unavailWait??7000)){ cleanup(); fin({fail:'none'}); }   // relay-only rooms aren't on the PeerJS server, so give relays time
@@ -2529,8 +2533,12 @@ const ctl = {
     if(keys.has('w')||keys.has('arrowup')) z+=1; if(keys.has('s')||keys.has('arrowdown')) z-=1;
     x+=this.sx; z+=this.sz; const l=hyp(x,z); if(l>1){ x/=l; z/=l; } return {x,z}; }
 };
-function pressA(){ if(ctl.aDown) return; ctl.aDown=true; ctl.aT=performance.now(); V.meterShow={start:ctl.aT, released:0, m:0}; predictLocalMove('a'); sendAct({t:'a',d:1}); }
-function releaseA(){ if(!ctl.aDown) return; ctl.aDown=false; const m=(performance.now()-ctl.aT)/1000/METER_T; if(V.meterShow) V.meterShow.m=m; sendAct({t:'a',d:0,m:r2(m)}); }
+function pressA(){ if(ctl.aDown) return; ctl.aDown=true; ctl.aT=performance.now();
+  const LS=V.lastSnap, mineBall=!!(LS && LS.b[3]===0 && LS.b[4]===net.myId);        // I had the ball when I pressed: this is a shot
+  V.meterShow={start:ctl.aT, released:0, m:0, mine:mineBall && V.phase==='game'}; predictLocalMove('a'); sendAct({t:'a',d:1}); }
+function releaseA(){ if(!ctl.aDown) return; ctl.aDown=false; const m=(performance.now()-ctl.aT)/1000/METER_T;
+  if(V.meterShow){ V.meterShow.m=m; if(V.meterShow.mine && net.role==='client') V.meterShow.released=performance.now(); }   // show where you let go right away
+  sendAct({t:'a',d:0,m:r2(m)}); }
 addEventListener('keydown', e=>{
   if(e.target.tagName==='INPUT'){ if(e.key==='Enter') (e.target.id==='code'?$('#joinBtn'):$('#hostBtn')).click(); return; }
   const k=e.key.toLowerCase(); keys.add(k);
@@ -3285,7 +3293,7 @@ function drawMeter(q, S){
   const ms=V.meterShow; if(!ms) return;
   const now=performance.now(), shooting=q[Q.act]===2;
   let m;
-  if(ctl.aDown && shooting) m=(now-ms.start)/1000/METER_T;
+  if(ctl.aDown && (shooting || ms.mine)) m=(now-ms.start)/1000/METER_T;     // joiners: keep it up even if the host is slow to confirm
   else if(ms.released && now-ms.released<700) m=ms.m;
   else if(ctl.aDown && now-ms.start<160 && S.b[3]===0 && S.b[4]===net.myId) m=(now-ms.start)/1000/METER_T;
   else return;
@@ -3955,6 +3963,7 @@ function qTryHost(i){
       net.role='host'; net.peer=peer; net.myId='host'; net.code='RANKED'; V.queueWaiting=true;
       const me=addRosterPlayer('host', getName(), false, 0); Object.assign(me, myGear()); me.rr=SAVE.rank.rr;
       peer.on('connection', acceptConn);
+      peer.on('disconnected', ()=>{ if(!peer.destroyed) setTimeout(()=>{ try{peer.reconnect()}catch(e){} }, 1000); });   // keep our queue slot on flaky Wi-Fi
       net.hub=RelayHub('rq'+i, acceptConn);           // challengers on blocked Wi-Fi come in through a relay
       const wait=setInterval(()=>{
         const giveUp = !qState || qState.cancel || performance.now()-qState.t0>QWAIT;
