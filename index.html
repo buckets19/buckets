@@ -1350,6 +1350,72 @@ function relayDial(code, onAck){
   return D;
 }
 
+// =====================================================================
+//  🛰️ BUCKETS GAME SERVER (our own Cloudflare server). When the direct link is blocked, this is the
+//  first choice: one fast websocket to a server we control, no public relays, no throttling.
+//  The public relays stay as a backup if the server can't be reached.
+// =====================================================================
+const SERVER_URL='';                                        // set after deploy, e.g. 'wss://buckets-server.NAME.workers.dev'
+const SERVER_SNAP_MS=50;                                     // 20 snapshots/s through our server
+const srvRoom=code=>SERVER_URL+'/room/'+encodeURIComponent(PREFIX+code);
+function connObj(extra){ const c=Object.assign({open:true, _h:{}, lastIn:performance.now()}, extra);
+  c.on=(ev,fn)=>{ (c._h[ev]=c._h[ev]||[]).push(fn); };
+  c.emit=(ev,x)=>{ for(const fn of (c._h[ev]||[])) try{ fn(x); }catch(e){ console.warn(e); } };
+  c.kill=()=>{ if(!c.open) return; c.open=false; clearInterval(c.hb); c.emit('close'); };
+  return c; }
+// host side: one websocket to the server carries every player in the room
+function ServerHub(code, onConn){
+  if(!SERVER_URL) return null;
+  const S={code, key:Math.random().toString(36).slice(2,12), conns:new Map(), dead:false, ws:null, open:false, last:0, pend:[], taken:false, fails:0};
+  const connect=()=>{ if(S.dead) return; let ws; try{ ws=new WebSocket(srvRoom(code)+'?role=host&key='+S.key); }catch(e){ return; } S.ws=ws;
+    ws.onmessage=ev=>{ const str=String(ev.data);
+      if(str[0]==='{'){ try{ const m=JSON.parse(str); if(m.t==='_ok'){ S.open=true; S.fails=0; } if(m.t==='_taken'){ S.taken=true; S.dead=true; } }catch(e){} return; }
+      const i=str.indexOf('|'); if(i<1) return; const cid=str.slice(0,i); let d; try{ d=JSON.parse(str.slice(i+1)); }catch(e){ return; }
+      if(!d || typeof d!=='object') return;
+      let c=S.conns.get(cid);
+      if(d.t==='_left'){ if(c) c.kill(); return; }
+      if(!c){ if(d.t!=='hello' && d.t!=='duo?') return;
+        c=connObj({peer:'s_'+cid, rid:cid, isRelay:true, isServer:true, relay:'server'});
+        c.raw=x=>{ try{ if(S.ws && S.ws.readyState===1) S.ws.send(cid+'|'+JSON.stringify(x)); }catch(e){} };
+        c.send=x=>{ if(c.open) c.raw(x); }; c.close=()=>{ if(!c.open) return; c.raw({t:'bye'}); c.kill(); };
+        S.conns.set(cid,c); c.on('close',()=>{ if(S.conns.get(cid)===c) S.conns.delete(cid); }); onConn(c); }
+      c.lastIn=performance.now();
+      if(d.t==='bye'){ c.kill(); return; } if(d.t==='hb') return;
+      c.emit('data', d); };
+    ws.onclose=()=>{ S.open=false; if(S.dead) return; S.fails++; setTimeout(connect, Math.min(8000, 600*S.fails)); };
+    ws.onerror=()=>{}; };
+  connect();
+  // one broadcast per snapshot for the whole room
+  S.snap=s=>{ if(!S.open || !S.conns.size) return; const now=performance.now();
+    if(now-S.last<SERVER_SNAP_MS-4){ if(s.ev && s.ev.length) S.pend.push(...s.ev); return; }
+    S.last=now; const d=S.pend.length?{...s, ev:[...S.pend, ...(s.ev||[])]}:s; S.pend=[];
+    try{ S.ws.send('*|'+JSON.stringify(d)); }catch(e){} };
+  S.close=()=>{ S.dead=true; for(const c of S.conns.values()) c.raw({t:'bye'}); try{ S.ws && S.ws.close(); }catch(e){} };
+  return S;
+}
+// player side: is the room's host on our server? resolves {ws, rtt} or null
+function serverProbe(code, rid){
+  return new Promise(res=>{
+    if(!SERVER_URL) return res(null);
+    let ws, done=false; const t0=performance.now(), fin=v=>{ if(done) return; done=true; clearTimeout(to); res(v); };
+    try{ ws=new WebSocket(srvRoom(code)+'?role=c&id='+rid); }catch(e){ return res(null); }
+    ws.onmessage=ev=>{ if(done) return; let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
+      if(m.t==='_hosthere') fin({ws, rtt:performance.now()-t0}); else if(m.t==='_nohost') fin(null); };
+    ws.onclose=ws.onerror=()=>fin(null);
+    const to=setTimeout(()=>{ try{ ws.close(); }catch(e){} fin(null); }, 6000);
+  });
+}
+function ServerClientConn(ws){
+  const c=connObj({peer:'host', isRelay:true, isServer:true, relay:'server'});
+  c.send=d=>{ if(c.open && ws.readyState===1) try{ ws.send(JSON.stringify(d)); }catch(e){} }; c.raw=c.send;
+  c.close=()=>{ if(!c.open) return; c.send({t:'bye'}); try{ ws.close(); }catch(e){} c.kill(); };
+  ws.onmessage=ev=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; } if(!d || typeof d!=='object') return; c.lastIn=performance.now();
+    if(d.t==='_hostgone' || d.t==='bye'){ c.kill(); return; } if(typeof d.t==='string' && d.t[0]==='_') return; if(d.t==='hb') return; c.emit('data', d); };
+  ws.onclose=()=>c.kill();
+  c.hb=setInterval(()=>{ if(c.open && performance.now()-c.lastIn>12000) c.kill(); }, 2000);
+  return c;
+}
+
 // ---- connect to a room. Direct WebRTC and every relay at once: direct wins if it opens quickly,
 //      otherwise the two FASTEST relays the host answered on. Resolves {conn, peer, id, via} or {fail}.
 function dial(code, o={}){
@@ -1358,8 +1424,13 @@ function dial(code, o={}){
     const acks=new Set();
     const t0=performance.now(), directWait=o.directWait??2500;
     const useDirect=NET_FORCE!=='relay' && typeof Peer!=='undefined', useRelay=NET_FORCE!=='direct';
-    const cleanup=()=>{ try{ peer&&peer.destroy(); }catch(e){} if(D) D.close(); };
-    const fin=r=>{ if(done) return; done=true; clearInterval(iv); clearTimeout(to); res(r); };
+    // our own game server: ask it in parallel. If the host is there, it beats every public relay.
+    const srid=Math.random().toString(36).slice(2,10); let srv=null, srvDone=!SERVER_URL || NET_FORCE==='direct' || NET_FORCE==='relays';
+    if(!srvDone) serverProbe(code, srid).then(r=>{ srvDone=true; if(done){ if(r) try{ r.ws.close(); }catch(e){} return; } srv=r; });
+    const cleanup=()=>{ try{ peer&&peer.destroy(); }catch(e){} if(D) D.close(); if(srv) try{ srv.ws.close(); }catch(e){} };
+    const fin=r=>{ if(done) return; done=true; clearInterval(iv); clearTimeout(to);
+      if(r.via!=='server' && srv) try{ srv.ws.close(); }catch(e){}
+      res(r); };
     // the PeerJS server also tells us fast if a room code doesn't exist, so ask it even in relay-only mode
     if(typeof Peer!=='undefined'){ try{
       peer=new Peer({debug:0});
@@ -1373,8 +1444,13 @@ function dial(code, o={}){
     const iv=setInterval(()=>{
       if(o.cancel && o.cancel()){ cleanup(); fin({fail:'cancel'}); return; }
       const el=performance.now()-t0;
+      // our server answered and the direct link isn't up quickly: use the server
+      if(srv && (el>directWait*0.6 || unavailable || peerErr || !useDirect)){
+        if(D) D.close(); try{ peer&&peer.destroy(); }catch(e){}
+        fin({conn:ServerClientConn(srv.ws), peer:null, id:'s_'+srid, via:'server'}); return; }
+      // public relays: only once the server has said no (or had 4s to answer)
       // wait ~0.8s after the first answer so slower relays can report their timing too
-      if(acks.size && performance.now()-firstAck>800 && (el>directWait || unavailable || peerErr || !useDirect)){
+      if(acks.size && (srvDone || el>4000) && performance.now()-firstAck>800 && (el>directWait || unavailable || peerErr || !useDirect)){
         // fastest first, but Nostr relays rate-limit hard (one school = one IP), so they only win if nothing else works
         const score=s=>(s.rtt??1e9)+(s.R.k==='nostr'?600:0);
         const sorted=[...acks].sort((a,b)=>score(a)-score(b)), picks=sorted.filter(s=>s.sid===sorted[0].sid).slice(0,2);
@@ -1398,10 +1474,12 @@ setInterval(()=>{ if(net.role==='client' && net.hostConn && net.hostConn.open &&
 function sendSnap(s){
   for(const c of net.conns.values()) if(c.open && !c.isRelay) c.send(s);
   if(net.hub) net.hub.snap(s);
+  if(net.srv) net.srv.snap(s);
 }
 addEventListener('pagehide', ()=>{
   try{ if(net.hostConn && net.hostConn.isRelay) net.hostConn.raw({t:'bye'}); }catch(e){}
   try{ if(net.hub) net.hub.close(); }catch(e){}
+  try{ if(net.srv) net.srv.close(); }catch(e){}
 });
 
 let hostTimer=0;
@@ -1416,14 +1494,15 @@ function hostGame(name, tries=0){
     clearTimeout(hostTimer);
     net.role='host'; net.peer=peer; net.myId='host'; net.code=code;
     if(!net.hub) net.hub=RelayHub(code, acceptConn);
+    if(!net.srv) net.srv=ServerHub(code, acceptConn);
     const me=addRosterPlayer('host', name, false, 0); Object.assign(me, myGear()); me.rr=SAVE.rank.rr;
     enterRoom(); broadcastRoster();
   };
   const relayOnly=()=>{
     if(net.role==='host') return;
-    const H=net.hub||(net.hub=RelayHub(code, acceptConn)); const t0=performance.now();
+    const H=net.hub||(net.hub=RelayHub(code, acceptConn)); if(!net.srv) net.srv=ServerHub(code, acceptConn); const t0=performance.now();
     const iv=setInterval(()=>{
-      if(H.anyOpen()){ clearInterval(iv); enter(null); }
+      if(H.anyOpen() || (net.srv && net.srv.open)){ clearInterval(iv); enter(null); }
       else if(performance.now()-t0>10000){ clearInterval(iv); H.close(); net.hub=null; setBusy(false); homeMsg(netErrMsg('network','Could not create a room')); }
     },200);
   };
@@ -2577,8 +2656,10 @@ bindBtn($('#bC'), ()=>{ predictLocalMove('c'); sendAct({t:'c'}); });
 let lastIn='', lastInAt=0;
 function clientSendInput(){
   if(net.role!=='client' || V.phase!=='game' || !net.hostConn || !net.hostConn.open) return;
-  const a=ctl.axis(), x=r2(a.x), z=r2(a.z), key=x+','+z, now=performance.now();
-  if(key!==lastIn || now-lastInAt>150){ net.hostConn.send({t:'in', x, z}); lastIn=key; lastInAt=now; }
+  // stick snapped to 1/8 steps and rate-capped: a thumb on an iPad joystick changes every frame, and 60 msgs/s
+  // through a relay piles up into SECONDS of delay. Direct: up to 30/s. Server/relay: up to 12/s. Keepalive every 250ms.
+  const a=ctl.axis(), x=Math.round(a.x*8)/8, z=Math.round(a.z*8)/8, key=x+','+z, now=performance.now(), gap=isRelay()?80:33;
+  if((key!==lastIn && now-lastInAt>=gap) || now-lastInAt>250){ net.hostConn.send({t:'in', x, z}); lastIn=key; lastInAt=now; }
 }
 
 // =====================================================================
@@ -3478,7 +3559,7 @@ function drawHUD(S, dt, real){
   drawScreenFx(dt);
   // connection quality for players who joined (the host is always instant)
   if(net.role==='client' && V.inRoom && V.rtt){ const r=Math.round(V.rtt), c=r<120?'#47e27a':r<250?'#ffd23f':'#ff5a4f';
-    txt('📶 '+r+'ms'+(isRelay()?' · relay':''), 14, H-18, 13, c, 'left', 4); }
+    txt('📶 '+r+'ms'+(net.via==='server'?' · server':isRelay()?' · relay':''), 14, H-18, 13, c, 'left', 4); }
   // your zone: orange heat or blue frost around the screen edges
   const meZ = real ? (S.p.find(q=>q[0]===net.myId)||[])[Q.fire] : 0;
   if(meZ===1 || meZ===-1){
@@ -3619,6 +3700,13 @@ async function runNetTest(){
     await pc.setLocalDescription(await pc.createOffer());
     setTimeout(()=>{ pc.close(); res.direct=ok; setD(ok?'✅ probably works':'❌ blocked — relays will be used'); r(); },5000);
   }catch(e){ setD('❌ not supported'); r(); } }));
+  // 2b) our own Buckets server (the main way to play when the direct link is blocked)
+  if(SERVER_URL){ const setV=netRow('🛰️ Buckets server (main backup)');
+    tests.push(new Promise(r=>{ const t0=performance.now(); let ws;
+      try{ ws=new WebSocket(srvRoom('TEST'+Math.random().toString(36).slice(2,7))+'?role=c&id=test'); }catch(e){ setV('❌'); return r(); }
+      const to=setTimeout(()=>{ setV('❌ blocked'); try{ws.close()}catch(e){} r(); },7000);
+      ws.onmessage=()=>{ clearTimeout(to); const ms=Math.round(performance.now()-t0); res.server=ms; setV('✅ '+ms+'ms'); try{ws.close()}catch(e){} r(); };
+      ws.onerror=()=>{ clearTimeout(to); setV('❌ blocked'); r(); }; })); }
   // 3) every backup relay: connect, then send a message to ourselves and time the round trip
   for(const R of RELAYS){
     const setR=netRow('Backup relay: '+R.id+(R.url.includes(':8')?' (port '+R.url.split(':')[2].split('/')[0]+')':''));
@@ -3635,6 +3723,7 @@ async function runNetTest(){
   if(run!==netTestRun) return;
   const best=res.relays.sort((a,b)=>a.ms-b.ms)[0];
   $('#netVerdict').textContent = res.direct ? '✅ Multiplayer should work here (direct link).'
+    : res.server ? '✅ Multiplayer will run through the Buckets server ('+res.server+'ms). This is the smooth backup.'
     : best ? '✅ Multiplayer should work here through the backup relay ('+res.relays.length+' working, best: '+best.id+'). Joining takes a few extra seconds.'
     : '❌ This Wi-Fi blocks every online option. Try a phone hotspot, or play Practice / Ranked vs bots.';
 }
@@ -3648,9 +3737,9 @@ $$('#netMode button').forEach(b=>b.onclick=()=>{ try{ if(b.dataset.m) localStora
 setInterval(()=>{ const n=$('#netInfo'); if(!n || !V.inRoom || V.practice) return;
   let t='';
   if(net.role==='host'){ const H=net.hub, up=H?H.socks.filter(s=>s.open).length:0;
-    t=(net.peer&&net.peer.open?'🟢 Direct link ready':'🟡 Direct link blocked')+' · 🛟 backup relays '+up+'/'+RELAYS.length;
+    t=(net.peer&&net.peer.open?'🟢 Direct link ready':'🟡 Direct link blocked')+(net.srv?(net.srv.open?' · 🛰️ server ready':' · 🛰️ server…'):'')+' · 🛟 backup relays '+up+'/'+RELAYS.length;
     const rc=[...net.conns.values()].filter(c=>c.isRelay).length; if(rc) t+=' · '+rc+' via relay'; }
-  else if(net.role==='client') t=isRelay()?'🟡 Connected through backup relay ('+net.via+')':'🟢 Connected direct';
+  else if(net.role==='client') t=net.via==='server'?'🟢 Connected through the Buckets server':isRelay()?'🟡 Connected through backup relay ('+net.via+')':'🟢 Connected direct';
   if(n.textContent!==t) n.textContent=t; },1000);
 $('#rankedClose').onclick=closeRanked;
 $('#rankedPlay').onclick=findRankedMatch;
@@ -3964,11 +4053,12 @@ function qTryHost(i){
       const me=addRosterPlayer('host', getName(), false, 0); Object.assign(me, myGear()); me.rr=SAVE.rank.rr;
       peer.on('connection', acceptConn);
       peer.on('disconnected', ()=>{ if(!peer.destroyed) setTimeout(()=>{ try{peer.reconnect()}catch(e){} }, 1000); });   // keep our queue slot on flaky Wi-Fi
-      net.hub=RelayHub('rq'+i, acceptConn);           // challengers on blocked Wi-Fi come in through a relay
+      net.hub=RelayHub('rq'+i, acceptConn);           // challengers on blocked Wi-Fi come in through our server or a relay
+      net.srv=ServerHub('rq'+i, acceptConn);
       const wait=setInterval(()=>{
         const giveUp = !qState || qState.cancel || performance.now()-qState.t0>QWAIT;
         if(G.players.size>=2){ clearInterval(wait); V.queueWaiting=false; qState.matched=true; startQueueMatch(); fin('matched'); return; }
-        if(giveUp){ clearInterval(wait); V.queueWaiting=false; try{peer.destroy()}catch(_){} try{net.hub&&net.hub.close()}catch(_){} net.hub=null; net.role=null; net.peer=null; G.players.clear(); net.conns.clear(); fin('none'); }
+        if(giveUp){ clearInterval(wait); V.queueWaiting=false; try{peer.destroy()}catch(_){} try{net.hub&&net.hub.close()}catch(_){} try{net.srv&&net.srv.close()}catch(_){} net.hub=null; net.srv=null; net.role=null; net.peer=null; G.players.clear(); net.conns.clear(); fin('none'); }
       },200);
     });
     setTimeout(()=>{ if(!peer.open){ try{peer.destroy()}catch(_){} fin('none'); } },8000);
@@ -4010,7 +4100,7 @@ function startQueueMatch(){
 const DUO_WAIT=20000;
 function duoStatus(t){ $('#duoStatus').textContent=t||''; $('#duoCancel').classList.toggle('hidden', !V.duoState); $('#duoBtn').disabled=!!V.duoState; }
 function duoEnd(){ const s=V.duoState; V.duoState=null; V.duoWaiting=false; V.duoTaken=false;
-  if(s){ clearInterval(s.tick); for(const p of [s.cp, s.sign]) if(p){ try{p.destroy()}catch(e){} } try{s.signHub&&s.signHub.close()}catch(e){} } duoStatus(''); renderLobby(); }
+  if(s){ clearInterval(s.tick); for(const p of [s.cp, s.sign]) if(p){ try{p.destroy()}catch(e){} } try{s.signHub&&s.signHub.close()}catch(e){} try{s.signSrv&&s.signSrv.close()}catch(e){} } duoStatus(''); renderLobby(); }
 function duoTempPeer(s){ return new Promise(res=>{ const p=new Peer({debug:0}); s.cp=p; let ok=false; p.on('open',()=>{ ok=true; res(p); }); p.on('error',e=>{ if(s.onErr) s.onErr(e); }); setTimeout(()=>{ if(!ok) res(null); },8000); }); }
 async function duoAsk(s, i){
   const r=await dial('rq2'+i, {unavailWait:600, timeout:8000, cancel:()=>s.cancel});
@@ -4035,7 +4125,7 @@ function duoClaim(s, i){
       setTimeout(()=>{ try{c.close()}catch(_){} },500);
     });
     sp.on('error',e=>{ if(e.type==='unavailable-id'){ try{sp.destroy()}catch(_){} fin(false); } });
-    sp.on('open',()=>{ s.sign=sp; s.signHub=RelayHub('rq2'+i, onSign); fin(true); });
+    sp.on('open',()=>{ s.sign=sp; s.signHub=RelayHub('rq2'+i, onSign); s.signSrv=ServerHub('rq2'+i, onSign); fin(true); });
     sp.on('connection',onSign);
     setTimeout(()=>{ if(!sp.open){ try{sp.destroy()}catch(_){} fin(false); } },8000);
   });
@@ -4079,7 +4169,7 @@ function duoJoinOther(code){
 function migrateTo(code, tag){
   if(!code) return;
   V.migrating=true; toast('Duo found! Joining the ranked 2v2…');
-  const old=net.peer, oldConn=net.hostConn, oldHub=net.hub;
+  const old=net.peer, oldConn=net.hostConn, oldHub=net.hub, oldSrv=net.srv; net.srv=null; setTimeout(()=>{ try{oldSrv&&oldSrv.close()}catch(e){} },150);
   setTimeout(()=>{ try{old&&old.destroy()}catch(e){} try{oldConn&&oldConn.close()}catch(e){} try{oldHub&&oldHub.close()}catch(e){} },150);
   RM=null; G.players.clear(); net.conns.clear(); net.hub=null; net.hostConn=null; G.phase='lobby';
   dial(code).then(r=>{
@@ -4094,7 +4184,7 @@ function migrateTo(code, tag){
 // the other duo arrived in my room: 2v2 ranked, go
 function duoMatchReady(){
   const s=V.duoState; V.duoWaiting=false; V.duoState=null;
-  if(s){ clearInterval(s.tick); for(const p of [s.cp, s.sign]) if(p){ try{p.destroy()}catch(e){} } try{s.signHub&&s.signHub.close()}catch(e){} }
+  if(s){ clearInterval(s.tick); for(const p of [s.cp, s.sign]) if(p){ try{p.destroy()}catch(e){} } try{s.signHub&&s.signHub.close()}catch(e){} try{s.signSrv&&s.signSrv.close()}catch(e){} }
   duoStatus(''); G.ranked2=true; G.toWin=11; G.winBy2=true; G.diff='pro';
   RM=newMatch([...G.players.values()], 11, false, 'pro', true); G.phase='game'; broadcastRoster();
   V.banner={text:'RANKED 2v2', sub:'vs a real duo', c:'#ffd23f', t:2.4};
