@@ -58,7 +58,7 @@ export class GameRoom {
   setGear(r, d) { for (const k in d) if (!NO_GEAR.has(k) && /^[a-z][a-zA-Z0-9]{0,11}$/.test(k) && typeof d[k] === 'string' && d[k].length <= 64) r[k] = d[k]; }
   addBot(team) {
     if (this.count(team) >= S.MAX_PER_TEAM) return;
-    const used = new Set([...this.G.players.values()].map(p => p.name)); const nm = S.BOT_NAMES.find(n => !used.has(n + ' 🤖')) || 'Bot';
+    const used = new Set([...this.G.players.values()].map(p => p.name)); const nm = S.BOT_NAMES.find(n => !used.has(S.cleanName(n + ' 🤖'))) || 'Bot';
     this.addPlayer('bot-' + rid(6), nm + ' 🤖', true, team);
   }
   addRival(R, team) { const b = this.addPlayer('rv-' + R.k, R.n, true, team); b.rv = R.k; b.rr = S.rivalRR(R); b.num = R.num; return b; }

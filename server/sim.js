@@ -42,7 +42,21 @@ const gauss = () => (Math.random()+Math.random()+Math.random()-1.5)*2;
 const approach = (v,t,d) => v<t ? Math.min(t, v+d) : Math.max(t, v-d);
 const hyp = Math.hypot;
 const hash = s => { let h=7; for(const c of String(s)) h=(h*31+c.charCodeAt(0))|0; return Math.abs(h); };
-const cleanName = s => (String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,12)) || 'Player';
+// 🚫 name filter: no inappropriate names anywhere (your own, other players, the leaderboard, the server).
+// Catches l33t-speak (5h1t), stretched letters (fuuuck) and symbols in between (f_u.c-k).
+// The word lists are stored scrambled (base64) so nobody reading the code sees them.
+const NAME_BAD = (()=>{ const d=x=>{ try{ return atob(x).split(','); }catch(e){ return []; } };
+  return { inn:d('ZnVjayxmdWssZmNrLGZ2Y2ssc2hpdCxiaXRjaCxidGNoLGN1bnQsZGljayxjb2NrLHB1c3N5LHBlbmlzLHZhZ2luYSxwb3JuLG5pZ2csbmlnYSxuaWdyLGZhZ2dvdCxmYWdvdCxyZXRhcmQscmFwaXN0LHdob3JlLHNsdXQsaGl0bGVyLG5hemksbW9sZXN0LHBlZG9waGlsZSxkaWxkbyxqaXp6LGJvb2IsdGl0cyx0aXR0eSxob3JueSxudWRlLG5ha2VkLGFzc2hvbGUsYXJzZWhvbGUsYmFzdGFyZCx3YW5rLHR3YXQsa2lsbHlvdXJzZWxmLGNoaW5rLGtpa2UsdHJhbm55LHNleHksc2V4eCxibG93am9iLGhhbmRqb2IsY3Vtc2hvdCxvcmdhc20sc2VtZW4sdGVzdGljbGUsYnV0dGhvbGUsYnV0dHNleCxtaWxmLHN0ZnUsZ3Rmbyx3dGYsc3VpY2lkZSx0ZXJyb3Jpc3Q='), ex:d('c3BpYyxjb29uLHBlZG8sYXNzLGN1bSxzZXgsZmFnLGt5cyxra2ssaG9lLGhvZXMsdGl0LGFuYWwsbnV0LG51dHMscGVlLHBvb3AsYnVtLHJhcGUscmFwZXMsYW51cyxpc2lzLGttcyxoZWls'), ok:['peacock','hancock','dickens','dickson','cockpit','scunthorpe','cockatoo','cockatiel','therapist'] }; })();
+function nameBad(s){
+  let low=String(s||'').toLowerCase();
+  const leet=low.replace(/[0@4]/g,m=>m==='0'?'o':'a').replace(/[1!|]/g,'i').replace(/3/g,'e').replace(/[5$]/g,'s').replace(/7/g,'t').replace(/8/g,'b').replace(/9/g,'g');
+  let a=leet.replace(/[^a-z]/g,''); for(const w of NAME_BAD.ok) a=a.split(w).join('');
+  let a2=leet.replace(/l/g,'i').replace(/[^a-z]/g,''); for(const w of NAME_BAD.ok) a2=a2.split(w.replace(/l/g,'i')).join('');
+  const b=a.replace(/(.)\1+/g,'$1');
+  for(const w of NAME_BAD.inn) if(a.includes(w) || b.includes(w) || a2.includes(w)) return true;
+  return NAME_BAD.ex.includes(a) || NAME_BAD.ex.includes(b);
+}
+const cleanName = s => { const n=(String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,12)) || 'Player'; return nameBad(n) ? 'Player' : n; };
 function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
 const outOfCourt = (x,z) => x<COURT_L || x>COURT_R || Math.abs(z)>HALF_D;
 

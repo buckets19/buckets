@@ -140,6 +140,12 @@
   #overScore{text-align:center;font-size:26px;font-weight:700;margin-bottom:10px}
   #overList{list-style:none;padding:0;margin:0 0 10px}
   #overList li{display:flex;justify-content:space-between;font-weight:600;padding:4px 0;border-bottom:2px dashed #e4d6bb}
+  #overList li.bxRow{display:grid;grid-template-columns:minmax(70px,1fr) repeat(7,minmax(26px,auto));gap:6px;font-size:13px;text-align:center;align-items:center}
+  #overList li.bxRow .bxName{text-align:left;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #overList li.bxHead{font-size:10px;opacity:.6;letter-spacing:1px;border-bottom:2px solid #e4d6bb}
+  #overList li.bxRow.me{background:#fff3c4;border-radius:8px}
+  #overList li.bxMvp{display:flex;align-items:center;gap:8px;justify-content:center;flex-wrap:wrap;background:linear-gradient(90deg,#ffd23f,#ffb400);border:3px solid var(--ink);border-radius:12px;padding:6px 10px;margin-bottom:6px}
+  #overList li.bxMvp small{opacity:.8}
   #overNote{text-align:center;font-size:14px;opacity:.7;margin:0}
 
   /* touch controls */
@@ -617,7 +623,21 @@ const gauss = () => (Math.random()+Math.random()+Math.random()-1.5)*2;
 const approach = (v,t,d) => v<t ? Math.min(t, v+d) : Math.max(t, v-d);
 const hyp = Math.hypot;
 const hash = s => { let h=7; for(const c of String(s)) h=(h*31+c.charCodeAt(0))|0; return Math.abs(h); };
-const cleanName = s => (String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,12)) || 'Player';
+// 🚫 name filter: no inappropriate names anywhere (your own, other players, the leaderboard, the server).
+// Catches l33t-speak (5h1t), stretched letters (fuuuck) and symbols in between (f_u.c-k).
+// The word lists are stored scrambled (base64) so nobody reading the code sees them.
+const NAME_BAD = (()=>{ const d=x=>{ try{ return atob(x).split(','); }catch(e){ return []; } };
+  return { inn:d('ZnVjayxmdWssZmNrLGZ2Y2ssc2hpdCxiaXRjaCxidGNoLGN1bnQsZGljayxjb2NrLHB1c3N5LHBlbmlzLHZhZ2luYSxwb3JuLG5pZ2csbmlnYSxuaWdyLGZhZ2dvdCxmYWdvdCxyZXRhcmQscmFwaXN0LHdob3JlLHNsdXQsaGl0bGVyLG5hemksbW9sZXN0LHBlZG9waGlsZSxkaWxkbyxqaXp6LGJvb2IsdGl0cyx0aXR0eSxob3JueSxudWRlLG5ha2VkLGFzc2hvbGUsYXJzZWhvbGUsYmFzdGFyZCx3YW5rLHR3YXQsa2lsbHlvdXJzZWxmLGNoaW5rLGtpa2UsdHJhbm55LHNleHksc2V4eCxibG93am9iLGhhbmRqb2IsY3Vtc2hvdCxvcmdhc20sc2VtZW4sdGVzdGljbGUsYnV0dGhvbGUsYnV0dHNleCxtaWxmLHN0ZnUsZ3Rmbyx3dGYsc3VpY2lkZSx0ZXJyb3Jpc3Q='), ex:d('c3BpYyxjb29uLHBlZG8sYXNzLGN1bSxzZXgsZmFnLGt5cyxra2ssaG9lLGhvZXMsdGl0LGFuYWwsbnV0LG51dHMscGVlLHBvb3AsYnVtLHJhcGUscmFwZXMsYW51cyxpc2lzLGttcyxoZWls'), ok:['peacock','hancock','dickens','dickson','cockpit','scunthorpe','cockatoo','cockatiel','therapist'] }; })();
+function nameBad(s){
+  let low=String(s||'').toLowerCase();
+  const leet=low.replace(/[0@4]/g,m=>m==='0'?'o':'a').replace(/[1!|]/g,'i').replace(/3/g,'e').replace(/[5$]/g,'s').replace(/7/g,'t').replace(/8/g,'b').replace(/9/g,'g');
+  let a=leet.replace(/[^a-z]/g,''); for(const w of NAME_BAD.ok) a=a.split(w).join('');
+  let a2=leet.replace(/l/g,'i').replace(/[^a-z]/g,''); for(const w of NAME_BAD.ok) a2=a2.split(w.replace(/l/g,'i')).join('');
+  const b=a.replace(/(.)\1+/g,'$1');
+  for(const w of NAME_BAD.inn) if(a.includes(w) || b.includes(w) || a2.includes(w)) return true;
+  return NAME_BAD.ex.includes(a) || NAME_BAD.ex.includes(b);
+}
+const cleanName = s => { const n=(String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,12)) || 'Player'; return nameBad(n) ? 'Player' : n; };
 function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
 const outOfCourt = (x,z) => x<COURT_L || x>COURT_R || Math.abs(z)>HALF_D;
 
@@ -3042,7 +3062,7 @@ function applyRoster(m){
   fillGear(m.players); V.owner=m.owner||null;
   V.roster=m.players; V.rmap=new Map(m.players.map(p=>[p.id,p])); V.phase=m.phase; V.toWin=m.toWin; V.diff=m.diff||'pro'; V.winBy2=!!m.winBy2; V.rankedRoom=!!m.ranked; V.ranked2=!!m.ranked2; V.party2Room=!!m.party; V.p2Srch=!!m.srch; if(m.code) net.code=m.code;
   if(!V.inRoom) return;
-  if(V.phase==='game' && prev!=='game'){ V.snaps=[]; $('#over').classList.add('hidden'); }
+  if(V.phase==='game' && prev!=='game'){ V.snaps=[]; $('#over').classList.add('hidden'); boxReset(); }
   if(V.phase==='lobby' && prev==='game') $('#over').classList.add('hidden');
   renderLobby(); updateControlsVisibility();
 }
@@ -3099,13 +3119,17 @@ function showGameOver(S){
   const w=S.w; $('#overName').textContent=TEAM_NAME[w]+' WINS'; $('#overName').style.color=TEAM_COL[w];
   $('#overScore').textContent=S.sc[0]+' – '+S.sc[1];
   const ul=$('#overList'); ul.innerHTML='';
-  [...S.p].sort((a,b)=>b[Q.pts]-a[Q.pts]).forEach(q=>{
-    const inf=infoOf(q[Q.id]); if(!inf) return;
-    const li=document.createElement('li'), a=document.createElement('span'), b=document.createElement('span');
-    a.textContent=inf.name; a.style.color=TEAM_DARK[q[Q.team]]; b.textContent=q[Q.pts]+' pts'; li.append(a,b); ul.append(li);
+  const mvp=boxMVP(w), mInf=mvp && infoOf(mvp);
+  if(mInf){ const r=bx(mvp), m=el('li','bxMvp'); m.append(el('b','','🏅 MVP'), el('span','', mInf.name+(mvp===net.myId?' (you!)':'')), el('small','', r.pts+' pts · '+r.ast+' ast · '+(r.stl+r.blk)+' stops')); ul.append(m); }
+  const hd=el('li','bxRow bxHead'); for(const h of ['','PTS','FG','3PT','AST','STL','BLK','REB']) hd.append(el('span','',h)); ul.append(hd);
+  [...S.p].sort((a,b)=>a[Q.team]-b[Q.team] || b[Q.pts]-a[Q.pts]).forEach(q=>{
+    const id=q[Q.id], inf=infoOf(id); if(!inf) return; const r=bx(id);
+    const li=el('li','bxRow'+(id===net.myId?' me':'')); const nm=el('span','bxName', inf.name); nm.style.color=TEAM_DARK[q[Q.team]];
+    li.append(nm, el('b','', String(q[Q.pts])), el('span','', r.fgm+'/'+r.fga), el('span','', r.tpm+'/'+r.tpa), el('span','', String(r.ast)), el('span','', String(r.stl)), el('span','', String(r.blk)), el('span','', String(r.reb)));
+    ul.append(li);
   });
-  $('#overBtns').classList.toggle('hidden', net.role!=='host' && !V.queueMatch);
-  $('#overNote').textContent = net.role==='host' ? 'Run it back, or head to the lobby to switch teams.' : 'Waiting for the host to run it back…';
+  $('#overBtns').classList.toggle('hidden', !amHost() && !V.queueMatch);
+  $('#overNote').textContent = amHost() ? 'Run it back, or head to the lobby to switch teams.' : 'Waiting for the host to run it back…';
   // ranked result: RR change, new rank, coins, promotion
   const rb=$('#overRank'), rr=V.rankRes; rb.innerHTML=''; rb.classList.toggle('hidden', !rr);
   if(rr){
@@ -3127,7 +3151,34 @@ function showGameOver(S){
 function floatText(text,x,y,z,color,size=26,life=1.1){ V.floats.push({text,x,y,z,color,size,t:life,max:life}); }
 function burstParts(x,y,z,n,color,spd=220){ for(let i=0;i<n;i++){ const a=rnd(0,TAU), s=rnd(.3,1)*spd; V.parts.push({x,y,z,vx:Math.cos(a)*s,vy:Math.sin(a)*s+80,vz:rnd(-1,1)*s*.5,life:rnd(.3,.7),max:.7,c:color,s:rnd(2,5)}); } }
 function posOf(id){ const S=currentSnap(); if(!S) return null; const q=S.p.find(q=>q[0]===id); return q?{x:q[Q.x],y:q[Q.y],z:q[Q.z],team:q[Q.team]}:null; }
+// ---------------------------------------------------------------- 📊 BOX SCORE + MVP
+// Built on every iPad from the game's own play-by-play (passes, shots, scores, steals, blocks, boards).
+const BOX={p:{}, lastPass:null, pend:null, done:false};
+function boxReset(){ BOX.p={}; BOX.lastPass=null; BOX.pend=null; BOX.done=false; }
+function bx(id){ return BOX.p[id]=BOX.p[id]||{pts:0,ast:0,stl:0,blk:0,reb:0,fgm:0,fga:0,tpm:0,tpa:0}; }
+const teamOfId=id=>{ const r=V.rmap && V.rmap.get(id); return r ? r.team : null; };
+function boxEvent(e){
+  if(BOX.done && e.k!=='over' && e.k!=='emote') boxReset();          // a new game started (rematch)
+  switch(e.k){
+    case 'pass': BOX.lastPass={id:e.id, t:performance.now()}; break;
+    case 'shot': { const r=bx(e.id); r.fga++; if(e.three) r.tpa++; BOX.pend={id:e.id, three:!!e.three}; break; }
+    case 'dunkgo': { bx(e.id).fga++; BOX.pend={id:e.id, three:false}; break; }
+    case 'score': { if(e.by){ const r=bx(e.by); r.pts+=e.pts||0; if(BOX.pend && BOX.pend.id===e.by){ r.fgm++; if(BOX.pend.three) r.tpm++; }
+        const lp=BOX.lastPass; if(lp && lp.id!==e.by && performance.now()-lp.t<5000 && teamOfId(lp.id)===teamOfId(e.by)) bx(lp.id).ast++; }
+      BOX.pend=null; BOX.lastPass=null; break; }
+    case 'steal': bx(e.id).stl++; BOX.lastPass=null; break;
+    case 'block': if(e.id) bx(e.id).blk++; break;
+    case 'reb': bx(e.id).reb++; BOX.lastPass=null; break;
+    case 'miss': BOX.pend=null; break;
+    case 'poss': case 'tov': BOX.lastPass=null; break;
+    case 'over': BOX.done=true; break;
+  }
+}
+// MVP = biggest impact: points, plus assists, stops and boards; winners get a small edge
+function boxMVP(win){ let best=null, bs=-1; for(const id in BOX.p){ const r=BOX.p[id], t=teamOfId(id);
+  const sc=r.pts+1.5*r.ast+2*r.stl+2*r.blk+0.7*r.reb+(t===win?2:0); if(sc>bs){ bs=sc; best=id; } } return best; }
 function handleEvent(e, demo){
+  if(!demo) boxEvent(e);
   const loud=!demo && V.inRoom;
   const p = e.id ? posOf(e.id) : null;
   const mine = id => !demo && id && id===net.myId;
@@ -4346,7 +4397,7 @@ $('#copyBtn').onclick=()=>{
 };
 function addBot(t){
   if(teamCount(t)>=MAX_PER_TEAM) return;
-  const used=new Set([...G.players.values()].map(p=>p.name)); const nm=BOT_NAMES.find(n=>!used.has(n+' 🤖'))||'Bot';
+  const used=new Set([...G.players.values()].map(p=>p.name)); const nm=BOT_NAMES.find(n=>!used.has(cleanName(n+' 🤖')))||'Bot';
   addRosterPlayer('bot-'+Math.random().toString(36).slice(2,8), nm+' 🤖', true, t);
 }
 document.querySelectorAll('.addBot').forEach(b=>b.onclick=()=>{ if(srvRoom()) return srvCmd('addbot',{team:+b.dataset.t}); addBot(+b.dataset.t); broadcastRoster(); });
@@ -4496,7 +4547,9 @@ const TIERS=[
 function rankOf(rr){
   rr=Math.max(0,Math.round(rr)); let ti=0; for(let i=0;i<TIERS.length;i++) if(rr>=TIERS[i].min) ti=i;
   const t=TIERS[ti];
-  if(ti===TIERS.length-1) return {ti, t, label:t.n+' · '+(rr-t.min)+' RR', short:t.n, div:0, prog:1, toNext:0};
+  if(ti===TIERS.length-1) return {ti, t, label:t.n+' · '+rr+' RR', short:t.n, div:0, prog:1, toNext:0, top:true};
+  // the top 3 ranks have no I/II/III: one long climb (like Fortnite's top ranks)
+  if(ti>=TIERS.length-3){ const nx=TIERS[ti+1].min; return {ti, t, label:t.n+' · '+rr+' RR', short:t.n, div:0, prog:(rr-t.min)/(nx-t.min), toNext:nx-rr, top:true}; }
   const width=TIERS[ti+1].min-t.min, step=width/3, into=rr-t.min, div=Math.min(2,Math.floor(into/step));
   const prog=(into-div*step)/step, toNext=Math.ceil(step*(div+1)-into);
   return {ti, t, div, label:t.n+' '+['III','II','I'][div], short:t.n+' '+['III','II','I'][div], prog, toNext};
@@ -4628,7 +4681,7 @@ function renderLeaderboard(){
     if(i>=50 && i!==meIdx) return;
     if(i>=50) lb.append(el('li','gap','…'));
     const li=el('li', r.pk===me?'me':'');
-    const ln=el('span','lname', r.n+(r.pk===me?' (you)':'')); { const tt=titleEl(r); if(tt) ln.append(tt); }
+    const ln=el('span','lname', cleanName(r.n)+(r.pk===me?' (you)':'')); { const tt=titleEl(r); if(tt) ln.append(tt); }
     li.append(el('b','',String(i+1)), rankBadge(r.rr), ln, el('span','lrr', r.rr+' RR'));
     lb.append(li);
   });
@@ -4677,7 +4730,7 @@ function renderRanked(){
   const R=SAVE.rank, rk=rankOf(R.rr), card=$('#rankCard'); card.innerHTML=''; card.style.setProperty('--tc', rk.t.c);
   card.append(el('div','rkIcon', rk.t.icon), el('div','rkName', rk.label));
   const bar=el('div','rkBar'), fill=el('div','rkFill'); fill.style.width=Math.round(rk.prog*100)+'%'; bar.append(fill); card.append(bar);
-  card.append(el('small','', rk.toNext ? rk.toNext+' RR to next division' : 'Top tier — keep climbing'));
+  card.append(el('small','', rk.toNext ? rk.toNext+' RR to '+(rk.top ? TIERS[rk.ti+1].n : 'next division') : 'The top. Keep climbing the leaderboard.'));
   card.append(el('div','rkStats', `${R.rr} RR · ${R.wins}W ${R.games-R.wins}L · ${R.streak>1?'🔥 '+R.streak+' win streak · ':''}best ${R.best}`));
   { const road=el('div','rkRoad'); TIERS.forEach((t,i)=>{ const s=el('span', i===rk.ti?'on':i<rk.ti?'done':'', t.icon); s.title=t.n; road.append(s); }); card.append(road); }
   renderLeaderboard();
@@ -5100,9 +5153,6 @@ function renderShop(){
 // promo codes. Only SHA-256 fingerprints live in this file, never the codes themselves,
 // so nobody can read them out of the page source. Each one works once per device.
 const CODE_HASHES={
-  'fba182dc0f3820b44eb2bedabfa4bd4f42245fbdc36767adcbc4666300afdae8':{id:'c5', coins:2000},
-  '66b21095b423e026c83918bc2e49c0e22d5a8e731fa82ba37acab8274e8ca442':{id:'c6', coins:2000},
-  '8734e1503d8b58593a63e1086e623198de9f1118e4b93e4ec365026d98dfd052':{id:'c7', coins:2000},
   '8469e29d6fc9436af0b39fa184be37339b83a9dcc809c1cf9c0470163cdddede':{id:'c8', coins:10000},
   'a88ed7ed607de4d5570004dc60aed5853489687a9d93193ede1b717c076857e2':{id:'c9', coins:50000},
 };
@@ -5202,7 +5252,10 @@ function renderAdmin(){
       s.append(ul);
       // plain-English verdict
       let v='';
-      if(g.fail>g.open) v='Google\'s fast connection is being blocked by the filter, so it falls back to a slow mode. That alone explains the lag.';
+      const onGS=joins.filter(r=>r.via==='gameserver').length;
+      if(onGS && onGS>=joins.length/2){ v = pg!=null && pg<=150 ? '✅ Games run on the game server: one trip each way, same for both teams. Connection looks healthy.'
+          : '⚠️ Games run on the game server, but pings are high: that is the Wi-Fi itself (school network or weak signal).'; }
+      else if(g.fail>g.open) v='Google\'s fast connection is being blocked by the filter, so it falls back to a slow mode. That alone explains the lag.';
       else if(legJ!=null && legH!=null && pg!=null && pg>(legJ+legH)*1.6) v='Each iPad\'s own trip to Google is OK, but the in-game ping is much bigger. The host iPads are slowing things down (freezing or overloaded).';
       else if(legJ90!=null && legJ90>250) v='The school Wi-Fi/VPN itself is slow and spiky (each iPad\'s own trip to Google has bad moments). A game server that runs the game would halve this and make it fair, but can\'t remove the Wi-Fi spikes.';
       else if(pg!=null) v='Lag mostly comes from going through Google twice (joiner → Google → host → Google → joiner). A game server that runs the game would cut that in half.';
@@ -5581,8 +5634,9 @@ async function claimName(n){
   if(cleanName($('#name').value)!==n) return true;                    // they kept typing
   setNameStatus(r.taken?'taken':'mine', n); return !r.taken;
 }
-function nameBlocked(){ const n=cleanName($('#name').value); if(NAMEST.name===n && NAMEST.state==='taken'){ homeMsg('"'+n+'" is already taken by another player. Pick a different name.'); toast('❌ That name is taken'); return true; } return false; }
-$('#name').addEventListener('input', ()=>{ clearTimeout(nameTimer); setNameStatus('', ''); nameTimer=setTimeout(()=>claimName($('#name').value), 900); });
+function nameBlocked(){ if(nameBad($('#name').value)){ homeMsg('🚫 That name isn\u2019t allowed. Pick a different name to play.'); toast('🚫 Pick a different name'); return true; }
+  const n=cleanName($('#name').value); if(NAMEST.name===n && NAMEST.state==='taken'){ homeMsg('"'+n+'" is already taken by another player. Pick a different name.'); toast('❌ That name is taken'); return true; } return false; }
+$('#name').addEventListener('input', ()=>{ clearTimeout(nameTimer); setNameStatus('', ''); if(nameBad($('#name').value)){ const st=$('#nameStat'); if(st){ st.textContent='🚫 not allowed: pick another name'; st.className='nameStat taken'; } return; } nameTimer=setTimeout(()=>claimName($('#name').value), 900); });
 $('#name').addEventListener('blur', ()=>{ clearTimeout(nameTimer); claimName($('#name').value); });
 setTimeout(()=>{ if(store('buckets-name')) claimName(store('buckets-name')); }, 1500);
 // ---- cloud save: back up a few seconds after anything changes, and when the app is closed
