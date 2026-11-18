@@ -748,7 +748,7 @@ function shotWindow(M,p){
   }
   p.contest=c;
   if(c<0.4) return 0;                                   // smothered: there is no green
-  return clamp(w*Math.pow(c,1.5), 0.012, 0.2);          // contests bite hard
+  return clamp(w*0.8*Math.pow(c,1.5), 0.01, 0.16);       // tighter greens (2K-style); contests bite hard
 }
 // judge HOW the shot started: set shot, in rhythm off a move, on the run, or fading away
 function shotFormAt(p, v){
@@ -838,12 +838,23 @@ function releaseShot(M,p,m){
   if(w<=0 || Math.abs(e)>w){                                   // smothered (no green) or outside the green
     err = w<=0 ? e : e-Math.sign(e)*w; if(Math.abs(err)<0.004) err=0.004*(Math.sign(e)||pick([-1,1]));
     q = Math.abs(err)<0.06 ? (err<0?'Slightly early':'Slightly late') : (err<0?'Early':'Late'); }
-  // GREEN = it's going in (only half-court heaves are a coin flip). Off-green: timing error + contest throw it off.
-  const cm=1-(p.contest===undefined?1:p.contest), green=q==='perfect';
-  const heaveMiss = green && dist>HEAVE_D && Math.random()<0.5;
-  // missing the green at all costs you: even "slightly" off is about a coin flip
-  const miss = green ? (heaveMiss ? pick([-1,1])*rnd(22,40) : 0) : Math.sign(err)*(rnd(8,17) + (w<=0?rnd(6,14):0)) + err*(230+dist*0.3) + rnd(-5,5) + cm*rnd(-1,1)*50;
-  const lat = green ? (heaveMiss ? rnd(-10,10) : 0) : rnd(-1,1)*Math.min(16, Math.abs(err)*90) + cm*rnd(-1,1)*12;
+  // 2K-style: GREEN = bucket (past half court it's luck, ~22%). Missing the green is a CHANCE, not a sure miss:
+  // the closer to green, the more open you are, and the cleaner you got into the shot, the better the odds.
+  const c0=(p.contest===undefined?1:p.contest), cm=1-c0, green=q==='perfect';
+  const band = dist<220 ? 0 : dist<THREE_D ? 1 : dist<THREE_D+260 ? 2 : dist<HEAVE_D ? 3 : 4;   // layup · mid · three · deep · heave
+  let made;
+  if(green) made = band<4 || Math.random()<0.22;
+  else {
+    const ODDS=[[0.62,0.38,0.15],[0.40,0.18,0.05],[0.28,0.10,0.03],[0.14,0.05,0.01],[0.08,0.03,0.01]];   // slightly off · off · way off
+    const ae=Math.abs(err); let pr=ODDS[band][ae<0.05?0:ae<0.12?1:2];
+    pr *= c0<0.4 ? 0.33 : Math.pow(c0,1.3);                 // covered = less likely, smothered = a prayer
+    pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
+    if(p.fire) pr*=1.15; if(p.cold) pr*=0.85;
+    made = Math.random() < Math.min(0.9, pr);
+  }
+  // misses: short or long by how far off you were (way off = airball), a little sideways
+  const miss = made ? 0 : Math.sign(err||e||pick([-1,1]))*(14 + Math.min(60, Math.abs(err)*260) + rnd(0,10)) + cm*rnd(-1,1)*10;
+  const lat = made ? 0 : rnd(-1,1)*(4 + Math.min(14, Math.abs(err)*90)) + cm*rnd(-1,1)*8;
   const along=Math.min(miss,30);
   const tx=h.cx+v.ux*along-v.uz*lat, tz=0+v.uz*along+v.ux*lat;
   const ty=RIM_Y+(miss>30 ? 45+(miss-30)*2.5 : 0);
