@@ -73,7 +73,8 @@
   .btn.red{background:#ff5a4f;color:#fff}
   .pbadge{display:inline-block;margin-left:6px;font-size:10px;font-weight:900;color:#fff;background:var(--tc,#555);border:2px solid var(--ink);border-radius:7px;padding:0 5px;vertical-align:middle;white-space:nowrap}
   .seasonCard{background:linear-gradient(135deg,#1b1530,#3b2a6b);color:#fff;border:3px solid var(--ink);border-radius:16px;padding:10px 12px;margin:0 0 10px;text-align:left}
-  .seasonCard .scTop{display:flex;justify-content:space-between;align-items:center;font-size:15px;letter-spacing:1px}
+  .seasonCard .scTop{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:15px;letter-spacing:1px;flex-wrap:wrap}
+  .seasonCard{padding:8px 12px}
   .seasonCard .scTop span{font-size:12px;opacity:.85}
   .seasonCard .scBest{margin:6px 0;font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
   .seasonCard .scRoad{display:flex;gap:6px;justify-content:space-between}
@@ -211,7 +212,17 @@
   #home .hLadder{background:#ffd23f}
   #home .hParty{width:100%;font-size:15px;padding:9px;background:linear-gradient(90deg,#c77dff,#ff6fb5);color:#fff;-webkit-text-stroke:0}
   #home .how{margin:0;font-size:12px}
-  #home .hBottom{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+  #home .hBottom{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+  .hTile.gPass{background:linear-gradient(135deg,#7b5cff,#c77dff 60%,#ffd23f)}
+  #passPanel{width:min(560px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(160deg,#fff6e5,#efe6ff)}
+  .psTop{display:flex;justify-content:space-between;align-items:center;font-size:15px;letter-spacing:1px} .psTop span{font-size:12px;opacity:.7}
+  .psLvl{background:#1b1530;color:#fff;border-radius:14px;padding:10px 12px;margin:8px 0} .psNum{font-size:24px;font-weight:900;letter-spacing:2px} .psBar{margin:6px 0;height:14px}
+  .psTk h4{margin:6px 0 0} .psTkRow{display:flex;gap:8px;margin:6px 0}
+  .psTkBtn{flex:1;border:3px solid var(--ink);border-radius:14px;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;cursor:pointer}
+  .psTkBtn.on{background:#ffd23f;box-shadow:0 0 0 3px #ff8a1f inset} .psTkBtn.locked{opacity:.5} .psTkBtn small{font-size:10px;opacity:.75;text-align:center} .psTkI{font-size:24px}
+  .psList{display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto;border:2px solid var(--ink);border-radius:12px;padding:6px;background:#fff}
+  .psRow{display:grid;grid-template-columns:34px 1fr 24px;gap:6px;align-items:center;font-size:13px;padding:4px 6px;border-radius:8px}
+  .psRow.big{background:#f3ebff;font-weight:800} .psRow.got{opacity:.55} .psRow b{text-align:center}
   #home .hTile{position:relative;overflow:hidden;border:3px solid var(--ink);border-radius:16px;padding:10px 6px;font:inherit;color:#fff;cursor:pointer;
     display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:4px 4px 0 var(--ink);-webkit-text-stroke:0}
   #home .hTile:active{transform:translate(3px,3px);box-shadow:1px 1px 0 var(--ink)}
@@ -320,7 +331,7 @@
   .rkStats{font-size:13px;font-weight:600;margin-top:4px}
   /* the page blocks touch scrolling (so the court never wiggles); menus that scroll opt back in */
   .panel, #ladder, #shopList, #questList, #netList, #rankedPanel, #shop, #questPanel, #netPanel{touch-action:pan-y}
-  #ladder{list-style:none;padding:0;margin:0;border:3px solid var(--ink);border-radius:14px;background:#fff;overflow-x:hidden;overflow-y:auto;max-height:min(52vh,420px);-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  #ladder{list-style:none;padding:0;margin:0;border:3px solid var(--ink);border-radius:14px;background:#fff;overflow-x:hidden;overflow-y:auto;max-height:min(60vh,460px);min-height:min(280px,48vh);flex-shrink:0;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
   #ladder li{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:2px dashed #eadfca;font-size:14px}
   #ladder li:last-child{border-bottom:0}
   #ladder li b{width:22px;text-align:right}
@@ -431,6 +442,7 @@
   <div class="hBottom">
     <button class="hTile gShop openShop"><span>🛒</span><b>SHOP</b></button>
     <button class="hTile gLock openLocker"><span>🎒</span><b>LOCKER</b></button>
+    <button class="hTile gPass" id="passBtn"><span>🎟️</span><b>PASS</b></button>
     <button class="hTile gQuest openQuests"><span>📜</span><b>QUESTS</b><i class="qBadge hidden">0</i></button>
   </div>
   <p id="homeMsg" class="msg"></p>
@@ -518,6 +530,7 @@
   <div id="p2Net" class="p2Net"></div>
 </div>
 <div id="seasonPop" class="panel center hidden"></div>
+<div id="passPanel" class="panel center hidden"><div class="adHead"><h2>🎟️ SEASON PASS</h2><button id="passClose" class="btn tiny">✕ Close</button></div><div id="passBody"></div></div>
 <div id="adminPanel" class="panel center hidden"><div class="adHead"><h2>🛠️ MASTER CONTROLS</h2><button id="adminClose" class="btn tiny">✕ Close</button></div><div id="adminBody"></div></div>
 <div id="rankedPanel" class="panel hidden">
   <div class="head"><h2>🏆 Ranked</h2><span class="coinPill">💰 <span class="coinCount">0</span></span></div>
@@ -684,16 +697,23 @@ function mkPlayer(r, idx){
   const p=mkPlayer0(r, idx);
   // ranked rivals bring their own play style + trash talk
   const R=r.rv && RIVAL_BY[r.rv];
-  if(R){ p.D=rivalDiff(R); p.style=R.style; p.talk=STYLES[R.style].talk; p.talkRate=STYLES[R.style].talkRate; }
+  if(R){ p.D=rivalDiff(R); p.style=R.style; p.talk=STYLES[R.style].talk; p.talkRate=STYLES[R.style].talkRate;
+    if(!p.tk) p.tk = R.style==='shooter'?'shot' : R.style==='lockdown'?'lock' : (R.style==='slasher'||R.style==='bully')?'slash' : ''; }
   return p;
 }
 // a bot reacts to a big play with an emote (personality)
 function botTalk(M,p,boost=1){ if(!p || !p.bot || !p.talk || M.demo || p.emoteIn>0) return; if(Math.random()<Math.min(0.6,(p.talkRate||0)*0.65*boost)){ p.emoteIn=rnd(0.3,0.9); p.emoteE=pick(p.talk); } }
+// 🔥 TAKEOVERS: pick one (unlocked in the Season Pass). Good plays fill your meter; when it's full you
+// get a 12-second boost. Kept modest on purpose: it helps, it doesn't win the game for you.
+const TK={shot:{n:'Sniper',icon:'🎯'}, lock:{n:'Lockdown',icon:'🔒'}, slash:{n:'Slasher',icon:'⚡'}}, TK_T=12, TK_CODE={'':0, shot:1, lock:2, slash:3};
+const tkOn=(p,k)=>p && p.tk===k && p.tkT>0;
+function tkAdd(M,p,v){ if(!p || !p.tk || p.tkT>0 || M.demo) return; p.tkm=Math.max(0,Math.min(1,(p.tkm||0)+v));
+  if(p.tkm>=1){ p.tkm=0; p.tkT=TK_T; pushEv(M,{k:'takeover', id:p.id, tk:p.tk}); } }
 function mkPlayer0(r, idx){
   return { id:r.id, name:r.name, team:r.team, bot:!!r.bot, idx, x:0,y:0,z:0,vx:0,vy:0,vz:0, face:1, act:'', actT:0, shootT:0,
     meterWin:0.1, burstT:0, bdx:1, bdz:0, hand:-1, reachFoiled:false, burstCd:0, stealCd:0, stumbleT:0, noGrabT:0, inX:0, inZ:0,
     wantA:false, relA:null, wantB:false, wantC:false, botRel:SWEET, think:0, reacted:false, shotRange:0, pts:0, ankled:{}, hustle:false, streak:0, fire:false,
-    hesiT:0, rhythmT:0, boostT:0, moveKind:'', shotForm:1, formTag:'' };
+    hesiT:0, rhythmT:0, boostT:0, moveKind:'', shotForm:1, formTag:'', tk:TK[r.tk]?r.tk:'', tkm:0, tkT:0 };
 }
 function resetP(p){ p.y=0;p.vx=0;p.vy=0;p.vz=0;p.act='';p.shootT=0;p.burstT=0;p.stumbleT=0;p.noGrabT=0;p.downT=0;p.hangT=0;
   p.wantA=p.wantB=p.wantC=false;p.relA=null;p.reacted=false;p.shotRange=0;p.stuckT=0;p.cutT=0;p.spot=null;
@@ -768,6 +788,7 @@ function shotWindow(M,p){
         : lerp(0.062, 0.042, clamp((dist-THREE_D)/220,0,1));
   if(dist>THREE_D+260) w*=0.65;
   if(dist>=220) w*=(p.shotForm||1);                                    // how you got into the shot
+  if(tkOn(p,'shot')) w*=1.22;                                          // 🎯 Sniper takeover
   if(p.fire) w*=1.35;
   if(p.cold) w*=0.75;
   let c=1;
@@ -778,6 +799,7 @@ function shotWindow(M,p){
       let f=0.25+0.75*Math.pow(d/135,1.2);
       if(ahead < -15) f=Math.min(1,f+0.35);            // defender behind you barely matters
       if(o.y>20) f*=0.65;                                // hand in the air
+      if(tkOn(o,'lock')) f*=0.85;                        // 🔒 Lockdown takeover: tighter contests
       c=Math.min(c,f);
     }
     // rim protection: a defender camped between you and the rim makes drives a lot tougher
@@ -838,7 +860,7 @@ function dribbleMove(M,p){
   const toward = il>0.2 ? (p.inX*v.ux+p.inZ*v.uz)/il : 0;
   let def=null, dd=1e9;
   for(const o of M.players){ if(o.team===p.team) continue; const d=hyp(o.x-p.x,o.z-p.z); if(d<dd){ dd=d; def=o; } }
-  p.ankled={}; p.burstCd=BURST_CD; p.moveKind='';
+  p.ankled={}; p.burstCd=BURST_CD*(tkOn(p,'slash')?0.75:1); p.moveKind='';
   // a reach timed against ANY move is dead: defender shook
   for(const o of M.players) if(o.team!==p.team && o.act==='reach' && hyp(o.x-p.x,o.z-p.z)<STEAL_R+45) o.reachFoiled=p.id;
   let m;
@@ -889,6 +911,7 @@ function releaseShot(M,p,m){
     pr *= c0<0.4 ? 0.33 : Math.pow(c0,1.3);                 // covered = less likely, smothered = a prayer
     pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
     if(p.fire) pr*=1.15; if(p.cold) pr*=0.85;
+    if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2;
     made = Math.random() < Math.min(0.9, pr);
   }
   // misses: short or long by how far off you were (way off = airball), a little sideways
@@ -919,7 +942,7 @@ function tryDunk(M,p){
     p.act='follow'; p.noGrabT=0.5;
     if(blk && Math.random()>make){
       looseBall(M, h.cx-h.dir*20, RIM_Y+40, 0, -h.dir*rnd(250,420), rnd(80,240), rnd(-200,200), blk.team);
-      pushEv(M,{k:'block', id:blk.id, x:h.cx, y:RIM_Y+40, z:0}); return;
+      pushEv(M,{k:'block', id:blk.id, x:h.cx, y:RIM_Y+40, z:0}); tkAdd(M,blk, blk.tk==='lock'?0.4:0.3); return;
     }
     // hang on the rim for a beat; anyone underneath gets knocked flat
     p.act='hang'; p.hangT=0.45; p.y=Math.max(p.y, RIM_Y-REACH-6); p.x=h.cx-h.dir*20; p.z*=0.4; p.vx=p.vz=p.vy=0;
@@ -967,13 +990,14 @@ function resolveSteal(M,p){
   if(h.burstT>0) ch*=0.2;
   if(h.act==='shoot'||h.act==='fake'||h.act==='dunk') ch=0.05;
   if(h.stumbleT>0) ch+=0.35;
+  if(tkOn(p,'lock')) ch*=1.25;                          // 🔒 Lockdown takeover
   if(Math.random()<ch){
     // clean pickpocket: the ball is yours (possession + fresh shot clock)
     Object.assign(b,{st:'held', holder:p.id, vx:0, vy:0, vz:0, t:0, touchedRim:false, dunk:false, reb:false, wasShot:false, lastTeam:p.team});
     p.act=''; p.hand=Math.sign(p.z-h.z)||-1; p.noGrabT=0;
     M.poss=p.team; M.scT=SHOT_CLOCK; M.scOn=true;
     h.noGrabT=0.45; h.stumbleT=Math.max(h.stumbleT,0.25);
-    pushEv(M,{k:'steal', id:p.id, from:h.id});
+    pushEv(M,{k:'steal', id:p.id, from:h.id}); tkAdd(M,p, p.tk==='lock'?0.4:0.3);
     botTalk(M,p,1.5);
   } else { p.recoverT=0.22; pushEv(M,{k:'whiff', id:p.id}); }   // missed: a quick recovery, no stumble
 }
@@ -993,13 +1017,14 @@ function movePlayer(M,p,dt){
   let ix=p.inX, iz=p.inZ; const il=hyp(ix,iz); if(il>1){ ix/=il; iz/=il; }
   if(p.rhythmT>0) p.rhythmT-=dt;
   if(p.boostT>0) p.boostT-=dt;
+  if(p.tkT>0) p.tkT-=dt;
   if(p.hesiT>0){ p.hesiT-=dt; p.vx=approach(p.vx,0,ACC*2*dt); p.vz=approach(p.vz,0,ACC*2*dt);
     if(p.hesiT<=0){ p.boostT=0.6;
       // hesi-GO: stick pushed as the hesi ends = explode out of it (free burst, no cooldown)
       const l=hyp(p.inX,p.inZ); if(l>0.3 && has && p.act===''){ p.bdx=p.inX/l; p.bdz=p.inZ/l; p.burstT=BURST_T*1.15; p.moveKind='go'; p.ankled={}; if(Math.abs(p.bdx)>0.2) p.face=Math.sign(p.bdx); } } }
   else if(p.burstT>0){ p.burstT-=dt; const bv=BURST_V*(p.moveKind==='step'?0.8:p.moveKind==='spin'?0.9:1); p.vx=p.bdx*bv; p.vz=p.bdz*bv*0.85; if(p.burstT<=0) p.moveKind=''; }
   else if(ground && !locked){
-    const k=(p.boostT>0&&has?1.22:1)*(has?0.93:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1)*(p.recoverT>0?0.55:1)*(guarding && !p.bot ? 1.06 : 1)*(p.bot?D.speed:1);
+    const k=(p.boostT>0&&has?1.22:1)*(has?0.93:1)*(has&&tkOn(p,'slash')?1.06:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1)*(p.recoverT>0?0.55:1)*(guarding && !p.bot ? 1.06 : 1)*(p.bot?D.speed:1);
     p.vx=approach(p.vx, ix*RUN*k, ACC*dt); p.vz=approach(p.vz, iz*RUN*0.85*k, ACC*dt);
   } else if(!ground && !locked){ p.vx=approach(p.vx,ix*RUN,AIR_ACC*dt); p.vz=approach(p.vz,iz*RUN*0.85,AIR_ACC*dt); }
   else if(ground && locked){ p.vx=approach(p.vx,0,ACC*dt); p.vz=approach(p.vz,0,ACC*dt); }
@@ -1140,7 +1165,7 @@ function updateBall(M,dt){
         b.vx=-b.vx/v*rnd(150,320)+p.face*60; b.vz=-b.vz/v*rnd(60,160)+rnd(-160,160); b.vy=rnd(-150,120);
         b.st='loose'; b.lastTeam=p.team;
         const sh=findP(M,b.shooter); if(sh) coldCheck(M,sh);
-        pushEv(M,{k:'block', id:p.id, x:r1(b.x), y:r1(b.y), z:r1(b.z), victim:b.shooter});
+        tkAdd(M,p, p.tk==='lock'?0.4:0.3); pushEv(M,{k:'block', id:p.id, x:r1(b.x), y:r1(b.y), z:r1(b.z), victim:b.shooter});
         botTalk(M,p,1.8);
         break;
       }
@@ -1192,6 +1217,8 @@ function scored(M,h){
   M.score[team]+=pts;
   const sh = b.st==='shot' ? findP(M,b.shooter) : null;
   if(sh && sh.team===team) sh.pts+=pts;
+  if(sh && sh.team===team) tkAdd(M,sh, three ? (sh.tk==='shot'?0.34:0.28) : (b.dunk||hyp(h.cx-sh.x,sh.z)<220) ? (sh.tk==='slash'?0.3:0.22) : 0.22);
+  for(const o of M.players) if(o.team!==team && o.tkT<=0 && o.tkm>0) o.tkm=Math.max(0,o.tkm-0.08);
   pushEv(M,{k:'score', team, pts, three:!!three, swish:b.st==='shot'&&!b.touchedRim&&!b.dunk, dunk:!!b.dunk, by:sh&&sh.team===team?sh.id:null, hx:h.cx, post:b.dunk?b.post:null, fire:!!(sh&&sh.fire)});
   if(sh && sh.team===team){
     sh.streak++; sh.miss=0;
@@ -1352,13 +1379,13 @@ function botDefense(M,p,holder,myHoop,opps,mates,go,tick){
 function makeSnap(M, withEv){
   const b=M.ball;
   const s={ t:'s', ph:M.phase, pt:r2(M.phaseT), sc:M.score, w:M.winner, poss:M.poss, toWin:M.toWin, wb2:M.winBy2?1:0, sct:r1(M.scT), scOn:M.scOn?1:0,
-    p:M.players.map(p=>[p.id, r1(p.x), r1(p.z), r1(p.y), Math.round(p.vx), Math.round(p.vz), p.face, ACT[p.act]||0, r2(p.meterWin), (p.burstT>0||p.hesiT>0)?1:0, p.downT>0?2:p.stumbleT>0?1:0, p.team, p.pts, p.hand, p.hesiT>0 ? -2 : p.burstT>0 && p.moveKind!=='step' && p.moveKind!=='go' ? r2(clamp(1-p.burstT/(p.moveKind==='spin'?SPIN_T:BURST_T),0,1)) : -1, p.fire?1:p.cold?-1:0]),
+    p:M.players.map(p=>[p.id, r1(p.x), r1(p.z), r1(p.y), Math.round(p.vx), Math.round(p.vz), p.face, ACT[p.act]||0, r2(p.meterWin), (p.burstT>0||p.hesiT>0)?1:0, p.downT>0?2:p.stumbleT>0?1:0, p.team, p.pts, p.hand, p.hesiT>0 ? -2 : p.burstT>0 && p.moveKind!=='step' && p.moveKind!=='go' ? r2(clamp(1-p.burstT/(p.moveKind==='spin'?SPIN_T:BURST_T),0,1)) : -1, p.fire?1:p.cold?-1:0, (TK_CODE[p.tk]||0)*100+(p.tkT>0?50:Math.round((p.tkm||0)*40))]),
     b:[r1(b.x), r1(b.y), r1(b.z), BST[b.st], b.holder, (b.st==='shot' && (findP(M,b.shooter)||{}).fire)?1:0, b.st==='shot'?b.shooter:null] };
   if(withEv) s.ev=M.events;
   return s;
 }
 // tuple indexes
-const Q={id:0,x:1,z:2,y:3,vx:4,vz:5,face:6,act:7,win:8,burst:9,stum:10,team:11,pts:12,hand:13,cross:14,fire:15};
+const Q={id:0,x:1,z:2,y:3,vx:4,vz:5,face:6,act:7,win:8,burst:9,stum:10,team:11,pts:12,hand:13,cross:14,fire:15,tk:16};
 // @@SIM-END
 
 // =====================================================================
@@ -2251,7 +2278,7 @@ function onHostData(conn,d){
   }
   hostApply(id, d);
 }
-function setGear(r, d){ for(const k in KINDS) if(typeof d[k]==='string' && KINDS[k].list.some(i=>i.id===d[k])) r[k]=d[k]; if(parseLook(d.lk)) r.lk=d.lk; if(typeof d.bdg==='string' && /^S\d{1,3}:\d{1,2}$/.test(d.bdg)) r.bdg=d.bdg; }
+function setGear(r, d){ for(const k in KINDS) if(typeof d[k]==='string' && KINDS[k].list.some(i=>i.id===d[k])) r[k]=d[k]; if(parseLook(d.lk)) r.lk=d.lk; if(typeof d.bdg==='string' && /^S\d{1,3}:\d{1,2}$/.test(d.bdg)) r.bdg=d.bdg; if(TK[d.tk]) r.tk=d.tk; }
 function hostApply(id, d){
   if(d.t==='gear'){ const r=G.players.get(id); if(r){ setGear(r,d); broadcastRoster(); } return; }
   if(d.t==='team'){ if(G.phase!=='lobby') return; const r=G.players.get(id); if(!r) return; const t=1-r.team; if(teamCount(t)<MAX_PER_TEAM){ r.team=t; broadcastRoster(); } return; }
@@ -2580,6 +2607,8 @@ TRAILS.push(
   {id:'szgoat',    r:'secret',   s:'season', noCrate:1, name:'G.O.A.T.',       icon:'🐐', desc:'SEASON REWARD · GOAT only. Black and gold. Everybody knows.'},
   {id:'evspark',   r:'exclusive',s:'event',  noCrate:1, name:'Event Spark',    icon:'⚡', desc:'EVENT REWARD · Crackling electric gold.'},
   {id:'evaurora',  r:'exclusive',s:'event',  noCrate:1, name:'Aurora',         icon:'🌌', desc:'EVENT REWARD · Northern lights follow the ball.'},
+  {id:'passprism', r:'exclusive',s:'pass',   noCrate:1, name:'Prism Pass',     icon:'🔷', desc:'SEASON PASS · Level 25. Spinning prism light.'},
+  {id:'passmax',   r:'secret',   s:'pass',   noCrate:1, name:'Max Level',      icon:'💯', desc:'SEASON PASS · Level 40. Only the grinders have it.'},
 );
 const KINDS={
   cel:  {label:'Cellys',     icon:'🎉', list:CELLYS, def:'flex'},
@@ -2643,7 +2672,7 @@ for(const k in KINDS){
   if(!SAVE.owned[k].includes(SAVE[k])) SAVE[k]=KINDS[k].def;
 }
 SAVE.stats=SAVE.stats||{games:0,wins:0,pts:0,greens:0};
-function myGear(){ const g={}; for(const k in KINDS) g[k]=SAVE[k]; if(SAVE.look) g.lk=SAVE.look; if(SAVE.badge) g.bdg='S'+SAVE.badge.s+':'+SAVE.badge.ti; return g; }
+function myGear(){ const g={}; for(const k in KINDS) g[k]=SAVE[k]; if(SAVE.look) g.lk=SAVE.look; if(SAVE.badge) g.bdg='S'+SAVE.badge.s+':'+SAVE.badge.ti; if(SAVE.tk && (SAVE.tkUnl||[]).includes(SAVE.tk)) g.tk=SAVE.tk; return g; }
 function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }catch(e){} updateCoinUI(); if(typeof scheduleBackup==='function') try{ scheduleBackup(); }catch(e){} }
 function earn(n, why){ if(!V.inRoom || V.phase!=='game') return; const evc=eventNow(), cm=clamp(Math.round(Math.max(+CTL.mult||1, evc&&evc.kind==='coins2'?2:1)),1,5); SAVE.coins+=n*cm; persist(); V.coinPops.push({n:n*cm, why, t:1.8});   // 🎉 admin coin events
   if(typeof questProgress==='function'){ questProgress(why==='TIP'?'BLOCK_TIP':why); if(why==='DUNK'||why==='THREE'||why==='BUCKET') questProgress('PTS', n/2); if(why==='THREE'||why==='DUNK') questProgress('BUCKET_ANY'); } }
@@ -3321,6 +3350,7 @@ function handleEvent(e, demo){
     case 'froze': if(p){ floatText(e.bit?'BIT ON THE HESI 🤣':'FROZE 🥶', p.x, p.y+205, p.z, e.bit?'#ffd23f':'#9fe7ff', 28, 1.2); for(let i=0;i<8;i++) emo(p.x+rnd(-40,40),p.y+rnd(40,180),p.z,'❄️',{vy:rnd(-30,30),g:30,life:1,max:1,s:16}); }
       if(!demo && mine(e.by)) earn(4,'FROZE'); V.cheer=1; if(loud) sfx('ankles'); break;
     case 'pass': if(loud) sfx('pass'); break;
+    case 'takeover': if(p && TK[e.tk]){ floatText(TK[e.tk].icon+' '+TK[e.tk].n.toUpperCase()+' TAKEOVER', p.x, p.y+230, p.z, '#ffd23f', 30, 1.8); if(loud){ sfx('cheer',1.2); if(mine(e.id)){ V.flash=.35; } } } break;
     case 'rim': if(loud) sfx('rim', Math.min(1.3,e.v/500)); break;
     case 'board': if(loud) sfx('board', Math.min(1.3,e.v/500)); break;
     case 'bounce': if(loud) sfx('dribble', .8); break;
@@ -3331,7 +3361,7 @@ function handleEvent(e, demo){
       if(!demo){
         sfx('buzzer'); confetti(e.w);
         const me=V.rmap.get(net.myId);
-        if(me){ SAVE.stats.games++; earn(10,'PLAYED'); if(me.team===e.w){ SAVE.stats.wins++; earn(25,'WIN'); } persist(); }
+        if(me){ setTimeout(()=>{ try{ passGameXP(me.team===e.w); }catch(x){} }, 900); SAVE.stats.games++; earn(10,'PLAYED'); if(me.team===e.w){ SAVE.stats.wins++; earn(25,'WIN'); } persist(); }
         V.rankRes=null;
         if(me && (V.ranked || V.queueMatch || V.ranked2 || (V.rankedRoom && rankedRoomOk()))){ V.overSeen=true;
           // rate against the average of the other team (1v1 or 2v2)
@@ -3848,6 +3878,8 @@ function drawTrail(style, dt){
       case 'szgoat':   seg(i,`rgba(0,0,0,${k*.6})`,26*k); seg(i,`rgba(255,200,40,${k*.95})`,6*k); seg(i,`hsla(${(clock*200+i*12)%360},100%,70%,${k*.5})`,2*k); break;
       case 'evspark':  { const a=T[i-1], b=T[i]; seg(i,`rgba(255,210,60,${k*.3})`,18*k); ctx.strokeStyle=`rgba(255,250,200,${k})`; ctx.lineWidth=3*k+1; ctx.beginPath(); ctx.moveTo(PX(a.x,a.z)+rnd(-7,7),PY(a.y,a.z)+rnd(-7,7)); ctx.lineTo(PX(b.x,b.z),PY(b.y,b.z)); ctx.stroke(); break; }
       case 'evaurora': { const o=Math.sin(i*.5+clock*5)*12*k; seg(i,`rgba(40,255,160,${k*.45})`,10*k,o); seg(i,`rgba(170,90,255,${k*.45})`,10*k,-o); seg(i,`rgba(255,255,255,${k*.6})`,2*k); break; }
+      case 'passprism':seg(i,`hsla(${(clock*180+i*30)%360},100%,70%,${k*.4})`,20*k); seg(i,`rgba(160,240,255,${k*.95})`,5*k); break;
+      case 'passmax':  { const o=Math.sin(i*.6+clock*12)*10*k; seg(i,`rgba(255,40,120,${k*.35})`,26*k); seg(i,`hsla(${(clock*360+i*20)%360},100%,65%,${k*.95})`,6*k+1,o); seg(i,`rgba(255,255,255,${k*.95})`,3*k,-o*.5); break; }
       default:         seg(i,`rgba(255,255,255,${k*.45})`,9*k);
     }
   }
@@ -3872,6 +3904,7 @@ function drawTrail(style, dt){
     else if(style==='szgoat' && Math.random()<.3) emo(h.x,h.y,h.z,'🐐',{vy:30,vx:rnd(-40,40),g:150,life:.9,max:.9,s:15});
     else if(style==='evspark' && Math.random()<.5) spray(h.x,h.y,h.z,3,['#fff','#ffe066','#ffd23f'],150,{g:0,life:.3,max:.3});
     else if(style==='evaurora') P(h.x+rnd(-10,10),h.y+rnd(-10,10),h.z,{g:-20,life:.8,max:.8,c:pick(['rgba(40,255,160,.6)','rgba(170,90,255,.6)']),s:rnd(4,8)});
+    else if(style==='passmax' && Math.random()<.4) emo(h.x,h.y,h.z,'💯',{vy:30,vx:rnd(-30,30),g:140,life:.8,max:.8,s:13});
     else if(style==='hyperspace'){ const a=T[Math.max(0,n-3)]; for(let j=0;j<3;j++) P(h.x+rnd(-12,12),h.y+rnd(-12,12),h.z,{vx:(a.x-h.x)*rnd(6,12),vy:(a.y-h.y)*rnd(6,12),g:0,life:.35,max:.35,c:pick(['#fff','#9fe7ff','#c77dff']),s:rnd(1.5,3)}); }
   }
 }
@@ -4357,6 +4390,14 @@ function drawHUD(S, dt, real){
   drawScreenFx(dt);
   // connection quality for players who joined (the host is always instant)
   if(net.role==='client' && V.inRoom && V.netLost) txt('📶 Wi-Fi dropped, reconnecting…', W/2, H*.32, 26, '#ffd23f', 'center', 6);
+  // 🔥 your takeover meter (bottom-left)
+  if(real && S && V.phase==='game'){ const me=S.p.find(q=>q[0]===net.myId), v=me && me[Q.tk];
+    if(v){ const kind=['','shot','lock','slash'][Math.floor(v/100)], r=v%100, on=r>=50, t=TK[kind];
+      if(t){ const x=14, y=H-34, w=150, h=14, f=on?1:r/40;
+        ctx.fillStyle='rgba(27,21,48,.75)'; rrect(x-4,y-20,w+8,h+26,10); ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,.18)'; rrect(x,y,w,h,7); ctx.fill();
+        ctx.fillStyle= on ? `hsl(${45+Math.sin(clock*10)*10},100%,${55+Math.sin(clock*12)*10}%)` : '#ffd23f'; rrect(x,y,Math.max(h,w*f),h,7); ctx.fill();
+        txt(t.icon+' '+(on?t.n.toUpperCase()+' TAKEOVER!':t.n), x, y-9, 12, on?'#ffd23f':'#fff', 'left', 3); } } }
   // your zone: orange heat or blue frost around the screen edges
   const meZ = real ? (S.p.find(q=>q[0]===net.myId)||[])[Q.fire] : 0;
   if(meZ===1 || meZ===-1){
@@ -4794,11 +4835,11 @@ function applyRanked(win, myScore, oppScore, oppRR){
 }
 
 // ---------------------------------------------------------------- 🗓️ SEASONS
-// 5-week seasons (Season 1 started Nov 18). Your best rank in a season earns rewards when it ends
+// 2-week seasons (Season 1 started Nov 18). Your best rank in a season earns rewards when it ends
 // (play at least 3 ranked games), then RR partly resets (you keep 70%) so everybody climbs again.
-const SEASON_START=Date.UTC(2026,10,18), SEASON_LEN=35*86400000;
+const SEASON_START=Date.UTC(2026,10,18), SEASON_LEN=14*86400000;   // 2-week seasons
 function seasonNow(){ const n=Math.max(1, Math.floor((Date.now()-SEASON_START)/SEASON_LEN)+1), start=SEASON_START+(n-1)*SEASON_LEN; return {n, start, end:start+SEASON_LEN}; }
-const SEASON_COINS=[100,200,300,450,600,800,1000,1300,1700,2200,2800,3500];
+const SEASON_COINS=[500,1000,1500,2200,3000,4000,5000,6500,8500,11000,14000,18000];
 const SEASON_ITEMS=[[3,'szgold'],[6,'szdiamond'],[9,'szcrown'],[11,'szgoat']];   // [tier needed, trail]
 function seasonRewardsFor(ti){ return {coins:SEASON_COINS[ti]||0, items:SEASON_ITEMS.filter(([t])=>ti>=t).map(([,id])=>id)}; }
 function badgeText(b){ const m=/^S(\d+):(\d+)$/.exec(String(b||'')); if(!m || !TIERS[+m[2]]) return ''; return 'S'+m[1]+' '+TIERS[+m[2]].icon; }
@@ -4815,7 +4856,7 @@ function seasonEnd(S){
     SAVE.badges=SAVE.badges||[]; SAVE.badges.push({s:old.n, ti}); SAVE.badge={s:old.n, ti};   // your latest season finish shows next to your name
     won={n:old.n, ti, rw}; }
   SAVE.rank.rr=Math.round(SAVE.rank.rr*0.7); SAVE.rank.streak=0;
-  SAVE.season={n:S.n, peak:SAVE.rank.rr, games:0}; persist();
+  SAVE.season={n:S.n, peak:SAVE.rank.rr, games:0}; SAVE.pass={s:S.n, xp:0, lvl:1}; persist();
   setTimeout(()=> won ? seasonPopup(won) : toast('🗓️ Season '+S.n+' started! Ranks were partly reset. Climb again.'), 1500);
 }
 function seasonPopup(w){
@@ -4830,18 +4871,62 @@ function seasonPopup(w){
 function ago2(ms){ const d=Math.floor(ms/86400000), h=Math.floor(ms%86400000/3600000), m=Math.floor(ms%3600000/60000); return d>0 ? d+'d '+h+'h' : h>0 ? h+'h '+m+'m' : m+'m'; }
 function renderSeasonCard(){
   const S=seasonNow(), c=$('#seasonCard'); if(!c) return; c.innerHTML='';
-  const peak=SAVE.season ? SAVE.season.peak : SAVE.rank.rr, pk=rankOf(peak), games=SAVE.season ? SAVE.season.games||0 : 0;
-  const top=el('div','scTop'); top.append(el('b','','🗓️ SEASON '+S.n), el('span','','ends in '+ago2(S.end-Date.now())));
-  const best=el('div','scBest'); best.append(el('span','','Season best: '), rankBadge(peak), el('small','', games<3 ? ' · play '+(3-games)+' more ranked game'+(3-games>1?'s':'')+' to earn rewards' : ''));
-  const road=el('div','scRoad');
-  for(const [t,id] of [[0,null],[3,'szgold'],[6,'szdiamond'],[9,'szcrown'],[11,'szgoat']]){
-    const it=id && itemOf('trail',id), got=pk.ti>=t, d=el('div','scStep'+(got?' on':''));
-    d.append(el('span','scIcon', TIERS[t].icon), el('small','', TIERS[t].n+'+'), el('small','', (it?it.icon+' ':'')+'💰'+SEASON_COINS[t]));
-    road.append(d); }
-  c.append(top, best, road, el('p','how','When the season ends you get coins + a badge for your best rank, and exclusive trails at Gold, Diamond, Champion and GOAT. Then RR partly resets.'));
+  const P=passNow(), L=passLevel(P.xp);
+  const t=el('div','scTop'); t.append(el('b','','🗓️ SEASON '+S.n), el('span','','ends in '+ago2(S.end-Date.now())));
+  const go=el('button','btn tiny yellow','🎟️ Season Pass · Lv '+L); go.onclick=()=>{ closeRanked(); openPass(); };
+  t.append(go); c.append(t);
 }
 seasonTrack();
 setInterval(()=>{ const n=seasonNow().n; if(SAVE.season && SAVE.season.n<n && !V.inRoom) seasonTrack(); }, 60000);
+
+// ---------------------------------------------------------------- 🎟️ SEASON PASS (free)
+// Every game gives XP; levels give rewards. Takeovers unlock here (and stay unlocked). Resets each season.
+const PASS_XP=250, PASS_MAX=40;                 // ~1-2 games a level: maxing it in a 2-week season takes real grinding
+const PASS_REW={2:{tk:'shot'}, 6:{tk:'lock'}, 12:{tk:'slash'}, 10:{crate:'cel-elite', coins:1000}, 20:{crate:'gfx-elite', coins:2000}, 30:{crate:'dunk-elite', coins:3000}, 25:{item:'passprism', coins:2500}, 40:{item:'passmax', coins:10000}};
+function passRew(L){ return PASS_REW[L] || {coins: 500+Math.floor(L/5)*250}; }
+function passDesc(r){ const out=[]; if(r.tk) out.push(TK[r.tk].icon+' '+TK[r.tk].n+' takeover'); if(r.crate){ const c=CRATES.find(x=>x.id===r.crate); out.push('🎁 '+(c?c.name:'Crate')); }
+  if(r.item){ const it=itemOf('trail',r.item); if(it) out.push(it.icon+' '+it.name+' trail'); } if(r.coins) out.push('💰'+r.coins); return out.join(' + '); }
+function passNow(){ const n=seasonNow().n; if(!SAVE.pass || SAVE.pass.s!==n) SAVE.pass={s:n, xp:0, lvl:1}; return SAVE.pass; }
+function passLevel(xp){ return Math.min(PASS_MAX, 1+Math.floor(xp/PASS_XP)); }
+function passXP(n, why){
+  const P=passNow(), before=passLevel(P.xp); P.xp+=Math.round(n); const after=passLevel(P.xp); const got=[];
+  for(let L=before+1; L<=after; L++){ const r=passRew(L);
+    if(r.tk){ SAVE.tkUnl=SAVE.tkUnl||[]; if(!SAVE.tkUnl.includes(r.tk)) SAVE.tkUnl.push(r.tk); if(!SAVE.tk) SAVE.tk=r.tk; }
+    if(r.coins) SAVE.coins+=r.coins;
+    if(r.crate){ SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[r.crate]=(SAVE.freeCrates[r.crate]||0)+1; }
+    if(r.item && !SAVE.owned.trail.includes(r.item)) SAVE.owned.trail.push(r.item);
+    got.push('Lv '+L+': '+passDesc(r)); }
+  P.lvl=after; persist();
+  if(got.length){ toast('🎟️ PASS LEVEL '+after+'! '+got[got.length-1]); try{ confetti(0); }catch(e){} }
+  else if(why) toast('🎟️ +'+Math.round(n)+' XP · '+why);
+}
+// XP for a finished game: playing, winning, ranked, your points, MVP
+function passGameXP(win){ const r=BOX.p[net.myId]||{pts:0}, online=!V.practice, ranked=!!(V.ranked||V.queueMatch||V.ranked2);
+  let x=(online?100:40)+(win?(online?60:20):0)+(ranked?40:0)+Math.min(80,(r.pts||0)*4)+(boxMVP(win)===net.myId?40:0);
+  passXP(x, (win?'win':'game')+(ranked?' · ranked':'')); }
+function renderPass(){
+  const P=passNow(), L=passLevel(P.xp), into=P.xp-(L-1)*PASS_XP, B=$('#passBody'); B.innerHTML='';
+  const top=el('div','psTop'); top.append(el('b','','🎟️ SEASON '+seasonNow().n+' PASS'), el('span','','ends in '+ago2(seasonNow().end-Date.now())));
+  const lv=el('div','psLvl'); lv.append(el('div','psNum','LEVEL '+L+(L>=PASS_MAX?' · MAX':'')));
+  const bar=el('div','evBar psBar'), fill=el('div','evFill'); fill.style.width=(L>=PASS_MAX?100:Math.round(into/PASS_XP*100))+'%'; bar.append(fill); lv.append(bar, el('small','', L>=PASS_MAX?'You maxed the pass 💯':into+' / '+PASS_XP+' XP to level '+(L+1)));
+  // takeover pick
+  const tkb=el('div','psTk'); tkb.append(el('h4','','🔥 YOUR TAKEOVER'), el('p','how','Good plays fill your meter in games. When it\u2019s full: a 12-second boost.'));
+  const row=el('div','psTkRow'); const un=SAVE.tkUnl||[];
+  for(const [k,t,d] of [['shot',TK.shot,'Wider green, jumpers fall more'],['lock',TK.lock,'Tighter contests, more steals'],['slash',TK.slash,'Faster drives, better at the rim']]){
+    const lockedAt=Object.entries(PASS_REW).find(([l,r])=>r.tk===k)[0], has=un.includes(k);
+    const b=el('button','psTkBtn'+(SAVE.tk===k&&has?' on':'')+(has?'':' locked')); b.append(el('span','psTkI', has?t.icon:'🔒'), el('b','',t.n), el('small','', has?d:'Pass level '+lockedAt));
+    b.onclick=()=>{ if(!has) return toast('🔒 Unlocks at pass level '+lockedAt); SAVE.tk=k; persist(); renderPass(); if(net.hostConn && net.hostConn.open) try{ sendAct({t:'gear', ...myGear()}); }catch(e){} };
+    row.append(b); }
+  if(SAVE.tk && un.includes(SAVE.tk)){ const off=el('button','btn tiny ghost','Turn off'); off.onclick=()=>{ SAVE.tk=''; persist(); renderPass(); }; tkb.append(row, off); } else tkb.append(row);
+  // levels
+  const list=el('div','psList');
+  for(let l=2;l<=PASS_MAX;l++){ const r=passRew(l), big=!!(r.tk||r.item||r.crate); const it=el('div','psRow'+(l<=L?' got':'')+(big?' big':''));
+    it.append(el('b','', String(l)), el('span','', passDesc(r)), el('i','', l<=L?'✅':'')); list.append(it); }
+  B.append(top, lv, tkb, el('h4','','REWARDS'), list, el('p','how','XP: 100 per online game (40 practice), +60 for a win, +40 ranked, +4 per point, +40 MVP.'));
+  setTimeout(()=>{ const cur=list.children[Math.max(0,L-2)]; if(cur) cur.scrollIntoView({block:'center'}); }, 30);
+}
+function openPass(){ $('#home').classList.add('hidden'); $('#passPanel').classList.remove('hidden'); renderPass(); }
+function closePass(){ $('#passPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); }
 
 // ---------------------------------------------------------------- 🎪 EVENTS (the admin starts them)
 // 2x RR on ranked wins, 2x coins, and challenges ("win 3 ranked games") with exclusive rewards.
@@ -4852,7 +4937,7 @@ function eventGame(win){ const e=eventNow(); if(!e || !e.goal || !e.goal.n) retu
 function eventClaim(){ const e=eventNow(), pr=evProg(); if(!e || !pr || pr.claimed || !e.goal || pr.n<e.goal.n) return;
   pr.claimed=true; const rw=e.reward||{}; if(+rw.coins) SAVE.coins+=Math.round(+rw.coins);
   if(rw.item && itemOf('trail', rw.item) && !SAVE.owned.trail.includes(rw.item)) SAVE.owned.trail.push(rw.item);
-  persist(); try{ confetti(0); }catch(x){} toast('🎁 Event reward: '+(+rw.coins?'+'+rw.coins+' 💰 ':'')+(rw.item&&itemOf('trail',rw.item)?itemOf('trail',rw.item).icon+' '+itemOf('trail',rw.item).name+' trail':'')); ctlBanner(); }
+  persist(); passXP(150); try{ confetti(0); }catch(x){} toast('🎁 Event reward: '+(+rw.coins?'+'+rw.coins+' 💰 ':'')+(rw.item&&itemOf('trail',rw.item)?itemOf('trail',rw.item).icon+' '+itemOf('trail',rw.item).name+' trail':'')); ctlBanner(); }
 setInterval(()=>{ if(eventNow() || $('#ctlBanner').querySelector('.evBox')) ctlBanner(); }, 30000);
 
 // ----- ranked panel
@@ -5351,64 +5436,45 @@ function renderAdmin(){
     const now=Date.now(), rows=Object.entries(ADM.live||{}).filter(([k,v])=>v && now-(+v.t||0)<90000);
     const players=rows.reduce((a,[k,v])=>a+(+v.n||0),0), joiners=Math.max(0, players-rows.length);
     const line=el('div','adStat');
-    line.append(el('b','', rows.length+' online room'+(rows.length===1?'':'s')), el('span','', players+' players'), el('span','', '≈'+Math.round(joiners*12)+' MB/hour of Google data'));
+    line.append(el('b','', rows.length+' online room'+(rows.length===1?'':'s')), el('span','', players+' players online'));
     s.append(line);
-    const via={}; for(const [k,v] of rows) for(const t in (v.v||{})) via[t]=(via[t]||0)+v.v[t];
-    if(rows.length) s.append(el('p','adSub', 'Joiners connected via: '+(Object.entries(via).map(([t,n])=>t+' '+n).join(' · ')||'—')));
     const ul=el('ul','adList'); rows.sort((a,b)=>(+b[1].n||0)-(+a[1].n||0)).slice(0,12).forEach(([k,v])=>ul.append(el('li','', '🏀 '+(v.m||'game')+' · '+(v.n||0)+' players · '+(v.ph==='game'?'playing':'in lobby'))));
     if(rows.length) s.append(ul);
-    s.append(el('p','adSub', 'Settings checked '+(CTL_AT?ago(CTL_AT):'never')+' · Fast server (Google): '+(fbURL()?'set up ✅':'❌ not set up')+' · Free plan: 100 players at once, 10 GB/month'));
+    s.append(el('p','adSub', 'Settings checked '+(CTL_AT?ago(CTL_AT):'never')+' · 🏟️ Game server: '+(CTL.gsOff?'OFF (backup mode)':'ON')));
     const rf=el('button','btn tiny','🔄 Refresh'); rf.onclick=async()=>{ rf.disabled=true; await ctlFetch(); await admLive(); renderAdmin(); }; s.append(rf);
     B.append(s); }
   // ---- 📶 connection report (today, from real iPads)
-  { const s=admSec('📶 CONNECTION REPORT (TODAY)', 'Real numbers from iPads that played online today. Updates every 30s while people play.');
+  { const s=admSec('📶 CONNECTION (TODAY)', 'Real numbers from iPads that played online today. Updates every 30s while people play.');
     const D=ADM.diag, recs=D?Object.values(D).filter(x=>x && typeof x==='object'):[];
     if(!D) s.append(el('p','adSub','Loading…'));
     else if(!recs.length) s.append(el('p','adSub','No online games reported yet today.'));
     else {
       const med=a=>{ a=a.filter(x=>x!=null).sort((x,y)=>x-y); return a.length?a[a.length>>1]:null; };
-      const hosts=recs.filter(r=>r.r==='host'), joins=recs.filter(r=>r.r==='client');
-      const legH=med(hosts.map(r=>r.leg&&r.leg.p50)), legJ=med(joins.map(r=>r.leg&&r.leg.p50)), legJ90=med(joins.map(r=>r.leg&&r.leg.p90));
-      const pg=med(joins.map(r=>r.ping&&r.ping.p50)), pg90=med(joins.map(r=>r.ping&&r.ping.p90));
-      const spikes=joins.reduce((a,r)=>a+(r.ping?r.ping.over300:0),0), pings=joins.reduce((a,r)=>a+(r.ping?r.ping.n:0),0);
+      const pr=recs.filter(r=>r.ping), pg=med(pr.map(r=>r.ping.p50)), pg90=med(pr.map(r=>r.ping.p90));
+      const spikes=pr.reduce((a,r)=>a+r.ping.over300,0), pings=pr.reduce((a,r)=>a+r.ping.n,0);
       const stallRate=r=>r.frames?r.stall/r.frames*100:0;
-      const g={open:0,fail:0,drop:0}; for(const r of recs){ const w=(r.ws||{}).google; if(w){ g.open+=w.open||0; g.fail+=w.fail||0; g.drop+=w.drop||0; } }
-      const st=el('div','adStat'); st.append(el('b','', recs.length+' iPads'), el('span','', hosts.length+' hosts · '+joins.length+' joiners'));
+      const gsr=recs.filter(r=>r.gs), ok=gsr.filter(r=>r.gs.ok && r.gs.ws), onGS=recs.filter(r=>r.via==='gameserver').length;
+      const st=el('div','adStat'); st.append(el('b','', recs.length+' iPads'), el('span','', onGS+' played on the game server'));
       s.append(st);
-      const ul=el('ul','adList');
-      const L=(t)=>ul.append(el('li','',t));
-      L('🎮 In-game ping (blue side): usually '+(pg??'—')+'ms, bad moments '+(pg90??'—')+'ms · '+(pings?Math.round(spikes/pings*100):0)+'% of pings over 300ms');
-      L('📡 Host iPad → Google: '+(legH??'—')+'ms   ·   Joiner iPad → Google: '+(legJ??'—')+'ms (bad moments '+(legJ90??'—')+'ms)');
-      L('🔌 Google fast connection: '+g.open+' opened, '+g.fail+' blocked/failed, '+g.drop+' dropped');
-      L('🧊 iPad freezes (150ms+): hosts '+(med(hosts.map(stallRate))??0).toFixed(1)+'% of frames · joiners '+(med(joins.map(stallRate))??0).toFixed(1)+'%');
-      { const gsr=recs.filter(r=>r.gs), ok=gsr.filter(r=>r.gs.ok && r.gs.ws), ms=med(ok.map(r=>r.gs.ms));
-        L('🏟️ Game server test: '+(gsr.length ? ok.length+' of '+gsr.length+' iPads reached it'+(ms!=null?', usually '+ms+'ms':'')+(gsr.length-ok.length? ' · '+(gsr.length-ok.length)+' blocked' : '') : 'no results yet')); }
-      const vias={}; for(const r of joins) vias[r.via]=(vias[r.via]||0)+1; L('🛣️ Joiners connected via: '+Object.entries(vias).map(([k,n])=>k+' '+n).join(' · '));
+      const ul=el('ul','adList'), L=t=>ul.append(el('li','',t));
+      L('🎮 Ping: usually '+(pg??'—')+'ms, bad moments '+(pg90??'—')+'ms · '+(pings?Math.round(spikes/pings*100):0)+'% over 300ms');
+      L('🏟️ Reached the game server: '+(gsr.length ? ok.length+' of '+gsr.length+' iPads'+(gsr.length-ok.length?' · '+(gsr.length-ok.length)+' blocked':'') : 'no results yet'));
+      L('🧊 iPad freezes (150ms+): '+(med(recs.map(stallRate))??0).toFixed(1)+'% of frames');
       s.append(ul);
-      // plain-English verdict
-      let v='';
-      const onGS=joins.filter(r=>r.via==='gameserver').length;
-      if(onGS && onGS>=joins.length/2){ v = pg!=null && pg<=150 ? '✅ Games run on the game server: one trip each way, same for both teams. Connection looks healthy.'
-          : '⚠️ Games run on the game server, but pings are high: that is the Wi-Fi itself (school network or weak signal).'; }
-      else if(g.fail>g.open) v='Google\'s fast connection is being blocked by the filter, so it falls back to a slow mode. That alone explains the lag.';
-      else if(legJ!=null && legH!=null && pg!=null && pg>(legJ+legH)*1.6) v='Each iPad\'s own trip to Google is OK, but the in-game ping is much bigger. The host iPads are slowing things down (freezing or overloaded).';
-      else if(legJ90!=null && legJ90>250) v='The school Wi-Fi/VPN itself is slow and spiky (each iPad\'s own trip to Google has bad moments). A game server that runs the game would halve this and make it fair, but can\'t remove the Wi-Fi spikes.';
-      else if(pg!=null) v='Lag mostly comes from going through Google twice (joiner → Google → host → Google → joiner). A game server that runs the game would cut that in half.';
-      if(v) s.append(el('p','adVerdict','💡 '+v));
+      const v = gsr.length && ok.length<gsr.length ? '⚠️ Some iPads can\'t reach the game server (blocked network). They automatically use the backup.'
+        : pg==null ? '' : pg<=150 ? '✅ Healthy: one trip to the server and back, the same for both teams.' : '⚠️ Pings are high: that\'s the Wi-Fi itself (school network or weak signal), not the game.';
+      if(v) s.append(el('p','adVerdict', v));
     }
-    const rf=el('button','btn tiny','🔄 Refresh report'); rf.onclick=async()=>{ await admDiag(); renderAdmin(); }; s.append(rf);
+    const rf=el('button','btn tiny','🔄 Refresh'); rf.onclick=async()=>{ await admDiag(); renderAdmin(); }; s.append(rf);
     B.append(s); }
   // ---- 🌐 multiplayer
   { const s=admSec('🌐 MULTIPLAYER', 'Every iPad follows these within about a minute.');
     s.append(el('label','','Online play'), admSeg([['on','🟢 ON'],['off','🔴 OFF (bots only)']], CTL.mp, v=>admSave({mp:v}, v==='off'?'🔴 Online play turned off':'🟢 Online play is on')));
     const om=admInput('Message when online is off (optional)', CTL.offMsg, 120), omb=el('button','btn tiny','Save message'); omb.onclick=()=>admSave({offMsg:om.value.trim()}, '✅ Saved');
     const r1=el('div','row'); r1.append(om, omb); s.append(r1);
-    s.append(el('label','','🏟️ Game server (runs every online game)'), admSeg([[false,'🟢 ON'],[true,'🔴 OFF (old way, through Google)']], !!CTL.gsOff, v=>admSave({gsOff:v}, v?'Game server off: new games use the old way':'🏟️ Game server on')));
-    s.append(el('p','adSub','Only switch this off if the game server ever has problems. Games already running keep going; new games use the old way.'));
-    s.append(el('label','','Old-way connection route'), admSeg([['auto','⚡ Auto (best)'],['google','Google only'],['relays','Relays only (Google off)']], CTL.route, v=>admSave({route:v}, '✅ Route: '+v)));
-    s.append(el('p','adSub','Auto = direct link if the Wi-Fi allows it, then Google, then public relays. If Google ever acts up, pick "Relays only". If relays are slowing games down, pick "Google only".'));
+    s.append(el('label','','🏟️ Game server'), admSeg([[false,'🟢 ON'],[true,'🔴 OFF (backup mode)']], !!CTL.gsOff, v=>admSave({gsOff:v}, v?'Game server off: new games use backup mode':'🏟️ Game server on')));
+    s.append(el('p','adSub','Only switch this off if the game server ever has problems. Games already running keep going.'));
     s.append(el('label','','Ranked vs real players'), admSeg([[true,'🟢 ON'],[false,'🔴 OFF (Ranked Rivals only)']], CTL.ranked!==false, v=>admSave({ranked:v}, '✅ Saved')));
-    s.append(el('label','','Smoothness vs data use (Google)'), admSeg([[15,'Smoothest 15/s'],[12,'Normal 12/s'],[8,'Data saver 8/s']], CTL.rate||12, v=>admSave({rate:v}, '✅ Saved')));
     B.append(s); }
   // ---- 🚨 emergency
   { const s=admSec('🚨 EMERGENCY');
@@ -5448,11 +5514,11 @@ function renderAdmin(){
     P('⚡ 2x RR · 1 hour', ()=>({name:'2x RR HOUR', kind:'rr2', end:Date.now()+H}));
     P('⚡ 2x RR · rest of today', ()=>({name:'2x RR DAY', kind:'rr2', end:midnight()}));
     P('💰 2x Coins · 1 hour', ()=>({name:'DOUBLE COINS', kind:'coins2', end:Date.now()+H}));
-    P('🏆 Win 3 ranked today → 750 + ⚡ Event Spark', ()=>({name:'DAILY CHALLENGE', kind:'', end:midnight(), goal:{t:'win', n:3}, reward:{coins:750, item:'evspark'}}));
-    P('🌌 Weekend: play 10 ranked → 1500 + Aurora', ()=>({name:'WEEKEND GRIND', kind:'rr2', end:Date.now()+48*H, goal:{t:'play', n:10}, reward:{coins:1500, item:'evaurora'}}));
+    P('🏆 Win 3 ranked today → 3000 + ⚡ Event Spark', ()=>({name:'DAILY CHALLENGE', kind:'', end:midnight(), goal:{t:'win', n:3}, reward:{coins:3000, item:'evspark'}}));
+    P('🌌 Weekend: play 10 ranked → 6000 + Aurora', ()=>({name:'WEEKEND GRIND', kind:'rr2', end:Date.now()+48*H, goal:{t:'play', n:10}, reward:{coins:6000, item:'evaurora'}}));
     s.append(el('label','','Quick start'), pre);
     // custom builder
-    const nm=admInput('Event name (e.g. LUNCH RUSH)', '', 30), kind=el('select'), dur=el('select'), goal=el('select'), n=admInput('How many', '3', 3), coins=admInput('Reward coins', '500', 6), item=el('select');
+    const nm=admInput('Event name (e.g. LUNCH RUSH)', '', 30), kind=el('select'), dur=el('select'), goal=el('select'), n=admInput('How many', '3', 3), coins=admInput('Reward coins', '2000', 6), item=el('select');
     for(const [v,t] of [['rr2','⚡ 2x RR on ranked wins'],['coins2','💰 2x coins'],['','Challenge only']]){ const o=el('option','',t); o.value=v; kind.append(o); }
     for(const [v,t] of [[H,'1 hour'],[3*H,'3 hours'],['today','Rest of today'],[48*H,'2 days'],[168*H,'1 week']]){ const o=el('option','',t); o.value=v; dur.append(o); }
     for(const [v,t] of [['','No challenge'],['play','Play N ranked'],['win','Win N ranked']]){ const o=el('option','',t); o.value=v; goal.append(o); }
@@ -5461,7 +5527,7 @@ function renderAdmin(){
     const start=el('button','btn yellow','🎪 Start event');
     start.onclick=()=>{ const end = dur.value==='today' ? midnight() : Date.now()+(+dur.value);
       const o={name:(nm.value.trim()||'EVENT').slice(0,30), kind:kind.value, end};
-      if(goal.value){ o.goal={t:goal.value, n:Math.max(1,Math.min(50,Math.round(+n.value||1)))}; o.reward={coins:Math.max(0,Math.min(20000,Math.round(+coins.value||0))), item:item.value||''}; }
+      if(goal.value){ o.goal={t:goal.value, n:Math.max(1,Math.min(50,Math.round(+n.value||1)))}; o.reward={coins:Math.max(0,Math.min(100000,Math.round(+coins.value||0))), item:item.value||''}; }
       if(!ev || confirm('Replace the event that\u2019s running?')) go(o); };
     const r1=el('div','row'); r1.append(nm, kind); const r2=el('div','row'); r2.append(dur, goal, n); const r3=el('div','row'); r3.append(coins, item);
     s.append(el('label','','Make your own'), r1, r2, r3, start);
@@ -5503,11 +5569,12 @@ function renderAdmin(){
   // ---- 🔒
   { const s=admSec('🔒 THIS iPAD');
     const lk=el('button','btn tiny','Lock admin on this iPad'); lk.onclick=()=>{ ADM.k=''; store('buckets-admk',''); $('#adminBtn').classList.add('hidden'); closeAdmin(); toast('🔒 Admin locked'); };
-    s.append(el('p','adSub','Backup switch if Google itself is down: edit control.json in the GitHub repo (for example {"mp":"off"}). Every iPad reads it too.'), lk);
+    s.append(el('p','adSub','Emergency backup: control.json in the GitHub repo works like these switches too (for example {"mp":"off"}).'), lk);
     B.append(s); }
   $('#adminPanel').scrollTop=keepScroll;
 }
 $('#adminBtn').onclick=openAdmin;
+$('#passBtn').onclick=openPass; $('#passClose').onclick=closePass;
 $('#adminClose').onclick=closeAdmin;
 if(ADM.k) $('#adminBtn').classList.remove('hidden');
 setInterval(()=>{ const a=document.activeElement; if($('#adminPanel').classList.contains('hidden') || (a && /INPUT|SELECT/.test(a.tagName) && $('#adminPanel').contains(a))) return; admLive().then(renderAdmin); }, 30000);   // never wipe what you're typing

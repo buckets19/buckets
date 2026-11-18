@@ -86,16 +86,23 @@ function mkPlayer(r, idx){
   const p=mkPlayer0(r, idx);
   // ranked rivals bring their own play style + trash talk
   const R=r.rv && RIVAL_BY[r.rv];
-  if(R){ p.D=rivalDiff(R); p.style=R.style; p.talk=STYLES[R.style].talk; p.talkRate=STYLES[R.style].talkRate; }
+  if(R){ p.D=rivalDiff(R); p.style=R.style; p.talk=STYLES[R.style].talk; p.talkRate=STYLES[R.style].talkRate;
+    if(!p.tk) p.tk = R.style==='shooter'?'shot' : R.style==='lockdown'?'lock' : (R.style==='slasher'||R.style==='bully')?'slash' : ''; }
   return p;
 }
 // a bot reacts to a big play with an emote (personality)
 function botTalk(M,p,boost=1){ if(!p || !p.bot || !p.talk || M.demo || p.emoteIn>0) return; if(Math.random()<Math.min(0.6,(p.talkRate||0)*0.65*boost)){ p.emoteIn=rnd(0.3,0.9); p.emoteE=pick(p.talk); } }
+// 🔥 TAKEOVERS: pick one (unlocked in the Season Pass). Good plays fill your meter; when it's full you
+// get a 12-second boost. Kept modest on purpose: it helps, it doesn't win the game for you.
+const TK={shot:{n:'Sniper',icon:'🎯'}, lock:{n:'Lockdown',icon:'🔒'}, slash:{n:'Slasher',icon:'⚡'}}, TK_T=12, TK_CODE={'':0, shot:1, lock:2, slash:3};
+const tkOn=(p,k)=>p && p.tk===k && p.tkT>0;
+function tkAdd(M,p,v){ if(!p || !p.tk || p.tkT>0 || M.demo) return; p.tkm=Math.max(0,Math.min(1,(p.tkm||0)+v));
+  if(p.tkm>=1){ p.tkm=0; p.tkT=TK_T; pushEv(M,{k:'takeover', id:p.id, tk:p.tk}); } }
 function mkPlayer0(r, idx){
   return { id:r.id, name:r.name, team:r.team, bot:!!r.bot, idx, x:0,y:0,z:0,vx:0,vy:0,vz:0, face:1, act:'', actT:0, shootT:0,
     meterWin:0.1, burstT:0, bdx:1, bdz:0, hand:-1, reachFoiled:false, burstCd:0, stealCd:0, stumbleT:0, noGrabT:0, inX:0, inZ:0,
     wantA:false, relA:null, wantB:false, wantC:false, botRel:SWEET, think:0, reacted:false, shotRange:0, pts:0, ankled:{}, hustle:false, streak:0, fire:false,
-    hesiT:0, rhythmT:0, boostT:0, moveKind:'', shotForm:1, formTag:'' };
+    hesiT:0, rhythmT:0, boostT:0, moveKind:'', shotForm:1, formTag:'', tk:TK[r.tk]?r.tk:'', tkm:0, tkT:0 };
 }
 function resetP(p){ p.y=0;p.vx=0;p.vy=0;p.vz=0;p.act='';p.shootT=0;p.burstT=0;p.stumbleT=0;p.noGrabT=0;p.downT=0;p.hangT=0;
   p.wantA=p.wantB=p.wantC=false;p.relA=null;p.reacted=false;p.shotRange=0;p.stuckT=0;p.cutT=0;p.spot=null;
@@ -170,6 +177,7 @@ function shotWindow(M,p){
         : lerp(0.062, 0.042, clamp((dist-THREE_D)/220,0,1));
   if(dist>THREE_D+260) w*=0.65;
   if(dist>=220) w*=(p.shotForm||1);                                    // how you got into the shot
+  if(tkOn(p,'shot')) w*=1.22;                                          // 🎯 Sniper takeover
   if(p.fire) w*=1.35;
   if(p.cold) w*=0.75;
   let c=1;
@@ -180,6 +188,7 @@ function shotWindow(M,p){
       let f=0.25+0.75*Math.pow(d/135,1.2);
       if(ahead < -15) f=Math.min(1,f+0.35);            // defender behind you barely matters
       if(o.y>20) f*=0.65;                                // hand in the air
+      if(tkOn(o,'lock')) f*=0.85;                        // 🔒 Lockdown takeover: tighter contests
       c=Math.min(c,f);
     }
     // rim protection: a defender camped between you and the rim makes drives a lot tougher
@@ -240,7 +249,7 @@ function dribbleMove(M,p){
   const toward = il>0.2 ? (p.inX*v.ux+p.inZ*v.uz)/il : 0;
   let def=null, dd=1e9;
   for(const o of M.players){ if(o.team===p.team) continue; const d=hyp(o.x-p.x,o.z-p.z); if(d<dd){ dd=d; def=o; } }
-  p.ankled={}; p.burstCd=BURST_CD; p.moveKind='';
+  p.ankled={}; p.burstCd=BURST_CD*(tkOn(p,'slash')?0.75:1); p.moveKind='';
   // a reach timed against ANY move is dead: defender shook
   for(const o of M.players) if(o.team!==p.team && o.act==='reach' && hyp(o.x-p.x,o.z-p.z)<STEAL_R+45) o.reachFoiled=p.id;
   let m;
@@ -291,6 +300,7 @@ function releaseShot(M,p,m){
     pr *= c0<0.4 ? 0.33 : Math.pow(c0,1.3);                 // covered = less likely, smothered = a prayer
     pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
     if(p.fire) pr*=1.15; if(p.cold) pr*=0.85;
+    if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2;
     made = Math.random() < Math.min(0.9, pr);
   }
   // misses: short or long by how far off you were (way off = airball), a little sideways
@@ -321,7 +331,7 @@ function tryDunk(M,p){
     p.act='follow'; p.noGrabT=0.5;
     if(blk && Math.random()>make){
       looseBall(M, h.cx-h.dir*20, RIM_Y+40, 0, -h.dir*rnd(250,420), rnd(80,240), rnd(-200,200), blk.team);
-      pushEv(M,{k:'block', id:blk.id, x:h.cx, y:RIM_Y+40, z:0}); return;
+      pushEv(M,{k:'block', id:blk.id, x:h.cx, y:RIM_Y+40, z:0}); tkAdd(M,blk, blk.tk==='lock'?0.4:0.3); return;
     }
     // hang on the rim for a beat; anyone underneath gets knocked flat
     p.act='hang'; p.hangT=0.45; p.y=Math.max(p.y, RIM_Y-REACH-6); p.x=h.cx-h.dir*20; p.z*=0.4; p.vx=p.vz=p.vy=0;
@@ -369,13 +379,14 @@ function resolveSteal(M,p){
   if(h.burstT>0) ch*=0.2;
   if(h.act==='shoot'||h.act==='fake'||h.act==='dunk') ch=0.05;
   if(h.stumbleT>0) ch+=0.35;
+  if(tkOn(p,'lock')) ch*=1.25;                          // 🔒 Lockdown takeover
   if(Math.random()<ch){
     // clean pickpocket: the ball is yours (possession + fresh shot clock)
     Object.assign(b,{st:'held', holder:p.id, vx:0, vy:0, vz:0, t:0, touchedRim:false, dunk:false, reb:false, wasShot:false, lastTeam:p.team});
     p.act=''; p.hand=Math.sign(p.z-h.z)||-1; p.noGrabT=0;
     M.poss=p.team; M.scT=SHOT_CLOCK; M.scOn=true;
     h.noGrabT=0.45; h.stumbleT=Math.max(h.stumbleT,0.25);
-    pushEv(M,{k:'steal', id:p.id, from:h.id});
+    pushEv(M,{k:'steal', id:p.id, from:h.id}); tkAdd(M,p, p.tk==='lock'?0.4:0.3);
     botTalk(M,p,1.5);
   } else { p.recoverT=0.22; pushEv(M,{k:'whiff', id:p.id}); }   // missed: a quick recovery, no stumble
 }
@@ -395,13 +406,14 @@ function movePlayer(M,p,dt){
   let ix=p.inX, iz=p.inZ; const il=hyp(ix,iz); if(il>1){ ix/=il; iz/=il; }
   if(p.rhythmT>0) p.rhythmT-=dt;
   if(p.boostT>0) p.boostT-=dt;
+  if(p.tkT>0) p.tkT-=dt;
   if(p.hesiT>0){ p.hesiT-=dt; p.vx=approach(p.vx,0,ACC*2*dt); p.vz=approach(p.vz,0,ACC*2*dt);
     if(p.hesiT<=0){ p.boostT=0.6;
       // hesi-GO: stick pushed as the hesi ends = explode out of it (free burst, no cooldown)
       const l=hyp(p.inX,p.inZ); if(l>0.3 && has && p.act===''){ p.bdx=p.inX/l; p.bdz=p.inZ/l; p.burstT=BURST_T*1.15; p.moveKind='go'; p.ankled={}; if(Math.abs(p.bdx)>0.2) p.face=Math.sign(p.bdx); } } }
   else if(p.burstT>0){ p.burstT-=dt; const bv=BURST_V*(p.moveKind==='step'?0.8:p.moveKind==='spin'?0.9:1); p.vx=p.bdx*bv; p.vz=p.bdz*bv*0.85; if(p.burstT<=0) p.moveKind=''; }
   else if(ground && !locked){
-    const k=(p.boostT>0&&has?1.22:1)*(has?0.93:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1)*(p.recoverT>0?0.55:1)*(guarding && !p.bot ? 1.06 : 1)*(p.bot?D.speed:1);
+    const k=(p.boostT>0&&has?1.22:1)*(has?0.93:1)*(has&&tkOn(p,'slash')?1.06:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1)*(p.recoverT>0?0.55:1)*(guarding && !p.bot ? 1.06 : 1)*(p.bot?D.speed:1);
     p.vx=approach(p.vx, ix*RUN*k, ACC*dt); p.vz=approach(p.vz, iz*RUN*0.85*k, ACC*dt);
   } else if(!ground && !locked){ p.vx=approach(p.vx,ix*RUN,AIR_ACC*dt); p.vz=approach(p.vz,iz*RUN*0.85,AIR_ACC*dt); }
   else if(ground && locked){ p.vx=approach(p.vx,0,ACC*dt); p.vz=approach(p.vz,0,ACC*dt); }
@@ -542,7 +554,7 @@ function updateBall(M,dt){
         b.vx=-b.vx/v*rnd(150,320)+p.face*60; b.vz=-b.vz/v*rnd(60,160)+rnd(-160,160); b.vy=rnd(-150,120);
         b.st='loose'; b.lastTeam=p.team;
         const sh=findP(M,b.shooter); if(sh) coldCheck(M,sh);
-        pushEv(M,{k:'block', id:p.id, x:r1(b.x), y:r1(b.y), z:r1(b.z), victim:b.shooter});
+        tkAdd(M,p, p.tk==='lock'?0.4:0.3); pushEv(M,{k:'block', id:p.id, x:r1(b.x), y:r1(b.y), z:r1(b.z), victim:b.shooter});
         botTalk(M,p,1.8);
         break;
       }
@@ -594,6 +606,8 @@ function scored(M,h){
   M.score[team]+=pts;
   const sh = b.st==='shot' ? findP(M,b.shooter) : null;
   if(sh && sh.team===team) sh.pts+=pts;
+  if(sh && sh.team===team) tkAdd(M,sh, three ? (sh.tk==='shot'?0.34:0.28) : (b.dunk||hyp(h.cx-sh.x,sh.z)<220) ? (sh.tk==='slash'?0.3:0.22) : 0.22);
+  for(const o of M.players) if(o.team!==team && o.tkT<=0 && o.tkm>0) o.tkm=Math.max(0,o.tkm-0.08);
   pushEv(M,{k:'score', team, pts, three:!!three, swish:b.st==='shot'&&!b.touchedRim&&!b.dunk, dunk:!!b.dunk, by:sh&&sh.team===team?sh.id:null, hx:h.cx, post:b.dunk?b.post:null, fire:!!(sh&&sh.fire)});
   if(sh && sh.team===team){
     sh.streak++; sh.miss=0;
@@ -754,13 +768,13 @@ function botDefense(M,p,holder,myHoop,opps,mates,go,tick){
 function makeSnap(M, withEv){
   const b=M.ball;
   const s={ t:'s', ph:M.phase, pt:r2(M.phaseT), sc:M.score, w:M.winner, poss:M.poss, toWin:M.toWin, wb2:M.winBy2?1:0, sct:r1(M.scT), scOn:M.scOn?1:0,
-    p:M.players.map(p=>[p.id, r1(p.x), r1(p.z), r1(p.y), Math.round(p.vx), Math.round(p.vz), p.face, ACT[p.act]||0, r2(p.meterWin), (p.burstT>0||p.hesiT>0)?1:0, p.downT>0?2:p.stumbleT>0?1:0, p.team, p.pts, p.hand, p.hesiT>0 ? -2 : p.burstT>0 && p.moveKind!=='step' && p.moveKind!=='go' ? r2(clamp(1-p.burstT/(p.moveKind==='spin'?SPIN_T:BURST_T),0,1)) : -1, p.fire?1:p.cold?-1:0]),
+    p:M.players.map(p=>[p.id, r1(p.x), r1(p.z), r1(p.y), Math.round(p.vx), Math.round(p.vz), p.face, ACT[p.act]||0, r2(p.meterWin), (p.burstT>0||p.hesiT>0)?1:0, p.downT>0?2:p.stumbleT>0?1:0, p.team, p.pts, p.hand, p.hesiT>0 ? -2 : p.burstT>0 && p.moveKind!=='step' && p.moveKind!=='go' ? r2(clamp(1-p.burstT/(p.moveKind==='spin'?SPIN_T:BURST_T),0,1)) : -1, p.fire?1:p.cold?-1:0, (TK_CODE[p.tk]||0)*100+(p.tkT>0?50:Math.round((p.tkm||0)*40))]),
     b:[r1(b.x), r1(b.y), r1(b.z), BST[b.st], b.holder, (b.st==='shot' && (findP(M,b.shooter)||{}).fire)?1:0, b.st==='shot'?b.shooter:null] };
   if(withEv) s.ev=M.events;
   return s;
 }
 // tuple indexes
-const Q={id:0,x:1,z:2,y:3,vx:4,vz:5,face:6,act:7,win:8,burst:9,stum:10,team:11,pts:12,hand:13,cross:14,fire:15};
+const Q={id:0,x:1,z:2,y:3,vx:4,vz:5,face:6,act:7,win:8,burst:9,stum:10,team:11,pts:12,hand:13,cross:14,fire:15,tk:16};
 
 // @@RIV-BEGIN (rival styles + roster: also copied by the game server)
 const STYLES={
