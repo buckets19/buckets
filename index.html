@@ -5371,11 +5371,38 @@ function acctCode(){
   }
   return k;
 }
+// Accounts now live on Google (Firebase), so they work at school:
+//   names:  rooms/_n_<name>  = {o: public owner id}      (first come; changing your name frees the old one)
+//   saves:  rooms/_a_<secret id> = {s: save, t, n}      (the secret id is a scrambled copy of your account code:
+//           without the code nobody can find or open your save)
+async function sha256hex(s){ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+const acctOn=()=>!!fbURL();
+async function fbReq(path, method, body){
+  const u=fbURL(); if(!u) return {ok:false};
+  const ac=new AbortController(), to=setTimeout(()=>ac.abort(),8000);
+  try{ const r=await fetch(u+'/rooms/'+path+'.json',{method:method||'GET', cache:'no-store', body:body===undefined?undefined:JSON.stringify(body), signal:ac.signal, keepalive:method==='PUT' && body && JSON.stringify(body).length<60000});
+    return {ok:r.ok, v:r.ok?await r.json():null}; }catch(e){ return {ok:false}; } finally{ clearTimeout(to); }
+}
 async function api(path, body, key){
-  if(!SERVER_URL) return null;                         // server switched off
-  const ac=new AbortController(), to=setTimeout(()=>ac.abort(),7000);
-  try{ const r=await fetch(API+path,{method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({key:key||acctCode(), ...body}), signal:ac.signal});
-    return await r.json(); }catch(e){ return null; } finally{ clearTimeout(to); }
+  try{ await FB_READY; }catch(e){}
+  if(!acctOn()) return null;
+  key=key||acctCode(); body=body||{};
+  const owner=(await sha256hex('bk19own|'+key)).slice(0,24), sid=(await sha256hex('bk19acct|'+key)).slice(0,40);
+  if(path==='/name/claim'){
+    const n=String(body.name||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,16); if(n.length<2) return {ok:false};
+    const cur=await fbReq('_n_'+n); if(!cur.ok) return null;
+    if(cur.v && cur.v.o && cur.v.o!==owner) return {ok:false, taken:true};
+    const w=await fbReq('_n_'+n,'PUT',{o:owner, t:{'.sv':'timestamp'}}); if(!w.ok) return null;
+    const old=store('buckets-myname'); store('buckets-myname', n);
+    if(old && old!==n){ const o=await fbReq('_n_'+old); if(o.ok && o.v && o.v.o===owner) await fbReq('_n_'+old,'DELETE'); }   // free your old name
+    return {ok:true};
+  }
+  if(path==='/save/put'){ const str=JSON.stringify(body.save||null); if(str.length>200000) return {error:'too big'};
+    const w=await fbReq('_a_'+sid,'PUT',{s:str, n:String((body.save&&body.save._name)||''), t:{'.sv':'timestamp'}}); return w.ok?{ok:true}:null; }
+  if(path==='/save/get'){ const r=await fbReq('_a_'+sid); if(!r.ok) return null; const v=r.v;
+    let save=null; try{ save=v && v.s ? JSON.parse(v.s) : null; }catch(e){}
+    return {ok:true, save, t:v?v.t:0, name:v?v.n:null}; }
+  return null;
 }
 // ---- names
 function setNameStatus(state, n){ NAMEST={name:n, state}; const s=$('#nameStat'); if(!s) return;
@@ -5396,10 +5423,9 @@ setTimeout(()=>{ if(store('buckets-name')) claimName(store('buckets-name')); }, 
 // ---- cloud save: back up a few seconds after anything changes, and when the app is closed
 function scheduleBackup(){ bkDirty=true; clearTimeout(bkTimer); bkTimer=setTimeout(doBackup, 6000); }
 function backupBody(){ return {save:{...SAVE, _name:store('buckets-name')||''}}; }
-async function doBackup(){ if(!SERVER_URL) return false; bkDirty=false; const r=await api('/save/put', backupBody());
+async function doBackup(){ if(!acctOn()) return false; bkDirty=false; const r=await api('/save/put', backupBody());
   if(r && r.ok){ store('buckets-lastbk', String(Date.now())); return true; } bkDirty=true; return false; }
-addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && bkDirty && SERVER_URL){
-  try{ navigator.sendBeacon(API+'/save/put', new Blob([JSON.stringify({key:acctCode(), ...backupBody()})],{type:'text/plain'})); bkDirty=false; }catch(e){} } });
+addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && bkDirty && acctOn()){ bkDirty=false; api('/save/put', backupBody()); } });   // closing the app: save now
 // ---- account screen
 function ago(t){ if(!t) return 'never'; const s=Math.round((Date.now()-t)/1000); return s<60?'just now':s<3600?Math.round(s/60)+' min ago':s<86400?Math.round(s/3600)+' h ago':Math.round(s/86400)+' days ago'; }
 function renderAcct(){
@@ -5433,10 +5459,9 @@ function renderAcct(){
 function renderAcctStatus(st){ st.textContent='☁️ Cloud backup: '+ago(+store('buckets-lastbk')||0); }
 function openAcct(){ $('#home').classList.add('hidden'); $('#acctPanel').classList.remove('hidden'); renderAcct(); }
 $('#acctBtn').onclick=openAcct;
-if(!SERVER_URL) $('#acctBtn').classList.add('hidden');   // accounts need our server
 $('#acctClose').onclick=()=>{ $('#acctPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); };
 // first backup shortly after opening the game
-setTimeout(()=>{ if(SERVER_URL && Date.now()-(+store('buckets-lastbk')||0)>60000) scheduleBackup(); }, 4000);
+setTimeout(()=>{ if(acctOn() && Date.now()-(+store('buckets-lastbk')||0)>60000) scheduleBackup(); }, 4000);
 requestAnimationFrame(frame);
 </script>
 </body>
