@@ -9,6 +9,8 @@
 //   player<-> server: "<json>"
 // Server-only notices: {"t":"_hosthere"} {"t":"_nohost"} {"t":"_hostgone"} {"t":"_taken"} {"t":"_left"}
 
+export { GameRoom, Matchmaker } from './game.js';
+
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, GET, OPTIONS', 'access-control-allow-headers': 'content-type', 'cache-control': 'no-store' };
 
 export default {
@@ -23,6 +25,10 @@ export default {
       const h = new Headers(res.headers); for (const k in CORS) h.set(k, CORS[k]);
       return new Response(res.body, { status: res.status, headers: h });
     }
+    // 🏟️ server-run games + matchmaking
+    const g = url.pathname.match(/^\/g\/([A-Za-z0-9]{1,16})$/);
+    if (g) return env.GAMES.get(env.GAMES.idFromName(g[1].toUpperCase())).fetch(req);
+    if (url.pathname === '/mm') return env.MM.get(env.MM.idFromName('mm')).fetch(req);
     const m = url.pathname.match(/^\/room\/([A-Za-z0-9_.-]{1,48})$/);
     if (!m) return new Response('buckets game server', { status: 200 });
     if ((req.headers.get('Upgrade') || '').toLowerCase() !== 'websocket') return new Response('websocket only', { status: 426 });

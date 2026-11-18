@@ -102,6 +102,7 @@
   .p2Btns{display:flex;gap:10px;margin-bottom:8px}
   .p2Btns .grandBtn b{font-size:18px}
   .p2Net{font-size:12px;opacity:.7;margin-top:6px}
+  #netInfo,#p2Net{display:none!important}
   @media (max-width:520px){ .p2Board{grid-template-columns:1fr} .p2Vs{font-size:20px} .p2Btns{flex-direction:column} }
   .codeBox{text-align:center;background:var(--ink);color:var(--cream);border-radius:14px;padding:10px;margin-bottom:14px}
   .codeBox small{opacity:.7}
@@ -412,7 +413,7 @@
     <button class="hTile gQuest openQuests"><span>📜</span><b>QUESTS</b><i class="qBadge hidden">0</i></button>
   </div>
   <p id="homeMsg" class="msg"></p>
-  <div class="hFoot"><button id="acctBtn" class="btn tiny ghost">👤 Account &amp; backup</button><button id="netTestBtn" class="btn tiny ghost">📶 Test connection</button><button id="adminBtn" class="btn tiny ghost hidden">🛠️ Admin</button></div>
+  <div class="hFoot"><button id="acctBtn" class="btn tiny ghost">👤 Account &amp; backup</button><button id="netTestBtn" class="btn tiny ghost hidden">📶 Test connection</button><button id="adminBtn" class="btn tiny ghost hidden">🛠️ Admin</button></div>
 </div>
 
 <div id="lobby" class="panel center hidden">
@@ -577,6 +578,7 @@ window.WSST={};
 </script>
 <script>
 "use strict";
+// @@SIM-BEGIN (the game server copies everything down to @@SIM-END: keep this part free of screen/sound code)
 // =====================================================================
 //  CONSTANTS  (world: x = along the court, z = depth (+ is far side), y = height)
 // =====================================================================
@@ -1304,6 +1306,7 @@ function makeSnap(M, withEv){
 }
 // tuple indexes
 const Q={id:0,x:1,z:2,y:3,vx:4,vz:5,face:6,act:7,win:8,burst:9,stum:10,team:11,pts:12,hand:13,cross:14,fire:15};
+// @@SIM-END
 
 // =====================================================================
 //  NETWORKING  (PeerJS: the host's browser runs the game)
@@ -1571,7 +1574,7 @@ async function gsProbe(){
   return out;
 }
 const SERVER_SNAP_MS=50;                                     // 20 snapshots/s through our server
-const srvRoom=code=>SERVER_URL+'/room/'+encodeURIComponent(PREFIX+code);
+const srvRoomURL=code=>SERVER_URL+'/room/'+encodeURIComponent(PREFIX+code);
 function connObj(extra){ const c=Object.assign({open:true, _h:{}, lastIn:performance.now()}, extra);
   c.on=(ev,fn)=>{ (c._h[ev]=c._h[ev]||[]).push(fn); };
   c.emit=(ev,x)=>{ for(const fn of (c._h[ev]||[])) try{ fn(x); }catch(e){ console.warn(e); } };
@@ -1583,7 +1586,7 @@ function ServerHub(code, onConn){ return SERVER_URL ? WsServerHub(code, onConn) 
 function WsServerHub(code, onConn){
   if(!SERVER_URL) return null;
   const S={code, key:Math.random().toString(36).slice(2,12), conns:new Map(), dead:false, ws:null, open:false, last:0, pend:[], taken:false, fails:0};
-  const connect=()=>{ if(S.dead) return; S.t0=performance.now(); let ws; try{ ws=new WebSocket(srvRoom(code)+'?role=host&key='+S.key); }catch(e){ return; } S.ws=ws;
+  const connect=()=>{ if(S.dead) return; S.t0=performance.now(); let ws; try{ ws=new WebSocket(srvRoomURL(code)+'?role=host&key='+S.key); }catch(e){ return; } S.ws=ws;
     ws.onmessage=ev=>{ const str=String(ev.data);
       if(str[0]==='{'){ try{ const m=JSON.parse(str); S.pong=performance.now(); if(m.t==='_ok'){ S.open=true; S.fails=0; } if(m.t==='_taken'){ S.taken=true; S.dead=true; } }catch(e){} return; }
       const i=str.indexOf('|'); if(i<1) return; const cid=str.slice(0,i); let d; try{ d=JSON.parse(str.slice(i+1)); }catch(e){ return; }
@@ -1619,7 +1622,7 @@ function serverProbe(code, rid){
   return new Promise(res=>{
     if(!SERVER_URL) return res(null);
     let ws, done=false; const t0=performance.now(), fin=v=>{ if(done) return; done=true; clearTimeout(to); res(v); };
-    try{ ws=new WebSocket(srvRoom(code)+'?role=c&id='+rid); }catch(e){ return res(null); }
+    try{ ws=new WebSocket(srvRoomURL(code)+'?role=c&id='+rid); }catch(e){ return res(null); }
     ws.onmessage=ev=>{ if(done) return; let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
       if(m.t==='_hosthere') fin({ws, rtt:performance.now()-t0}); else if(m.t==='_nohost') fin(null); };
     ws.onclose=ws.onerror=()=>fin(null);
@@ -1642,7 +1645,7 @@ function ServerClientConn(ws0, code, rid){
     w.onclose=()=>{ if(!c.open || ws!==w) return; if(!lostAt) lostAt=performance.now(); V.netLost=true; setTimeout(retry, 600); }; };
   const retry=()=>{ if(!c.open) return;
     if(performance.now()-lostAt>15000){ V.netLost=false; c.kill(); return; }
-    let w; try{ w=new WebSocket(srvRoom(code)+'?role=c&id='+rid); }catch(e){ setTimeout(retry,1200); return; }
+    let w; try{ w=new WebSocket(srvRoomURL(code)+'?role=c&id='+rid); }catch(e){ setTimeout(retry,1200); return; }
     w.onmessage=ev=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
       if(d.t==='_hosthere'){ lostAt=0; hostAway=0; V.netLost=false; attach(w); c.lastIn=performance.now(); c.send({t:'ping', ts:performance.now()}); }
       else if(d.t==='_nohost'){ again(); } };   // host may be reconnecting too: keep trying until 15s
@@ -1830,7 +1833,8 @@ const PAGE_T=Date.now();
 const nk=n=>String(n||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,16);
 function fbURL(){ const c=FB_ORIG||FB_CONFIG; return c && c.databaseURL ? c.databaseURL.replace(/\/$/,'') : ''; }
 // who am I, for titles / gifts / bans: my device's leaderboard id (if I've played ranked) and my name
-function myKeys(){ const k=['n'+nk(getName())]; const pk=lbMe(); if(pk) k.unshift('p'+pk.slice(0,16)); return k; }
+// read-only name check (never overwrites the saved name)
+function myKeys(){ const k=['n'+nk($('#name').value || store('buckets-name') || '')]; const pk=lbMe(); if(pk) k.unshift('p'+pk.slice(0,16)); return k; }
 function keysOf(p){ const k=[]; if(p && p.pk) k.push('p'+String(p.pk).slice(0,16)); if(p && p.name!==undefined) k.push('n'+nk(p.name)); else if(p && p.n!==undefined) k.push('n'+nk(p.n)); return k; }
 function ctlPick(map, keys){ if(!map || typeof map!=='object') return null; for(const k of keys) if(map[k]) return map[k]; return null; }
 try{ const c=JSON.parse(store('buckets-ctl')||'null'); if(c && typeof c==='object') CTL={...CTL_DEF, ...c}; }catch(e){}
@@ -1898,12 +1902,13 @@ addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visibl
 const LIVE_ID=Math.random().toString(36).slice(2,12);
 function liveTick(){
   const u=fbURL(); if(!u || CTL.route==='relays') return;
-  const on=net.role==='host' && V.inRoom && !V.practice;
+  const on=amHost() && V.inRoom && !V.practice;
   if(!on){ if(liveTick.was){ liveTick.was=false; fetch(u+'/live/'+LIVE_ID+'.json',{method:'DELETE', keepalive:true}).catch(()=>{}); } return; }
   liveTick.was=true;
-  const hum=[...G.players.values()].filter(p=>!p.bot).length, mode=G.ranked2?'ranked 2v2':V.queueMatch?'ranked':G.party?'2v2 team-up':'friends';
-  const via=[...net.conns.values()].reduce((o,c)=>{ const k=c.isFire?'google':c.isRelay?'relay':'direct'; o[k]=(o[k]||0)+1; return o; },{});
-  fetch(u+'/live/'+LIVE_ID+'.json',{method:'PUT', body:JSON.stringify({n:hum, m:mode, ph:G.phase, v:via, t:{'.sv':'timestamp'}})}).catch(()=>{});
+  const ro=net.role==='host' ? [...G.players.values()] : (V.roster||[]);
+  const hum=ro.filter(p=>!p.bot).length, mode=(G.ranked2||V.ranked2)?'ranked 2v2':V.queueMatch?'ranked':(G.party||V.party2Room)?'2v2 team-up':'friends';
+  const via=srvRoom() ? {gameserver:hum} : [...net.conns.values()].reduce((o,c)=>{ const k=c.isFire?'google':c.isRelay?'relay':'direct'; o[k]=(o[k]||0)+1; return o; },{});
+  fetch(u+'/live/'+LIVE_ID+'.json',{method:'PUT', body:JSON.stringify({n:hum, m:mode, ph:V.phase, v:via, t:{'.sv':'timestamp'}})}).catch(()=>{});
 }
 setInterval(liveTick, 30000);
 addEventListener('pagehide', ()=>{ const u=fbURL(); if(u && liveTick.was) try{ fetch(u+'/live/'+LIVE_ID+'.json',{method:'DELETE', keepalive:true}); }catch(e){} });
@@ -1916,7 +1921,6 @@ addEventListener('pagehide', ()=>{ const u=fbURL(); if(u && liveTick.was) try{ f
 //   ws    = websockets opened / failed / dropped (does Google's fast connection get through the filter?)
 // =====================================================================
 const DIAG={id:Math.random().toString(36).slice(2,10), leg:[], ping:[], stall:0, frames:0, t0:0, gs:null};
-setTimeout(async()=>{ DIAG.gs=await gsProbe(); }, 7000);
 function diagAdd(k,v){ const a=DIAG[k]; if(!a) return; a.push(Math.round(v)); if(a.length>600) a.splice(0,a.length-600); }
 (function stallWatch(){ let last=performance.now();
   const f=now=>{ if(document.visibilityState==='visible' && V.inRoom && !V.practice){ DIAG.frames++; if(now-last>150) DIAG.stall++; } last=now; requestAnimationFrame(f); };
@@ -1927,13 +1931,117 @@ function diagSend(){
   const u=fbURL(); if(!u || !V.inRoom || V.practice || !net.role) return;
   if(!DIAG.t0) DIAG.t0=Date.now();
   const sum=a=>a.length?{p50:pct(a,.5), p90:pct(a,.9), max:Math.max(...a), n:a.length, over300:a.filter(x=>x>300).length}:null;
-  const via = net.role==='host' ? [...new Set([...net.conns.values()].map(c=>c.isFire?'google':c.isRelay?'relay':'direct'))].join('+')||'none' : (net.via==='server'?'google':isRelay()?'relay':'direct');
+  const via = net.role==='host' ? [...new Set([...net.conns.values()].map(c=>c.isFire?'google':c.isRelay?'relay':'direct'))].join('+')||'none' : (net.via==='gameserver'?'gameserver':net.via==='server'?'google':isRelay()?'relay':'direct');
   const rec={r:net.role, via, m:G.ranked2||V.ranked2?'ranked2v2':V.queueMatch?'ranked':'friends', leg:sum(DIAG.leg), ping:sum(DIAG.ping), stall:DIAG.stall, frames:DIAG.frames,
     gs:DIAG.gs, ws:window.WSST||{}, mins:Math.round((Date.now()-DIAG.t0)/60000), ua:/iPad|Macintosh/.test(navigator.userAgent)&&'ontouchend' in document?'iPad':/iPhone/.test(navigator.userAgent)?'iPhone':'other', t:{'.sv':'timestamp'}};
   fetch(u+'/rooms/_diag'+diagDay()+'/'+DIAG.id+'.json',{method:'PUT', body:JSON.stringify(rec)}).catch(()=>{});
 }
 setInterval(diagSend, 30000);
 addEventListener('pagehide', diagSend);
+// =====================================================================
+//  🏟️ PLAYING ON THE GAME SERVER (live.bucketsonline.site). The server runs every online game; every
+//  iPad is just a player, so red and blue get exactly the same delay (one trip to the server and back).
+//  It speaks the same messages a host iPad used to send, so the rest of the game works unchanged.
+//  If an iPad can't reach the server (or the admin switches it off), it quietly uses the old way.
+// =====================================================================
+const SRV={ok:null, p:null};
+const srvWS=()=>gsURL().replace(/^http/,'ws');
+function srvCheck(){ if(SRV.ok!==null) return Promise.resolve(SRV.ok);
+  if(!SRV.p) SRV.p=gsProbe().then(g=>{ SRV.ok=!!(g.ok && g.ws); DIAG.gs=g; return SRV.ok; }).catch(()=>{ SRV.ok=false; return false; });
+  return SRV.p; }
+async function srvUse(){ if(CTL.gsOff) return false; return await Promise.race([srvCheck(), new Promise(r=>setTimeout(()=>r(false),5000))]); }
+setTimeout(srvCheck, 400);
+const srvRoom=()=>!!(net.hostConn && net.hostConn.isServerRoom);
+function amHost(){ return net.role==='host' || (srvRoom() && V.owner===net.myId); }      // room owner: start, bots, settings
+function srvCmd(c, x){ if(srvRoom()) net.hostConn.send({t:'cmd', c, ...(x||{})}); }
+const srvId=()=>('u'+Math.random().toString(36).slice(2,11)).padEnd(10,'0');
+function helloOf(name, extra){ return {name:cleanName(name), ...myGear(), rr:SAVE.rank.rr, pk:lbMe()||'', ...(extra||{})}; }
+// one live connection to a server room. Quietly reconnects (same spot in the game) if the Wi-Fi drops.
+function SrvConn(code, hello){
+  return new Promise(res=>{
+    const c=connObj({peer:'host', isServerRoom:true, isRelay:false, relay:'gameserver'});
+    let ws=null, welcomed=false, done=false, lostAt=0;
+    const fin=v=>{ if(done) return; done=true; clearTimeout(to); res(v); };
+    const to=setTimeout(()=>{ c.open=false; clearInterval(c.hb); try{ ws&&ws.close(); }catch(e){} fin({fail:'timeout'}); }, 7000);
+    const open=re=>{
+      let w; try{ w=new WebSocket(srvWS()+'/g/'+encodeURIComponent(code)); }catch(e){ if(!welcomed){ c.open=false; fin({fail:'error'}); } else setTimeout(retry,1000); return; }
+      ws=w;
+      w.onopen=()=>{ try{ w.send(JSON.stringify({...hello, t:'hello', ...(re?{rejoin:1, id:c.myId}:{})})); }catch(e){} };
+      w.onmessage=ev=>{ if(ws!==w) return; let d; try{ d=JSON.parse(ev.data); }catch(e){ return; } if(!d || typeof d!=='object') return; c.lastIn=performance.now();
+        if(!welcomed){
+          if(d.t==='welcome'){ welcomed=true; c.myId=d.id; fin({conn:c, id:d.id}); setTimeout(()=>c.emit('data', d),0); return; }
+          if(['none','taken','busy','full','qnone'].includes(d.t)){ c.open=false; clearInterval(c.hb); try{ w.close(); }catch(e){} fin({fail:d.t}); }
+          return; }
+        if(d.t==='welcome'){ lostAt=0; V.netLost=false; return; }               // back in after a Wi-Fi drop
+        if(d.t==='none' || d.t==='bye'){ c.kill(); return; }
+        if(d.t==='qnone'){ c.qnone=true; c.kill(); return; }
+        c.emit('data', d); };
+      w.onclose=()=>{ if(ws!==w) return; if(!welcomed){ c.open=false; clearInterval(c.hb); fin({fail:'closed'}); return; } if(!c.open) return;
+        if(!lostAt){ lostAt=performance.now(); V.netLost=true; } setTimeout(retry, 600); };
+      w.onerror=()=>{};
+    };
+    const retry=()=>{ if(!c.open) return; if(performance.now()-lostAt>15000){ V.netLost=false; c.kill(); return; } open(true); };
+    c.send=d=>{ if(c.open && ws && ws.readyState===1) try{ ws.send(JSON.stringify(d)); }catch(e){} };
+    c.raw=c.send;
+    c.close=()=>{ if(!c.open) return; c.send({t:'bye'}); const w=ws; ws=null; setTimeout(()=>{ try{ w&&w.close(); }catch(e){} },100); c.kill(); };
+    // the server talks at least every 2s (pongs, updates): 5s of silence = the link died, reconnect
+    c.hb=setInterval(()=>{ if(!c.open || !welcomed || lostAt) return; if(performance.now()-c.lastIn>5000){ lostAt=performance.now(); V.netLost=true; const w=ws; ws=null; try{ w.onclose=null; w.close(); }catch(e){} retry(); } }, 1000);
+    open(false);
+  });
+}
+function srvAdopt(r, code, opts){
+  const conn=r.conn; net.role='client'; net.peer=null; net.myId=r.id; net.hostConn=conn; net.code=code; net.via='gameserver';
+  conn.on('data', onClientData);
+  conn.on('close', ()=>{ if(V.migrating) return; if(opts && opts.onClose && opts.onClose(conn)) return; if(V.overSeen) return;
+    fatal('Lost connection to the game. Check your Wi-Fi and try again.'); });
+}
+async function srvHost(name){
+  for(let i=0;i<5;i++){ const code=genCode(); const r=await SrvConn(code, helloOf(name, {id:srvId(), create:1, party:G.party?1:0}));
+    if(r.conn){ srvAdopt(r, code); return true; } if(r.fail!=='taken') return false; }
+  return false;
+}
+// 🏆 ranked queue on the server's matchmaker
+function srvQueue(mode, solo){
+  qState={cancel:false, t0:performance.now(), matched:false, srv:true}; $('#rankedPlay').disabled=true; $('#rankedPlay2').disabled=true; $('#rankedCancel').classList.remove('hidden');
+  let n=1, done=false, ws;
+  const stop=()=>{ if(done) return; done=true; clearInterval(tick); try{ ws.onclose=null; ws.send(JSON.stringify({t:'cancel'})); }catch(e){} try{ ws.close(); }catch(e){} };
+  const tick=setInterval(()=>{ if(!qState){ stop(); return; } if(qState.cancel){ stop(); qEnd(); qStatus(''); return; }
+    if(!qState.matched) qStatus((mode==='2v2'?'👥 Searching for a 2v2… '+(n>1?n+'/4 · ':''):'🔎 Searching for players… ')+Math.round((performance.now()-qState.t0)/1000)+'s'); },250);
+  const noMatch=msg=>{ stop(); qEnd(); qStatus(''); toast(msg); solo(); };
+  try{ ws=new WebSocket(srvWS()+'/mm'); }catch(e){ stop(); qEnd(); SRV.ok=false; findRankedMatch(mode); return; }
+  ws.onopen=()=>ws.send(JSON.stringify({t:'q', mode, rr:SAVE.rank.rr}));
+  ws.onmessage=async ev=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
+    if(d.t==='wait') n=d.n;
+    else if(d.t==='none') noMatch(mode==='2v2' ? 'No other players in the 2v2 queue — Ranked Rivals filled the lobby' : 'No players in queue — a Ranked Rival picked up the game');
+    else if(d.t==='go'){ stop(); qStatus('Match found! Joining…');
+      const r=await SrvConn(d.code, helloOf(getName(), {id:srvId(), ...(d.mode==='duo-solo'?{r2:1}:{q:d.mode, exp:d.exp})}));
+      if(!r.conn){ noMatch('The match fell through — a Ranked Rival picked up the game'); return; }
+      qState.matched=true; V.queueMatch=true;
+      srvAdopt(r, d.code, {onClose:c=>{ if(c.qnone && !V.overSeen){ V.migrating=true; location.href=location.pathname+(mode==='2v2'?'#rankedq2':'#rankedq'); location.reload(); return true; } }});
+      closeRanked(); qStatus('');
+      if(mode==='1v1') setTimeout(()=>{ const opp=(V.roster||[]).find(p=>p.id!==net.myId && !p.bot); if(opp) showVsCard({n:opp.name, rr:opp.rr||0}); }, 900);
+      else toast('👥 Ranked 2v2 found! Starting…'); } };
+  ws.onclose=()=>{ if(done) return; stop(); qEnd(); qStatus(''); SRV.ok=false; findRankedMatch(mode); };   // matchmaker unreachable: the old way
+}
+// 🏆 team-up: the room owner looks for 2 opponents (another duo, or solo 2v2 queuers)
+function srvDuoSearch(){
+  if(V.duoState || !amHost()) return;
+  const mine=(V.roster||[]).filter(p=>!p.bot && p.team===0); if(mine.length<2){ toast('Your teammate needs to join first'); return; }
+  const s=V.duoState={t0:performance.now(), cancel:false, srv:true}; let ws;
+  try{ ws=new WebSocket(srvWS()+'/mm'); }catch(e){ V.duoState=null; return; }
+  srvCmd('srch',{on:1});
+  s.end=msg=>{ if(s.ended) return; s.ended=true; clearInterval(s.tick); try{ ws.onclose=null; ws.send(JSON.stringify({t:'cancel'})); }catch(e){} try{ ws.close(); }catch(e){}
+    if(V.duoState===s) V.duoState=null; srvCmd('srch',{on:0}); duoStatus(msg||''); renderLobby(); };
+  s.tick=setInterval(()=>{ if(V.phase==='game'){ s.end(); return; } duoStatus('🔎 Searching for opponents… '+Math.round((performance.now()-s.t0)/1000)+'s'+(s.found?' · '+s.found+' found, joining…':'')); },250);
+  ws.onopen=()=>ws.send(JSON.stringify({t:'q', mode:'duo', code:net.code, rr:Math.max(0,...mine.map(p=>+p.rr||0))}));
+  ws.onmessage=ev=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; } if(d.t==='go'){ s.end(); srvCmd('migrate',{code:d.code}); } else if(d.t==='filled') s.found=d.n; };
+  ws.onclose=()=>{ if(!s.ended) s.end('😕 Lost the matchmaking server. Try again, or play the bots.'); };
+  renderLobby();
+}
+// bots from the server come without gear: dress them the same way on every iPad
+function seededGear(id){ const g={}; for(const k in KINDS){ const pool=KINDS[k].list.filter(i=>RORDER.indexOf(i.r)<=3); g[k]=pool[hash(id+k)%pool.length].id; } return g; }
+function fillGear(list){ for(const q of list||[]){ if(q.bot && !Object.keys(KINDS).some(k=>q[k])){ const R=q.rv && RIVAL_BY[q.rv]; Object.assign(q, R ? rivalGear(R) : seededGear(q.id)); } for(const k in KINDS) if(!q[k]) q[k]=KINDS[k].def; } }
+
 // ---- connect to a room. Direct WebRTC and every relay at once: direct wins if it opens quickly,
 //      otherwise the two FASTEST relays the host answered on. Resolves {conn, peer, id, via} or {fail}.
 function dial(code, o={}){
@@ -1998,7 +2106,7 @@ function sendSnap(s){
   if(net.srv) net.srv.snap(s);
 }
 addEventListener('pagehide', ()=>{
-  try{ if(net.hostConn && net.hostConn.isRelay) net.hostConn.raw({t:'bye'}); }catch(e){}
+  try{ if(net.hostConn && (net.hostConn.isRelay || net.hostConn.isServerRoom)) net.hostConn.raw({t:'bye'}); }catch(e){}
   try{ if(net.hub) net.hub.close(); }catch(e){}
   try{ if(net.srv) net.srv.close(); }catch(e){}
 });
@@ -2008,6 +2116,7 @@ let hostTimer=0;
 // If the PeerJS server itself is blocked, the room still opens as relay-only.
 function hostGame(name, tries=0){
   if(!tries && ctlBlocked()) return;                      // 🎛️ admin turned online off (or this name is banned)
+  if(!tries){ setBusy(true); srvUse().then(async ok=>{ if(ok && await srvHost(name)) return; hostGame(name, 1); }); return; }   // 🏟️ game server first
   setBusy(true);
   const code=genCode();
   clearTimeout(hostTimer);
@@ -2099,10 +2208,14 @@ function hostApply(id, d){
 async function joinGame(name, code){
   if(ctlBlocked()) return;
   setBusy(true);
-  const r=await dial(code, {onTick:el=>{ if(el>2600) homeMsg('Direct link blocked — trying backup relays… '+Math.round(el/1000)+'s'); }});
+  if(await srvUse()){ const sr=await SrvConn(code, helloOf(name,{id:srvId()}));          // 🏟️ game server first
+    if(sr.conn){ homeMsg(''); srvAdopt(sr, code); return; }
+    if(sr.fail==='full'){ setBusy(false); homeMsg('That room is full (3v3 max).'); return; }
+    if(sr.fail==='busy'){ setBusy(false); homeMsg('That room isn\'t taking players right now.'); return; } }
+  const r=await dial(code, {onTick:el=>{ if(el>2600) homeMsg('Connecting… '+Math.round(el/1000)+'s'); }});
   if(r.fail){ setBusy(false);
     homeMsg(r.fail==='none' ? 'No room with code '+code+'. Check the code with the host.'
-      : 'Could not reach room '+code+'. Make sure the host is still in the room, then try again. (Tap 📶 Test connection to see what this Wi-Fi allows.)');
+      : 'Could not reach room '+code+'. Make sure your friend is still in the room, then try again.');
     return; }
   homeMsg('');
   const conn=r.conn;
@@ -2912,6 +3025,7 @@ setInterval(()=>{
 
 function applyRoster(m){
   const prev=V.phase;
+  fillGear(m.players); V.owner=m.owner||null;
   V.roster=m.players; V.rmap=new Map(m.players.map(p=>[p.id,p])); V.phase=m.phase; V.toWin=m.toWin; V.diff=m.diff||'pro'; V.winBy2=!!m.winBy2; V.rankedRoom=!!m.ranked; V.ranked2=!!m.ranked2; V.party2Room=!!m.party; V.p2Srch=!!m.srch; if(m.code) net.code=m.code;
   if(!V.inRoom) return;
   if(V.phase==='game' && prev!=='game'){ V.snaps=[]; $('#over').classList.add('hidden'); }
@@ -2926,7 +3040,7 @@ function renderLobby(){
   $('#roomCode').textContent=net.code;
   document.querySelector('.codeBox').classList.toggle('hidden', !!V.practice);
   $('#switchBtn').classList.toggle('hidden', false);
-  const isHost=net.role==='host';
+  const isHost=amHost();
   for(const t of [0,1]){
     const ul=$('#team'+t); ul.innerHTML='';
     for(const p of V.roster.filter(p=>p.team===t)){
@@ -2936,7 +3050,7 @@ function renderLobby(){
       const gear=document.createElement('span'); gear.title='Celly / Green FX'; gear.textContent=((CELLYS.find(c=>c.id===p.cel)||{}).icon||'')+((GFX.find(c=>c.id===p.gfx)||{}).icon||''); li.append(gear);
       const tg = p.id===net.myId ? 'YOU' : p.id==='host' ? 'HOST' : p.bot ? 'BOT' : '';
       if(tg){ const s=document.createElement('span'); s.className='tg'; s.textContent=tg; li.append(s); }
-      if(isHost && p.bot){ const x=document.createElement('button'); x.className='x'; x.textContent='✕'; x.onclick=()=>{ G.players.delete(p.id); broadcastRoster(); }; li.append(x); }
+      if(isHost && p.bot){ const x=document.createElement('button'); x.className='x'; x.textContent='✕'; x.onclick=()=>{ if(srvRoom()) return srvCmd('rmbot',{id:p.id}); G.players.delete(p.id); broadcastRoster(); }; li.append(x); }
       ul.append(li);
     }
   }
@@ -2946,8 +3060,8 @@ function renderLobby(){
   $('#botDiff').classList.toggle('hidden', !V.roster.some(p=>p.bot));
   { const hum=V.roster.filter(p=>!p.bot), ok2=net.role==='host' && !V.practice && hum.length===2 && hum[0].team===hum[1].team;
     $('#duoRow').classList.toggle('hidden', !ok2 && !V.duoState); }
-  { const ok=rankedRoomOk(); $('#rankedToggle').classList.toggle('hidden', !ok); $('#rankedToggle').textContent='🏆 Ranked: '+(V.rankedRoom&&ok?'ON':'OFF'); $('#rankedToggle').classList.toggle('yellow', V.rankedRoom&&ok); $('#rankedToggle').disabled=net.role!=='host'; }
-  $('#winBy2').textContent='Win by 2: '+(V.winBy2?'ON':'OFF'); $('#winBy2').classList.toggle('yellow', !!V.winBy2); $('#winBy2').disabled=net.role!=='host';
+  { const ok=rankedRoomOk(); $('#rankedToggle').classList.toggle('hidden', !ok); $('#rankedToggle').textContent='🏆 Ranked: '+(V.rankedRoom&&ok?'ON':'OFF'); $('#rankedToggle').classList.toggle('yellow', V.rankedRoom&&ok); $('#rankedToggle').disabled=!amHost(); }
+  $('#winBy2').textContent='Win by 2: '+(V.winBy2?'ON':'OFF'); $('#winBy2').classList.toggle('yellow', !!V.winBy2); $('#winBy2').disabled=!amHost();
   const me=V.rmap.get(net.myId);
   $('#switchBtn').disabled = !me || V.roster.filter(p=>p.team===1-me.team).length>=MAX_PER_TEAM;
   const ok = V.roster.some(p=>p.team===0) && V.roster.some(p=>p.team===1);
@@ -3191,7 +3305,7 @@ function clientSendInput(){
   if(net.role!=='client' || V.phase!=='game' || !net.hostConn || !net.hostConn.open) return;
   // stick snapped to 1/8 steps and rate-capped: a thumb on an iPad joystick changes every frame, and 60 msgs/s
   // through a relay piles up into SECONDS of delay. Direct: up to 30/s. Server/relay: up to 12/s. Keepalive every 250ms.
-  const a=ctl.axis(), x=Math.round(a.x*8)/8, z=Math.round(a.z*8)/8, now=performance.now(), gap=isRelay()?80:33;
+  const a=ctl.axis(), x=Math.round(a.x*8)/8, z=Math.round(a.z*8)/8, now=performance.now(), gap=srvRoom()?50:isRelay()?80:33;
   // also send where MY screen says I am, so the host follows me instead of the other way around
   const P=V.pred, mine=P && P.blend>0.5 ? {px:Math.round(P.x), pz:Math.round(P.z)} : null;
   const key=x+','+z+(mine?','+(mine.px>>2)+','+(mine.pz>>2):'');
@@ -4121,8 +4235,6 @@ function drawHUD(S, dt, real){
   drawScreenFx(dt);
   // connection quality for players who joined (the host is always instant)
   if(net.role==='client' && V.inRoom && V.netLost) txt('📶 Wi-Fi dropped, reconnecting…', W/2, H*.32, 26, '#ffd23f', 'center', 6);
-  if(net.role==='client' && V.inRoom && V.rtt){ const r=Math.round(V.rtt), c=r<120?'#47e27a':r<250?'#ffd23f':'#ff5a4f';
-    txt('📶 '+r+'ms'+(net.via==='server'?' · server':isRelay()?' · relay':''), 14, H-18, 13, c, 'left', 4); }
   // your zone: orange heat or blue frost around the screen edges
   const meZ = real ? (S.p.find(q=>q[0]===net.myId)||[])[Q.fire] : 0;
   if(meZ===1 || meZ===-1){
@@ -4223,7 +4335,7 @@ function addBot(t){
   const used=new Set([...G.players.values()].map(p=>p.name)); const nm=BOT_NAMES.find(n=>!used.has(n+' 🤖'))||'Bot';
   addRosterPlayer('bot-'+Math.random().toString(36).slice(2,8), nm+' 🤖', true, t);
 }
-document.querySelectorAll('.addBot').forEach(b=>b.onclick=()=>{ addBot(+b.dataset.t); broadcastRoster(); });
+document.querySelectorAll('.addBot').forEach(b=>b.onclick=()=>{ if(srvRoom()) return srvCmd('addbot',{team:+b.dataset.t}); addBot(+b.dataset.t); broadcastRoster(); });
 // practice: a private local game vs bots — no room code, no internet needed
 $('#practiceBtn').onclick=()=>{
   initAudio(); goFull();
@@ -4233,12 +4345,13 @@ $('#practiceBtn').onclick=()=>{
 };
 $('#rematchBtn').onclick=()=>{
   if(V.ranked||V.queueMatch){ try{net.peer&&net.peer.destroy()}catch(e){} location.href=location.pathname+(V.ranked2?'#rankedq2':'#rankedq'); location.reload(); return; }
+  if(srvRoom()){ srvCmd('rematch'); return; }
   if(net.role!=='host') return;
   if(V.ranked){ const me=G.players.get('host'); if(me) me.rr=SAVE.rank.rr; setupRankedRoster(); startRankedMatch(); return; }
   const ro=[...G.players.values()]; if(!ro.some(p=>p.team===0)||!ro.some(p=>p.team===1)) return;
   $('#over').classList.add('hidden'); RM=newMatch(ro, G.toWin, false, G.diff, G.winBy2); G.phase='game'; broadcastRoster();
 };
-$('#toLobbyBtn').onclick=()=>{ if(V.ranked||V.queueMatch){ try{net.peer&&net.peer.destroy()}catch(e){} location.href=location.pathname+'#ranked'; location.reload(); return; } if(net.role==='host' && RM) RM.phaseT=0; };
+$('#toLobbyBtn').onclick=()=>{ if(V.ranked||V.queueMatch){ try{net.peer&&net.peer.destroy()}catch(e){} location.href=location.pathname+'#ranked'; location.reload(); return; } if(srvRoom()) srvCmd('tolobby'); else if(net.role==='host' && RM) RM.phaseT=0; };
 $('#rankedBtn').onclick=openRanked;
 
 // ---------------------------------------------------------------- 📶 connection test
@@ -4266,7 +4379,7 @@ async function runNetTest(){
   // 2b) our own Buckets server (the main way to play when the direct link is blocked)
   if(SERVER_URL){ const setV=netRow('🛰️ Buckets server (main backup)');
     tests.push(new Promise(r=>{ const t0=performance.now(); let ws;
-      try{ ws=new WebSocket(srvRoom('TEST'+Math.random().toString(36).slice(2,7))+'?role=c&id=test'); }catch(e){ setV('❌'); return r(); }
+      try{ ws=new WebSocket(srvRoomURL('TEST'+Math.random().toString(36).slice(2,7))+'?role=c&id=test'); }catch(e){ setV('❌'); return r(); }
       const to=setTimeout(()=>{ setV('❌ blocked'); try{ws.close()}catch(e){} r(); },7000);
       ws.onmessage=()=>{ clearTimeout(to); const ms=Math.round(performance.now()-t0); res.server=ms; setV('✅ '+ms+'ms'); try{ws.close()}catch(e){} r(); };
       ws.onerror=()=>{ clearTimeout(to); setV('❌ blocked'); r(); }; })); }
@@ -4334,13 +4447,14 @@ $('#partyBtn').onclick=()=>{ if(nameBlocked()) return; initAudio(); goFull(); V.
 $('#duoBtn').onclick=()=>duoSearch();
 $('#duoCancel').onclick=()=>{ if(V.duoState) V.duoState.cancel=true; duoStatus('Cancelling…'); };
 $('#rankedCancel').onclick=()=>{ if(qState) qState.cancel=true; qStatus('Cancelling…'); };
-$('#rankedToggle').onclick=()=>{ if(net.role!=='host') return; G.ranked=!G.ranked; broadcastRoster(); };
+$('#rankedToggle').onclick=()=>{ if(srvRoom()) return srvCmd('ranked'); if(net.role!=='host') return; G.ranked=!G.ranked; broadcastRoster(); };
 if(location.hash==='#ranked' || location.hash==='#rankedq' || location.hash==='#rankedq2'){ const h=location.hash; try{ history.replaceState(null,'',location.pathname); }catch(e){} setTimeout(()=>{ openRanked(); if(h==='#rankedq') findRankedMatch('1v1'); if(h==='#rankedq2') findRankedMatch('2v2'); },50); }
 $('#switchBtn').onclick=()=>sendAct({t:'team'});
-document.querySelectorAll('#toWin button').forEach(b=>b.onclick=()=>{ if(net.role!=='host') return; G.toWin=+b.dataset.v; broadcastRoster(); });
-document.querySelectorAll('#botDiff button').forEach(b=>b.onclick=()=>{ if(net.role!=='host') return; G.diff=b.dataset.d; broadcastRoster(); });
-$('#winBy2').onclick=()=>{ if(net.role!=='host') return; G.winBy2=!G.winBy2; broadcastRoster(); };
+document.querySelectorAll('#toWin button').forEach(b=>b.onclick=()=>{ if(srvRoom()) return srvCmd('towin',{v:+b.dataset.v}); if(net.role!=='host') return; G.toWin=+b.dataset.v; broadcastRoster(); });
+document.querySelectorAll('#botDiff button').forEach(b=>b.onclick=()=>{ if(srvRoom()) return srvCmd('diff',{d:b.dataset.d}); if(net.role!=='host') return; G.diff=b.dataset.d; broadcastRoster(); });
+$('#winBy2').onclick=()=>{ if(srvRoom()) return srvCmd('wb2'); if(net.role!=='host') return; G.winBy2=!G.winBy2; broadcastRoster(); };
 $('#startBtn').onclick=()=>{
+  if(srvRoom()){ srvCmd('start'); return; }
   if(G.phase!=='lobby') return;
   const ro=[...G.players.values()]; if(!ro.some(p=>p.team===0)||!ro.some(p=>p.team===1)) return;
   RM=newMatch(ro, G.toWin, false, G.diff, G.winBy2); G.phase='game'; broadcastRoster();
@@ -4379,6 +4493,7 @@ SAVE.rank = SAVE.rank || {rr:0, games:0, wins:0, streak:0, best:0};
 // A fixed cast of CPU hoopers who "live" in the ranked queue. Every rank has its own regulars, each
 // with a play style, a look (same face + gear every time) and a personality. You'll learn them:
 // "Lil Timmy never misses from the corner", "Sweaty D picks you up full court", etc.
+// @@RIV-BEGIN (rival styles + roster: also copied by the game server)
 const STYLES={
   shooter: {icon:'🎯', name:'Sharpshooter', tip:'Lives behind the arc. Close out hard.',
             mod:{shotSd:0.82, burst:0.7, moves:0.8, plant:1.15}, talk:[3,1], talkRate:0.35},
@@ -4442,6 +4557,7 @@ function rivalDiff(R){
   d.plant=Math.min(0.97,d.plant);
   d.name=R.n; return d;
 }
+// @@RIV-END
 function rivalRecord(R){ const h=(SAVE.rank.h2h||{})[R.k]; return h ? h[0]+'-'+h[1] : '0-0'; }
 // ---------------------------------------------------------------- REAL-PLAYER LEADERBOARD
 // Everyone who has played ranked posts {name, RR} to a few public Nostr relays (the same network the
@@ -4504,6 +4620,7 @@ function renderLeaderboard(){
   });
   if(!SAVE.rank.games) lb.append(el('li','gap','Play a ranked game to get on the board.'));
 }
+// @@DIFF-BEGIN (also copied by the game server)
 // bots get tougher as you climb: blend Rookie -> Pro -> Legend by rating
 function diffForRR(rr){
   // Bronze-Silver: Scrub -> Rookie, Gold-Platinum: Rookie -> Pro, Diamond+: Pro -> Legend
@@ -4513,6 +4630,7 @@ function diffForRR(rr){
   for(const key of ['shotSd','burst','dodge','slide','jump','steal','speed','cushion']) d[key]=lerp(x[key],y[key],k);
   d.name='Ranked'; return d;
 }
+// @@DIFF-END
 // rating change: Elo-style (beating someone better pays more), plus margin + streak bonus on wins
 function rrDelta(win, myRR, oppRR, margin){
   const exp=1/(1+Math.pow(10,(oppRR-myRR)/400));
@@ -4705,6 +4823,7 @@ async function findRankedMatch(mode){
   if(qState) return; initAudio(); qMode = mode==='2v2' ? '2v2' : '1v1';
   const solo=()=> qMode==='2v2' ? startRanked2Solo() : startRanked();
   if(ctlOnlineBlock() || CTL.ranked===false){ toast(ctlOnlineBlock() || '🏆 Ranked is vs Ranked Rivals right now'); solo(); return; }   // 🎛️ admin switch
+  if(await srvUse()) return srvQueue(qMode, solo);        // 🏟️ the server's matchmaker
   if(typeof Peer==='undefined' && !FB_CONFIG){ solo(); return; }
   qState={cancel:false, t0:performance.now(), matched:false}; $('#rankedPlay').disabled=true; $('#rankedPlay2').disabled=true; $('#rankedCancel').classList.remove('hidden');
   const tick=setInterval(()=>{ if(qState && !qState.matched && !V.q2Waiting) qStatus((qMode==='2v2'?'👥 Searching for a 2v2… ':'🔎 Searching for players… ')+Math.round((performance.now()-qState.t0)/1000)+'s'); },250);
@@ -4851,6 +4970,11 @@ function duoJoinOther(code){
 // move this device into another room (used by both players of the joining duo)
 function migrateTo(code, tag){
   if(!code) return;
+  if(srvRoom()){                                          // 🏟️ server room -> server room (team-up found opponents)
+    V.migrating=true; toast('Opponents found! Joining the ranked 2v2…');
+    const old=net.hostConn; try{ old.close(); }catch(e){} RM=null; G.players.clear(); net.hostConn=null;
+    SrvConn(code, helloOf(getName(), {id:srvId(), duo:tag||1})).then(r=>{ if(!r.conn){ V.migrating=false; fatal('Could not join the other team ('+r.fail+').'); return; } srvAdopt(r, code); V.migrating=false; });
+    return; }
   V.migrating=true; toast('Duo found! Joining the ranked 2v2…');
   const old=net.peer, oldConn=net.hostConn, oldHub=net.hub, oldSrv=net.srv; net.srv=null; setTimeout(()=>{ try{oldSrv&&oldSrv.close()}catch(e){} },150);
   setTimeout(()=>{ try{old&&old.destroy()}catch(e){} try{oldConn&&oldConn.close()}catch(e){} try{oldHub&&oldHub.close()}catch(e){} },150);
@@ -4883,8 +5007,8 @@ function p2Slot(p, emptyText, pulse){
   who.append(nm, sub); d.append(av, who); return d;
 }
 function renderParty2(){
-  const isHost=net.role==='host', R=V.roster||[];
-  if(isHost && !V.duoState && R.some(p=>p.bot)){ for(const [id,r] of [...G.players]) if(r.bot) G.players.delete(id); broadcastRoster(); return; }   // back from a game: clear the rivals
+  const isHost=amHost(), R=V.roster||[];
+  if(net.role==='host' && !V.duoState && R.some(p=>p.bot)){ for(const [id,r] of [...G.players]) if(r.bot) G.players.delete(id); broadcastRoster(); return; }   // back from a game: clear the rivals
   $('#p2Code').textContent=net.code;
   const myT=(R.find(p=>p.id===net.myId)||{team:0}).team, mine=R.filter(p=>p.team===myT), opp=R.filter(p=>p.team!==myT), searching=isHost ? !!V.duoState : !!V.p2Srch;
   const m=$('#p2Mine'), o=$('#p2Opp'); m.innerHTML=''; o.innerHTML='';
@@ -4910,9 +5034,10 @@ function renderParty2(){
   if(!isHost){ const h=R.find(p=>p.id==='host'); st.textContent = searching ? '🔎 '+(h?h.name:'Your teammate')+' is finding opponents…' : '⏳ Waiting for '+(h?h.name:'the host')+' to find opponents or pick bots'; }
   else if(!searching) st.textContent = V.p2Msg || (mate ? '✅ Teammate in! Find two real opponents, or play the bots.' : '📨 Send your friend the code above.');
 }
-$('#p2Find').onclick=()=>{ V.p2Msg=''; duoSearch(); };
-$('#p2Bots').onclick=()=>{ if(net.role!=='host') return; const s=V.duoState; if(s){ s.botsNow=true; s.cancel=true; duoStatus('Starting…'); return; } V.p2Msg=''; duoVsBots(); };
-$('#p2Stop').onclick=()=>{ if(V.duoState){ V.duoState.cancel=true; duoStatus('Stopping…'); } };
+$('#p2Find').onclick=()=>{ V.p2Msg=''; if(srvRoom()) return srvDuoSearch(); duoSearch(); };
+$('#p2Bots').onclick=()=>{ if(srvRoom()){ if(!amHost()) return; if(V.duoState && V.duoState.end) V.duoState.end(); V.p2Msg=''; srvCmd('p2bots'); return; }
+  if(net.role!=='host') return; const s=V.duoState; if(s){ s.botsNow=true; s.cancel=true; duoStatus('Starting…'); return; } V.p2Msg=''; duoVsBots(); };
+$('#p2Stop').onclick=()=>{ if(V.duoState && V.duoState.srv){ V.duoState.end(); return; } if(V.duoState){ V.duoState.cancel=true; duoStatus('Stopping…'); } };
 $('#p2Copy').onclick=()=>$('#copyBtn').onclick();
 $('#p2Leave').onclick=()=>{ try{ net.peer&&net.peer.destroy(); }catch(e){} location.href=location.pathname; };
 // no other duo: your duo vs whoever solo-queued into your game, Ranked Rivals fill the rest
@@ -5073,7 +5198,9 @@ function renderAdmin(){
     s.append(el('label','','Online play'), admSeg([['on','🟢 ON'],['off','🔴 OFF (bots only)']], CTL.mp, v=>admSave({mp:v}, v==='off'?'🔴 Online play turned off':'🟢 Online play is on')));
     const om=admInput('Message when online is off (optional)', CTL.offMsg, 120), omb=el('button','btn tiny','Save message'); omb.onclick=()=>admSave({offMsg:om.value.trim()}, '✅ Saved');
     const r1=el('div','row'); r1.append(om, omb); s.append(r1);
-    s.append(el('label','','Connection route'), admSeg([['auto','⚡ Auto (best)'],['google','Google only'],['relays','Relays only (Google off)']], CTL.route, v=>admSave({route:v}, '✅ Route: '+v)));
+    s.append(el('label','','🏟️ Game server (runs every online game)'), admSeg([[false,'🟢 ON'],[true,'🔴 OFF (old way, through Google)']], !!CTL.gsOff, v=>admSave({gsOff:v}, v?'Game server off: new games use the old way':'🏟️ Game server on')));
+    s.append(el('p','adSub','Only switch this off if the game server ever has problems. Games already running keep going; new games use the old way.'));
+    s.append(el('label','','Old-way connection route'), admSeg([['auto','⚡ Auto (best)'],['google','Google only'],['relays','Relays only (Google off)']], CTL.route, v=>admSave({route:v}, '✅ Route: '+v)));
     s.append(el('p','adSub','Auto = direct link if the Wi-Fi allows it, then Google, then public relays. If Google ever acts up, pick "Relays only". If relays are slowing games down, pick "Google only".'));
     s.append(el('label','','Ranked vs real players'), admSeg([[true,'🟢 ON'],[false,'🔴 OFF (Ranked Rivals only)']], CTL.ranked!==false, v=>admSave({ranked:v}, '✅ Saved')));
     s.append(el('label','','Smoothness vs data use (Google)'), admSeg([[15,'Smoothest 15/s'],[12,'Normal 12/s'],[8,'Data saver 8/s']], CTL.rate||12, v=>admSave({rate:v}, '✅ Saved')));
