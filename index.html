@@ -657,7 +657,7 @@ const hash = s => { let h=7; for(const c of String(s)) h=(h*31+c.charCodeAt(0))|
 // Catches l33t-speak (5h1t), stretched letters (fuuuck) and symbols in between (f_u.c-k).
 // The word lists are stored scrambled (base64) so nobody reading the code sees them.
 const NAME_BAD = (()=>{ const d=x=>{ try{ return atob(x).split(','); }catch(e){ return []; } };
-  return { inn:d('ZnVjayxmdWssZmNrLGZ2Y2ssc2hpdCxiaXRjaCxidGNoLGN1bnQsZGljayxjb2NrLHB1c3N5LHBlbmlzLHZhZ2luYSxwb3JuLG5pZ2csbmlnYSxuaWdyLGZhZ2dvdCxmYWdvdCxyZXRhcmQscmFwaXN0LHdob3JlLHNsdXQsaGl0bGVyLG5hemksbW9sZXN0LHBlZG9waGlsZSxkaWxkbyxqaXp6LGJvb2IsdGl0cyx0aXR0eSxob3JueSxudWRlLG5ha2VkLGFzc2hvbGUsYXJzZWhvbGUsYmFzdGFyZCx3YW5rLHR3YXQsa2lsbHlvdXJzZWxmLGNoaW5rLGtpa2UsdHJhbm55LHNleHksc2V4eCxibG93am9iLGhhbmRqb2IsY3Vtc2hvdCxvcmdhc20sc2VtZW4sdGVzdGljbGUsYnV0dGhvbGUsYnV0dHNleCxtaWxmLHN0ZnUsZ3Rmbyx3dGYsc3VpY2lkZSx0ZXJyb3Jpc3Q='), ex:d('c3BpYyxjb29uLHBlZG8sYXNzLGN1bSxzZXgsZmFnLGt5cyxra2ssaG9lLGhvZXMsdGl0LGFuYWwsbnV0LG51dHMscGVlLHBvb3AsYnVtLHJhcGUscmFwZXMsYW51cyxpc2lzLGttcyxoZWls'), ok:['peacock','hancock','dickens','dickson','cockpit','scunthorpe','cockatoo','cockatiel','therapist'] }; })();
+  return { inn:d('amFja29mZixqYWNraG9mZixqYWNraW5vZmYsamVya29mZixqZXJraW5nb2Zm').concat(d('ZnVjayxmdWssZmNrLGZ2Y2ssc2hpdCxiaXRjaCxidGNoLGN1bnQsZGljayxjb2NrLHB1c3N5LHBlbmlzLHZhZ2luYSxwb3JuLG5pZ2csbmlnYSxuaWdyLGZhZ2dvdCxmYWdvdCxyZXRhcmQscmFwaXN0LHdob3JlLHNsdXQsaGl0bGVyLG5hemksbW9sZXN0LHBlZG9waGlsZSxkaWxkbyxqaXp6LGJvb2IsdGl0cyx0aXR0eSxob3JueSxudWRlLG5ha2VkLGFzc2hvbGUsYXJzZWhvbGUsYmFzdGFyZCx3YW5rLHR3YXQsa2lsbHlvdXJzZWxmLGNoaW5rLGtpa2UsdHJhbm55LHNleHksc2V4eCxibG93am9iLGhhbmRqb2IsY3Vtc2hvdCxvcmdhc20sc2VtZW4sdGVzdGljbGUsYnV0dGhvbGUsYnV0dHNleCxtaWxmLHN0ZnUsZ3Rmbyx3dGYsc3VpY2lkZSx0ZXJyb3Jpc3Q=')), ex:d('c3BpYyxjb29uLHBlZG8sYXNzLGN1bSxzZXgsZmFnLGt5cyxra2ssaG9lLGhvZXMsdGl0LGFuYWwsbnV0LG51dHMscGVlLHBvb3AsYnVtLHJhcGUscmFwZXMsYW51cyxpc2lzLGttcyxoZWls'), ok:['peacock','hancock','dickens','dickson','cockpit','scunthorpe','cockatoo','cockatiel','therapist'] }; })();
 function nameBad(s){
   let low=String(s||'').toLowerCase();
   const leet=low.replace(/[0@4]/g,m=>m==='0'?'o':'a').replace(/[1!|]/g,'i').replace(/3/g,'e').replace(/[5$]/g,'s').replace(/7/g,'t').replace(/8/g,'b').replace(/9/g,'g');
@@ -3433,7 +3433,7 @@ function bindBtn(el, down, up){
 bindBtn($('#bA'), pressA, releaseA);
 bindBtn($('#bB'), ()=>sendAct({t:'b'}));
 bindBtn($('#bC'), ()=>{ predictLocalMove('c'); sendAct({t:'c'}); });
-let lastIn='', lastInAt=0;
+let lastIn='', lastInAt=0, lastDir='';
 function clientSendInput(){
   if(net.role!=='client' || V.phase!=='game' || !net.hostConn || !net.hostConn.open) return;
   // stick snapped to 1/8 steps and rate-capped: a thumb on an iPad joystick changes every frame, and 60 msgs/s
@@ -3442,7 +3442,8 @@ function clientSendInput(){
   // also send where MY screen says I am, so the host follows me instead of the other way around
   const P=V.pred, mine=P && P.blend>0.5 ? {px:Math.round(P.x), pz:Math.round(P.z)} : null;
   const key=x+','+z+(mine?','+(mine.px>>2)+','+(mine.pz>>2):'');
-  if((key!==lastIn && now-lastInAt>=gap) || now-lastInAt>250){ net.hostConn.send({t:'in', x, z, ...(mine||{})}); lastIn=key; lastInAt=now; }
+  const dir=x+','+z;                                   // a new direction goes out right away; routine position updates keep the normal pace
+  if((dir!==lastDir && now-lastInAt>=16) || (key!==lastIn && now-lastInAt>=gap) || now-lastInAt>250){ net.hostConn.send({t:'in', x, z, ...(mine||{})}); lastIn=key; lastInAt=now; lastDir=dir; }
 }
 
 // =====================================================================
@@ -3497,7 +3498,7 @@ function sfx(kind,p=1){
 // =====================================================================
 const cv=$('#c'); let ctx=cv.getContext('2d');
 let W=0,H=0,dpr=1;
-function resize(){ dpr=Math.min(V.lowFx?1.25:2,devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*dpr; cv.height=H*dpr;
+function resize(){ dpr=Math.min(V.lowFx2?0.85:V.lowFx?1:1.6,devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*dpr; cv.height=H*dpr;
   $('#rotate').classList.toggle('hidden', !(touchMode && H>W)); }
 addEventListener('resize', resize); resize();
 const FONT='Fredoka,"Trebuchet MS",system-ui,sans-serif';
@@ -3595,7 +3596,7 @@ function predictLocalMove(kind){
     if(has){ const h=attackHoop(me[Q.team]), v=hoopVec({x:me[Q.x],z:me[Q.z]},h); if((a.x*v.ux+a.z*v.uz)/l<-0.5) return; }   // stepback: let the host do it
     V.pred.bdx=a.x/l; V.pred.bdz=a.z/l; V.pred.bt=BURST_T; V.pred.cdT=performance.now()+BURST_CD*1000; }
 }
-function interpDelay(){ const g=V.gapA||(isRelay()?50:25), j=V.gapJ||10; return clamp(g+2.2*j+12, isRelay()?70:45, 260); }
+function interpDelay(){ const g=V.gapA||(isRelay()?50:25), j=V.gapJ||10; return clamp(g+2.2*j+12, isRelay()?70:srvRoom()?28:45, 260); }   // game server: 50 updates/s, so a smaller buffer
 function rrect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function txt(s,x,y,size,color,align='center',stroke=6){
   ctx.font=`700 ${size}px ${FONT}`; ctx.textAlign=align; ctx.textBaseline='middle'; ctx.lineJoin='round';
@@ -3611,8 +3612,9 @@ function frame(){
   if(!isFinite(camX)) camX=COURT_W/2;
   // older iPads: if frames run slow for a few seconds, drop the heavy effects for good
   V.ftA = V.ftA ? lerp(V.ftA,dt,.05) : dt;
-  V.slowT = V.ftA>0.026 ? (V.slowT||0)+dt : 0;
-  if(V.slowT>2.5 && !V.lowFx){ V.lowFx=true; resize(); }
+  V.slowT = V.ftA>0.022 ? (V.slowT||0)+dt : 0;
+  if(V.slowT>2 && !V.lowFx){ V.lowFx=true; V.slowT=-2; resize(); }
+  else if(V.slowT>3 && V.lowFx && !V.lowFx2){ V.lowFx2=true; resize(); }        // still slow: extra-low (oldest iPads)
   clientSendInput();
   if(ctl.aDown && (now-ctl.aT)/1000/METER_T>1.3) releaseA();
   let S=currentSnap();
@@ -4736,7 +4738,7 @@ function lbKey(){ let h=store('buckets-lbkey'); if(!h || !/^[0-9a-f]{64}$/.test(
 function lbMe(){ try{ const h=store('buckets-lbkey'); return NT && h ? NT.getPublicKey(bytesOf(h)) : null; }catch(e){ return null; } }
 const LB={rows:null, at:0, loading:null, posted:false};
 async function lbPublish(){
-  if(!SAVE.rank.games) return;
+  if(!SAVE.rank.games || store('buckets-nolb')) return;          // (test devices never post)
   const nt=await loadNostr(); if(!nt) return;
   const sk=lbKey(), R=SAVE.rank;
   const ev=nt.finalizeEvent({kind:LB_KIND, created_at:Math.floor(Date.now()/1000), tags:[['d',LB_TAG],['t',LB_TAG]],
@@ -4773,6 +4775,7 @@ function renderLeaderboard(){
   const me=lbMe(), rows=[...LB.rows];
   if(SAVE.rank.games && !rows.some(r=>r.pk===me)) rows.push({pk:me, n:getName(), rr:SAVE.rank.rr, g:SAVE.rank.games});
   rows.sort((a,b)=>b.rr-a.rr || b.g-a.g);
+  { const hide=CTL.lbHide||{}; for(let i=rows.length-1;i>=0;i--) if(hide['p'+String(rows[i].pk).slice(0,16)] && rows[i].pk!==me) rows.splice(i,1); }   // admin: hidden from the board
   if(!rows.length){ lb.append(el('li','gap','No ranked players yet. Play a ranked game to be #1.')); return; }
   const meIdx=rows.findIndex(r=>r.pk===me);
   rows.forEach((r,i)=>{
@@ -5553,6 +5556,7 @@ function renderAdmin(){
       const banned=!!(CTL.banned||{})[k], bb=el('button','btn '+(banned?'':'red'), banned?'✅ Unban from online':'🚫 Ban from online');
       bb.onclick=()=>admSave({['banned/'+k]: banned?null:true}, banned?'Unbanned':'🚫 Banned from online');
       for(const row of [[c,cm,cb],[rr,rb],[tt,tc,tb]]){ const r=el('div','row'); r.append(...row); box.append(r); }
+      if(k[0]==='p'){ const hid=!!(CTL.lbHide||{})[k], hb=el('button','btn tiny', hid?'👁 Show on leaderboard':'🙈 Hide from leaderboard'); hb.onclick=()=>admSave({['lbHide/'+k]: hid?null:true}, hid?'Shown again':'Hidden from the leaderboard'); box.append(hb); }
       box.append(bb); s.append(box); }
     // current titles / bans / gifts
     const cur=el('div','adCur');

@@ -7,7 +7,7 @@
 // Matchmaker (one for everyone):  /mm        ranked 1v1 queue, 2v2 queue, team-up duo search.
 import { makeSim } from './sim.js';
 const S = makeSim();
-const TICK_MS = 1000 / 30;                 // 30 updates a second to every player
+const TICK_MS = 1000 / 50;                 // 50 updates a second to every player (less waiting, smaller buffer on iPads)
 const GRACE_MS = 15000;                    // a player whose Wi-Fi drops keeps their spot this long
 const NO_GEAR = new Set(['t','name','pk','duo','r2','q','exp','create','party','rr','id','rejoin','c']);
 const rid = n => { const A = 'abcdefghjkmnpqrstuvwxyz23456789'; let s = ''; for (let i = 0; i < n; i++) s += A[Math.floor(Math.random() * A.length)]; return s; };
