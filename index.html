@@ -667,7 +667,7 @@ function nameBad(s){
   for(const w of NAME_BAD.inn) if(a.includes(w) || b.includes(w) || a2.includes(w)) return true;
   return NAME_BAD.ex.includes(a) || NAME_BAD.ex.includes(b);
 }
-const cleanName = s => { const n=(String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,12)) || 'Player'; return nameBad(n) ? 'Player' : n; };
+const cleanName = s => { const n=(String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,12)) || 'Player'; return nameBad(n) ? '#'.repeat(Math.max(4,n.length)) : n; };   // bad names are masked like Roblox tags
 function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
 const outOfCourt = (x,z) => x<COURT_L || x>COURT_R || Math.abs(z)>HALF_D;
 
@@ -5864,7 +5864,7 @@ function setNameStatus(state, n){ NAMEST={name:n, state}; const s=$('#nameStat')
   s.textContent = state==='mine' ? '✅ this name is yours' : state==='taken' ? '❌ taken: pick another name' : state==='checking' ? '…' : '';
   s.className='nameStat '+state; }
 async function claimName(n){
-  n=cleanName(n); if(!n || n==='Player'){ setNameStatus('',n); return true; }
+  n=cleanName(n); if(!n || n==='Player' || /^#+$/.test(n)){ setNameStatus('',n); return true; }
   setNameStatus('checking', n);
   const r=await api('/name/claim',{name:n});
   if(!r){ setNameStatus('', n); return true; }                       // can't reach the server: don't block play

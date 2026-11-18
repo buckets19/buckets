@@ -56,7 +56,7 @@ function nameBad(s){
   for(const w of NAME_BAD.inn) if(a.includes(w) || b.includes(w) || a2.includes(w)) return true;
   return NAME_BAD.ex.includes(a) || NAME_BAD.ex.includes(b);
 }
-const cleanName = s => { const n=(String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,12)) || 'Player'; return nameBad(n) ? 'Player' : n; };
+const cleanName = s => { const n=(String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,12)) || 'Player'; return nameBad(n) ? '#'.repeat(Math.max(4,n.length)) : n; };   // bad names are masked like Roblox tags
 function store(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
 const outOfCourt = (x,z) => x<COURT_L || x>COURT_R || Math.abs(z)>HALF_D;
 
