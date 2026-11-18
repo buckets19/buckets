@@ -4102,8 +4102,12 @@ async function runNetTest(){
       const fin=v=>{ if(done) return; done=true; clearTimeout(to); setF(v); fbRelease(); r(); };
       const to=setTimeout(()=>fin('❌ blocked'), 9000);
       const db=await fbLoad(); if(!db) return fin('❌ blocked');
-      const ref=db.ref('rooms/'+fbKey('TEST'+Math.random().toString(36).slice(2,8))), t1=performance.now();
-      ref.set(1, e=>{ if(e) return fin('❌ '+(e.code||'error')); const ms=Math.round(performance.now()-t1); res.fb=ms; try{ ref.remove(); }catch(_){} fin('✅ '+ms+'ms'); });
+      const ref=db.ref('rooms/'+fbKey('TEST'+Math.random().toString(36).slice(2,8)));
+      // first message also opens the connection: time the best of a few after that (= real in-game lag)
+      ref.set(0, e=>{ if(e) return fin('❌ '+(e.code||'error')); let best=1e9, n=0;
+        const go=()=>{ const t1=performance.now(); ref.set(++n, e2=>{ if(e2) return fin('❌ '+(e2.code||'error')); best=Math.min(best, performance.now()-t1);
+          if(n<3) return go(); const ms=Math.round(best); res.fb=ms; try{ ref.remove(); }catch(_){} fin('✅ '+ms+'ms'); }); };
+        go(); });
     })); }
   // 3) every backup relay: connect, then send a message to ourselves and time the round trip
   for(const R of RELAYS){
