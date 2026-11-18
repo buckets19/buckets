@@ -567,7 +567,7 @@
 // connection report: count websockets that open / fail / drop, per kind (google, relay, matchmaking)
 window.WSST={};
 (function(){ var OW=window.WebSocket; if(!OW) return;
-  var kind=function(u){ u=String(u); return /firebaseio\.com|firebasedatabase/.test(u)?'google':/peerjs/.test(u)?'match':/workers\.dev/.test(u)?'cf':'relay'; };
+  var kind=function(u){ u=String(u); return /firebaseio\.com|firebasedatabase/.test(u)?'google':/bucketsonline/.test(u)?'gs':/peerjs/.test(u)?'match':/workers\.dev/.test(u)?'cf':'relay'; };
   var W=function(u,p){ var s=p?new OW(u,p):new OW(u), k=kind(u), st=WSST[k]=WSST[k]||{open:0,fail:0,drop:0}, opened=false;
     s.addEventListener('open',function(){ opened=true; st.open++; });
     s.addEventListener('close',function(){ if(opened) st.drop++; else st.fail++; });
@@ -1555,6 +1555,21 @@ function relayDial(code, onAck){
 // Our Cloudflare server (server/worker.js) is blocked by the school's filter, so it's switched off.
 // Put 'wss://buckets-server.buckets19.workers.dev' back here to turn it on again.
 const SERVER_URL='';
+// 🏟️ our own game server on our own domain (like Three Pins). Being tested at school first: games don't use it yet.
+// The admin can point it at a different domain (cfg.gs) if this one ever gets blocked.
+const GAME_SERVER='https://live.bucketsonline.site';
+function gsURL(){ try{ if(CTL && /^https:\/\/[a-z0-9.-]+$/i.test(CTL.gs||'')) return CTL.gs; }catch(e){} return GAME_SERVER; }
+// can this Wi-Fi reach it, and how fast? (web request round trip, then a real live connection)
+async function gsProbe(){
+  const base=gsURL(), out={ok:false, ms:null, ws:false, host:base.replace('https://','')};
+  for(let i=0;i<4;i++){ try{ const ac=new AbortController(), to=setTimeout(()=>ac.abort(),6000), t=performance.now();
+      const r=await fetch(base+'/ping',{cache:'no-store', signal:ac.signal}); clearTimeout(to); if(!r.ok) break; await r.text();
+      out.ok=true; if(i>0) out.ms=Math.round(Math.min(out.ms??1e9, performance.now()-t)); }catch(e){ break; } }
+  if(out.ok) out.ws=await new Promise(res=>{ let w; const to=setTimeout(()=>{ try{w.close()}catch(e){} res(false); },7000);
+    try{ w=new WebSocket(base.replace(/^http/,'ws')+'/room/'+encodeURIComponent('buckets-v2-PROBE'+Math.random().toString(36).slice(2,7))+'?role=c&id=probe'); }catch(e){ clearTimeout(to); return res(false); }
+    w.onmessage=()=>{ clearTimeout(to); try{w.close()}catch(e){} res(true); }; w.onerror=()=>{ clearTimeout(to); res(false); }; });
+  return out;
+}
 const SERVER_SNAP_MS=50;                                     // 20 snapshots/s through our server
 const srvRoom=code=>SERVER_URL+'/room/'+encodeURIComponent(PREFIX+code);
 function connObj(extra){ const c=Object.assign({open:true, _h:{}, lastIn:performance.now()}, extra);
@@ -1900,7 +1915,8 @@ addEventListener('pagehide', ()=>{ const u=fbURL(); if(u && liveTick.was) try{ f
 //   stall = the game froze on this iPad for 150ms+ (slow iPad / too much on screen)
 //   ws    = websockets opened / failed / dropped (does Google's fast connection get through the filter?)
 // =====================================================================
-const DIAG={id:Math.random().toString(36).slice(2,10), leg:[], ping:[], stall:0, frames:0, t0:0};
+const DIAG={id:Math.random().toString(36).slice(2,10), leg:[], ping:[], stall:0, frames:0, t0:0, gs:null};
+setTimeout(async()=>{ DIAG.gs=await gsProbe(); }, 7000);
 function diagAdd(k,v){ const a=DIAG[k]; if(!a) return; a.push(Math.round(v)); if(a.length>600) a.splice(0,a.length-600); }
 (function stallWatch(){ let last=performance.now();
   const f=now=>{ if(document.visibilityState==='visible' && V.inRoom && !V.practice){ DIAG.frames++; if(now-last>150) DIAG.stall++; } last=now; requestAnimationFrame(f); };
@@ -1913,7 +1929,7 @@ function diagSend(){
   const sum=a=>a.length?{p50:pct(a,.5), p90:pct(a,.9), max:Math.max(...a), n:a.length, over300:a.filter(x=>x>300).length}:null;
   const via = net.role==='host' ? [...new Set([...net.conns.values()].map(c=>c.isFire?'google':c.isRelay?'relay':'direct'))].join('+')||'none' : (net.via==='server'?'google':isRelay()?'relay':'direct');
   const rec={r:net.role, via, m:G.ranked2||V.ranked2?'ranked2v2':V.queueMatch?'ranked':'friends', leg:sum(DIAG.leg), ping:sum(DIAG.ping), stall:DIAG.stall, frames:DIAG.frames,
-    ws:window.WSST||{}, mins:Math.round((Date.now()-DIAG.t0)/60000), ua:/iPad|Macintosh/.test(navigator.userAgent)&&'ontouchend' in document?'iPad':/iPhone/.test(navigator.userAgent)?'iPhone':'other', t:{'.sv':'timestamp'}};
+    gs:DIAG.gs, ws:window.WSST||{}, mins:Math.round((Date.now()-DIAG.t0)/60000), ua:/iPad|Macintosh/.test(navigator.userAgent)&&'ontouchend' in document?'iPad':/iPhone/.test(navigator.userAgent)?'iPhone':'other', t:{'.sv':'timestamp'}};
   fetch(u+'/rooms/_diag'+diagDay()+'/'+DIAG.id+'.json',{method:'PUT', body:JSON.stringify(rec)}).catch(()=>{});
 }
 setInterval(diagSend, 30000);
@@ -4267,6 +4283,9 @@ async function runNetTest(){
           if(n<3) return go(); const ms=Math.round(best); res.fb=ms; try{ ref.remove(); }catch(_){} fin('✅ '+ms+'ms'); }); };
         go(); });
     })); }
+  // 2d) our own game server (being tested)
+  { const setG=netRow('🏟️ Game server ('+gsURL().replace('https://','')+')');
+    tests.push(gsProbe().then(g=>{ res.gs=g; setG(!g.ok ? '❌ blocked' : !g.ws ? '⚠️ opens, live link blocked' : '✅ '+(g.ms??'?')+'ms'); })); }
   // 3) every backup relay: connect, then send a message to ourselves and time the round trip
   for(const R of RELAYS){
     const setR=netRow('Backup relay: '+R.id+(R.url.includes(':8')?' (port '+R.url.split(':')[2].split('/')[0]+')':''));
@@ -5035,6 +5054,8 @@ function renderAdmin(){
       L('📡 Host iPad → Google: '+(legH??'—')+'ms   ·   Joiner iPad → Google: '+(legJ??'—')+'ms (bad moments '+(legJ90??'—')+'ms)');
       L('🔌 Google fast connection: '+g.open+' opened, '+g.fail+' blocked/failed, '+g.drop+' dropped');
       L('🧊 iPad freezes (150ms+): hosts '+(med(hosts.map(stallRate))??0).toFixed(1)+'% of frames · joiners '+(med(joins.map(stallRate))??0).toFixed(1)+'%');
+      { const gsr=recs.filter(r=>r.gs), ok=gsr.filter(r=>r.gs.ok && r.gs.ws), ms=med(ok.map(r=>r.gs.ms));
+        L('🏟️ Game server test: '+(gsr.length ? ok.length+' of '+gsr.length+' iPads reached it'+(ms!=null?', usually '+ms+'ms':'')+(gsr.length-ok.length? ' · '+(gsr.length-ok.length)+' blocked' : '') : 'no results yet')); }
       const vias={}; for(const r of joins) vias[r.via]=(vias[r.via]||0)+1; L('🛣️ Joiners connected via: '+Object.entries(vias).map(([k,n])=>k+' '+n).join(' · '));
       s.append(ul);
       // plain-English verdict

@@ -2,6 +2,7 @@ name = "buckets-server"
 main = "worker.js"
 compatibility_date = "2025-01-01"
 workers_dev = true
+routes = [ { pattern = "live.bucketsonline.site", custom_domain = true } ]
 
 [[durable_objects.bindings]]
 name = "ROOMS"
