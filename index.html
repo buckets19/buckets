@@ -48,6 +48,29 @@
   .msg{color:#c0392b;text-align:center;font-weight:600;min-height:1em;margin:10px 0 0}
 
   #lobby{width:min(580px,calc(100vw - 32px))}
+  /* master controls */
+  .ctlBanner{display:flex;flex-direction:column;gap:6px;margin:0 0 10px}
+  .ctlMsg{border:3px solid var(--ink);border-radius:12px;padding:6px 12px;font-weight:800;font-size:15px;text-align:center;box-shadow:0 3px 0 var(--ink)}
+  .ptitle{display:inline-block;margin-left:6px;font-size:11px;font-weight:800;color:#fff;border:2px solid var(--ink);border-radius:7px;padding:0 6px;vertical-align:middle;-webkit-text-stroke:0;text-shadow:0 1px 0 rgba(0,0,0,.5);white-space:nowrap}
+  #adminPanel{width:min(680px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(160deg,#fff6e5,#e8f0ff)}
+  .adHead{display:flex;justify-content:space-between;align-items:center;gap:10px;position:sticky;top:-22px;background:inherit;padding:4px 0 8px;z-index:2}
+  .adHead h2{margin:0;font-size:24px;letter-spacing:2px}
+  .adSec{background:#fff;border:3px solid var(--ink);border-radius:16px;padding:10px 12px;margin:0 0 12px;display:flex;flex-direction:column;gap:8px}
+  .adSec h4{margin:0;letter-spacing:2px}
+  .adSec label{font-weight:800;font-size:13px;margin-top:4px}
+  .adSub{margin:0;font-size:12px;opacity:.75}
+  .adSeg{display:flex;flex-wrap:wrap;gap:6px}
+  .adSeg .btn.on{background:var(--ink);color:#fff}
+  .adBtns{display:flex;flex-wrap:wrap;gap:8px}
+  .adSec .row{flex-wrap:wrap} .adSec .row input{min-width:0;flex:1 1 140px} .adSec input{min-width:0} .adSec select{font:inherit;border:2px solid var(--ink);border-radius:10px;padding:6px}
+  .adStat{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;font-size:15px} .adStat b{font-size:22px}
+  .adList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px}
+  .adPick li{border:2px solid var(--ink);border-radius:10px;padding:5px 8px;cursor:pointer;background:#fffdf7}
+  .adPick li.on{background:#ffd23f}
+  .adSel{border:3px dashed var(--ink);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:8px;background:#fffbe9}
+  .adCur h5{margin:6px 0 2px;font-size:13px}
+  .adItem{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;padding:2px 0}
+  .btn.red{background:#ff5a4f;color:#fff}
   /* ranked 2v2 team-up menu */
   #party2{width:min(620px,calc(100vw - 32px));text-align:center;background:linear-gradient(160deg,#fff6e5,#f3e8ff)}
   .p2Tag{display:inline-block;background:linear-gradient(135deg,#5b2a86,#8c46ff 50%,#c77dff);color:#fff;font-weight:800;letter-spacing:2px;font-size:13px;padding:4px 12px;border-radius:999px;border:3px solid var(--ink)}
@@ -364,6 +387,7 @@
       <span class="coinPill">💰 <span class="coinCount">0</span></span>
     </div>
   </div>
+  <div id="ctlBanner" class="ctlBanner hidden"></div>
   <div class="hGrid">
     <section class="hCard hFriends">
       <h4>🏀 PLAY WITH FRIENDS</h4>
@@ -387,7 +411,7 @@
     <button class="hTile gQuest openQuests"><span>📜</span><b>QUESTS</b><i class="qBadge hidden">0</i></button>
   </div>
   <p id="homeMsg" class="msg"></p>
-  <div class="hFoot"><button id="acctBtn" class="btn tiny ghost">👤 Account &amp; backup</button><button id="netTestBtn" class="btn tiny ghost">📶 Test connection</button></div>
+  <div class="hFoot"><button id="acctBtn" class="btn tiny ghost">👤 Account &amp; backup</button><button id="netTestBtn" class="btn tiny ghost">📶 Test connection</button><button id="adminBtn" class="btn tiny ghost hidden">🛠️ Admin</button></div>
 </div>
 
 <div id="lobby" class="panel center hidden">
@@ -470,6 +494,7 @@
   <div class="row" style="justify-content:center"><button id="p2Stop" class="btn tiny hidden">Stop searching</button><button id="p2Leave" class="btn tiny ghost">Leave</button></div>
   <div id="p2Net" class="p2Net"></div>
 </div>
+<div id="adminPanel" class="panel center hidden"><div class="adHead"><h2>🛠️ MASTER CONTROLS</h2><button id="adminClose" class="btn tiny">✕ Close</button></div><div id="adminBody"></div></div>
 <div id="rankedPanel" class="panel hidden">
   <div class="head"><h2>🏆 Ranked</h2><span class="coinPill">💰 <span class="coinCount">0</span></span></div>
   <div id="rankCard"></div>
@@ -1292,7 +1317,7 @@ function addRosterPlayer(id, name, bot, team){
   if(bot) Object.assign(r, botGear());
   G.players.set(id,r); return r;
 }
-function rosterMsg(){ return {t:'roster', code:net.code, phase:G.phase, toWin:G.toWin, diff:G.diff, winBy2:!!G.winBy2, ranked:!!G.ranked, ranked2:!!G.ranked2, party:!!G.party, srch:!!V.duoState, players:[...G.players.values()].map(({emAt,...r})=>r)}; }
+function rosterMsg(){ return {t:'roster', code:net.code, phase:G.phase, toWin:G.toWin, diff:G.diff, winBy2:!!G.winBy2, ranked:!!G.ranked, ranked2:!!G.ranked2, party:!!G.party, srch:!!V.duoState, players:[...G.players.values()].map(({emAt,...r})=>(r.id==='host' && !r.pk && net.role==='host' && lbMe()) ? {...r, pk:lbMe()} : r)}; }
 function broadcastRoster(){ const m=rosterMsg(); for(const c of net.conns.values()) if(c.open) c.send(m); applyRoster(m); }
 
 function netErrMsg(type, what){
@@ -1630,7 +1655,7 @@ const FB_READY=FB_CONFIG ? Promise.resolve(FB_CONFIG) : (()=>{
     FB_CONFIG=c; try{ if(c) localStorage.setItem('buckets-fbcfg', JSON.stringify(c)); else localStorage.removeItem('buckets-fbcfg'); }catch(e){}
     return c; }).catch(()=>FB_CONFIG);
 })();
-const FB_SNAP_MS=80;                                          // 12.5 snapshots/s: smooth (your own player moves instantly), easy on the free data limit
+let FB_SNAP_MS=80;                                          // 12.5 snapshots/s: smooth (your own player moves instantly), easy on the free data limit
 const FB_LATEST={s:1, in:1, ping:1, pong:1, hb:1};             // only the newest of these matters
 let FBdb=null, FBload=null, FBusers=0, FBoffT=0;
 const fbKey=code=>(PREFIX+code).replace(/[.#$\[\]\/]/g,'_');
@@ -1765,6 +1790,98 @@ function FireClientConn(P, code, rid){
   return c;
 }
 
+// =====================================================================
+//  🎛️ MASTER CONTROLS: settings every copy of the game follows (online on/off, connection route,
+//  ranked, announcements, coin events, titles, gifts, bans, end-all-games, force-reload).
+//  Lives in Firebase at "cfg": anyone can read it, but only the admin code can change it, and
+//  Google's servers check that (see the database rules), so it can't be faked from the browser.
+//  Fallback: control.json in the repo is read too and overrides the same fields (works even if
+//  Firebase is down; edit it on github.com).
+// =====================================================================
+const CTL_DEF={mp:'on', offMsg:'', route:'auto', ranked:true, msg:'', msgC:'#ffd23f', rate:12, endAt:0, endMsg:'', reloadAt:0, mult:1, multLbl:'', titles:{}, gifts:{}, banned:{}};
+let CTL={...CTL_DEF}, CTL_AT=0, CTL_NORELAY=false, FB_ORIG=null;
+const PAGE_T=Date.now();
+const nk=n=>String(n||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,16);
+function fbURL(){ const c=FB_ORIG||FB_CONFIG; return c && c.databaseURL ? c.databaseURL.replace(/\/$/,'') : ''; }
+// who am I, for titles / gifts / bans: my device's leaderboard id (if I've played ranked) and my name
+function myKeys(){ const k=['n'+nk(getName())]; const pk=lbMe(); if(pk) k.unshift('p'+pk.slice(0,16)); return k; }
+function keysOf(p){ const k=[]; if(p && p.pk) k.push('p'+String(p.pk).slice(0,16)); if(p && p.name!==undefined) k.push('n'+nk(p.name)); else if(p && p.n!==undefined) k.push('n'+nk(p.n)); return k; }
+function ctlPick(map, keys){ if(!map || typeof map!=='object') return null; for(const k of keys) if(map[k]) return map[k]; return null; }
+try{ const c=JSON.parse(store('buckets-ctl')||'null'); if(c && typeof c==='object') CTL={...CTL_DEF, ...c}; }catch(e){}
+async function ctlFetch(){
+  try{ await FB_READY; }catch(e){}
+  if(FB_CONFIG && !FB_CONFIG.fake && !FB_ORIG) FB_ORIG=FB_CONFIG;
+  let a=null, b=null; const u=fbURL();
+  if(u){ try{ const r=await fetch(u+'/cfg.json',{cache:'no-store'}); if(r.ok) a=await r.json(); }catch(e){} }
+  try{ const r=await fetch('control.json?'+Math.floor(Date.now()/30000),{cache:'no-cache'}); if(r.ok) b=await r.json(); }catch(e){}
+  if(!a && !b && CTL_AT) return;                                   // offline: keep what we had
+  CTL={...CTL_DEF, ...(a && typeof a==='object' ? a : {}), ...(b && typeof b==='object' ? b : {})};
+  CTL_AT=Date.now(); store('buckets-ctl', JSON.stringify(CTL));
+  ctlApply();
+}
+function ctlApply(){
+  // connection route: 'auto' | 'google' (no public relays) | 'relays' (Google switched off)
+  if(CTL.route==='relays'){ if(FB_CONFIG && !FB_CONFIG.fake){ FB_ORIG=FB_CONFIG; FB_CONFIG=null; } }
+  else if(!FB_CONFIG && FB_ORIG) FB_CONFIG=FB_ORIG;
+  CTL_NORELAY = CTL.route==='google' && !!FB_CONFIG;
+  FB_SNAP_MS = Math.round(1000/clamp(+CTL.rate||12, 5, 20));
+  ctlBanner(); ctlGifts();
+  // ⛔ admin ended all online games
+  if(V.inRoom && !V.practice && +CTL.endAt>(V.roomAt||PAGE_T) && Date.now()-CTL.endAt<10*60e3){
+    const em=CTL.endMsg || '⛔ The Buckets admin ended all online games for now.';
+    if(net.role==='host'){ for(const c of net.conns.values()) try{ c.send({t:'adminend', m:em}); }catch(e){} }   // players see the admin's message too
+    V.migrating=true; setTimeout(()=>fatal(em), net.role==='host'?400:0); return; }
+  // 🔄 admin pushed an update: reload (but never in the middle of an online game)
+  if(+CTL.reloadAt>PAGE_T && Date.now()-CTL.reloadAt<30*60e3 && !(V.inRoom && V.phase==='game' && !V.practice)){ toast('🔄 Updating Buckets…'); setTimeout(()=>location.reload(), 900); }
+}
+// online play allowed for me right now? '' = yes, otherwise the reason
+function ctlOnlineBlock(){
+  if(ctlPick(CTL.banned, myKeys())) return '🚫 This name can\'t play online right now.';
+  if(CTL.mp==='off') return CTL.offMsg || '🔴 Online play is off right now. Practice and Ranked vs bots still work!';
+  return '';
+}
+function ctlBlocked(){ const m=ctlOnlineBlock(); if(!m) return false; homeMsg(m); toast(m); try{ setBusy(false); }catch(e){} return true; }
+// home-screen banner: announcement / coin event / online status
+function ctlBanner(){
+  const b=$('#ctlBanner'); if(!b) return; b.innerHTML='';
+  const add=(t,c)=>{ const d=el('div','ctlMsg',t); if(c) d.style.background=c; b.append(d); };
+  if(CTL.mp==='off') add(CTL.offMsg || '🔴 Online play is off right now. Practice and Ranked vs bots still work!', '#ff8a80');
+  if(CTL.msg) add(CTL.msg, CTL.msgC||'#ffd23f');
+  if(+CTL.mult>1) add('🎉 '+(CTL.multLbl || (CTL.mult+'x COINS!'))+' · every coin you earn is x'+CTL.mult, '#9bf6a1');
+  b.classList.toggle('hidden', !b.children.length);
+}
+// 🎁 gifts from the admin (to me, or to everyone '*'): each one is applied once per device
+function ctlGifts(){
+  const G0=CTL.gifts; if(!G0 || typeof G0!=='object') return;
+  SAVE.gifts=SAVE.gifts||[]; let any=false;
+  for(const key of [...myKeys(), '*']){ const g=G0[key]; if(!g || typeof g!=='object') continue;
+    for(const id in g){ if(SAVE.gifts.includes(id)) continue; const x=g[id]||{}; SAVE.gifts.push(id); any=true;
+      const coins=Math.round(+x.coins||0); if(coins) SAVE.coins=Math.max(0, SAVE.coins+coins);
+      if(x.rr!==undefined && x.rr!==null && x.rr!=='' && Number.isFinite(+x.rr)){ SAVE.rank.rr=clamp(Math.round(+x.rr),0,9999); SAVE.rank.best=Math.max(SAVE.rank.best||0, SAVE.rank.rr); }
+      toast('🎁 '+(x.msg||'Gift from the Buckets admin!')+(coins?' '+(coins>0?'+':'')+coins+' 💰':'')); try{ confetti(0); }catch(e){} } }
+  if(SAVE.gifts.length>300) SAVE.gifts=SAVE.gifts.slice(-300);
+  if(any){ persist(); updateCoinUI(); }
+}
+// 🏷️ admin-given titles shown next to names
+function titleEl(p){ const t=ctlPick(CTL.titles, keysOf(p)); if(!t) return null; const o=typeof t==='string'?{t}:t; if(!o.t) return null;
+  const s=el('span','ptitle', String(o.t).slice(0,24)); s.style.background=o.c||'#ffd23f'; return s; }
+setTimeout(ctlFetch, 300);
+setInterval(()=>{ if(document.visibilityState==='visible') ctlFetch(); }, 60000);
+addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && Date.now()-CTL_AT>20000) ctlFetch(); });
+// 📡 live room count for the admin: hosts of online rooms check in every 30s (no codes, just counts)
+const LIVE_ID=Math.random().toString(36).slice(2,12);
+function liveTick(){
+  const u=fbURL(); if(!u || CTL.route==='relays') return;
+  const on=net.role==='host' && V.inRoom && !V.practice;
+  if(!on){ if(liveTick.was){ liveTick.was=false; fetch(u+'/live/'+LIVE_ID+'.json',{method:'DELETE', keepalive:true}).catch(()=>{}); } return; }
+  liveTick.was=true;
+  const hum=[...G.players.values()].filter(p=>!p.bot).length, mode=G.ranked2?'ranked 2v2':V.queueMatch?'ranked':G.party?'2v2 team-up':'friends';
+  const via=[...net.conns.values()].reduce((o,c)=>{ const k=c.isFire?'google':c.isRelay?'relay':'direct'; o[k]=(o[k]||0)+1; return o; },{});
+  fetch(u+'/live/'+LIVE_ID+'.json',{method:'PUT', body:JSON.stringify({n:hum, m:mode, ph:G.phase, v:via, t:{'.sv':'timestamp'}})}).catch(()=>{});
+}
+setInterval(liveTick, 30000);
+addEventListener('pagehide', ()=>{ const u=fbURL(); if(u && liveTick.was) try{ fetch(u+'/live/'+LIVE_ID+'.json',{method:'DELETE', keepalive:true}); }catch(e){} });
+
 // ---- connect to a room. Direct WebRTC and every relay at once: direct wins if it opens quickly,
 //      otherwise the two FASTEST relays the host answered on. Resolves {conn, peer, id, via} or {fail}.
 function dial(code, o={}){
@@ -1772,7 +1889,7 @@ function dial(code, o={}){
     let done=false, peer=null, D=null, unavailable=false, peerErr=null;
     const acks=new Set();
     const t0=performance.now(), directWait=o.directWait??2500;
-    const useDirect=NET_FORCE!=='relay' && typeof Peer!=='undefined', useRelay=NET_FORCE!=='direct';
+    const useDirect=NET_FORCE!=='relay' && typeof Peer!=='undefined', useRelay=NET_FORCE!=='direct' && !CTL_NORELAY;
     // our own game server: ask it in parallel. If the host is there, it beats every public relay.
     const srid=Math.random().toString(36).slice(2,10); let srv=null, fbNone=false, srvDone=!(SERVER_URL||FB_CONFIG) || NET_FORCE==='direct' || NET_FORCE==='relays';
     const srvClose=r=>{ try{ r.fire ? r.close() : r.ws.close(); }catch(e){} };
@@ -1838,6 +1955,7 @@ let hostTimer=0;
 // A room is reachable two ways at once: the PeerJS id (direct WebRTC) and the relay hub (backup).
 // If the PeerJS server itself is blocked, the room still opens as relay-only.
 function hostGame(name, tries=0){
+  if(!tries && ctlBlocked()) return;                      // 🎛️ admin turned online off (or this name is banned)
   setBusy(true);
   const code=genCode();
   clearTimeout(hostTimer);
@@ -1884,6 +2002,7 @@ function onHostData(conn,d){
   if(d.t==='ping'){ conn.send({t:'pong', ts:d.ts}); return; }
   if(d.t==='hello'){
     if(G.players.has(id)) return;
+    if(ctlPick(CTL.banned, keysOf({pk:d.pk, name:d.name}))){ conn.send({t:'banned'}); setTimeout(()=>{ try{conn.close()}catch(e){} },300); return; }   // 🎛️ admin ban
     // ranked queue: only a host that's still waiting takes a challenger (one at a time)
     if(d.r2 && (!V.q2Waiting || G.players.size>=4)){ conn.send({t:'busy'}); setTimeout(()=>{ try{conn.close()}catch(e){} },200); return; }
     if(d.rq && (!V.queueWaiting || G.players.size>=2)){ conn.send({t:'busy'}); setTimeout(()=>{ try{conn.close()}catch(e){} },200); return; }
@@ -1895,7 +2014,7 @@ function onHostData(conn,d){
       else { conn.send({t:'full'}); setTimeout(()=>conn.close(),300); return; }
     }
     net.conns.set(id,conn);
-    const r=addRosterPlayer(id, d.name, false);
+    const r=addRosterPlayer(id, d.name, false); if(typeof d.pk==='string' && d.pk) r.pk=d.pk.slice(0,80);
     setGear(r, d); r.rr=clamp(Math.round(+d.rr||0),0,5000);
     if(d.duo) r.team=1;
     if(d.r2 && V.party2) r.team=1;                                  // solo 2v2 queuers join a party's game as the other team
@@ -1926,6 +2045,7 @@ function hostApply(id, d){
 }
 
 async function joinGame(name, code){
+  if(ctlBlocked()) return;
   setBusy(true);
   const r=await dial(code, {onTick:el=>{ if(el>2600) homeMsg('Direct link blocked — trying backup relays… '+Math.round(el/1000)+'s'); }});
   if(r.fail){ setBusy(false);
@@ -1937,12 +2057,14 @@ async function joinGame(name, code){
   net.role='client'; net.peer=r.peer; net.myId=r.id; net.hostConn=conn; net.code=code; net.via=r.via;
   conn.on('data', onClientData);
   conn.on('close', ()=>{ if(!V.migrating) fatal('Lost connection to the host (they may have left the room).'); });
-  conn.send({t:'hello', name, ...myGear(), rr:SAVE.rank.rr});
+  conn.send({t:'hello', name, ...myGear(), rr:SAVE.rank.rr, pk:lbMe()||''});
 }
 function onClientData(d){
   if(!d || typeof d!=='object') return;
   if(d.t==='welcome') enterRoom();
   else if(d.t==='full') fatal('That room is full (3v3 max).');
+  else if(d.t==='adminend'){ V.migrating=true; fatal(String(d.m||'⛔ The Buckets admin ended all online games for now.').slice(0,160)); }
+  else if(d.t==='banned') fatal('🚫 This name can\'t play online right now.');
   else if(d.t==='roster') applyRoster(d);
   else if(d.t==='ev') handleEvent(d.e,false);
   else if(d.t==='pong'){ const r=performance.now()-(+d.ts||0); if(r>0 && r<5000) V.rtt=V.rtt?lerp(V.rtt,r,.3):r; }
@@ -2286,7 +2408,7 @@ for(const k in KINDS){
 SAVE.stats=SAVE.stats||{games:0,wins:0,pts:0,greens:0};
 function myGear(){ const g={}; for(const k in KINDS) g[k]=SAVE[k]; if(SAVE.look) g.lk=SAVE.look; return g; }
 function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }catch(e){} updateCoinUI(); if(typeof scheduleBackup==='function') try{ scheduleBackup(); }catch(e){} }
-function earn(n, why){ if(!V.inRoom || V.phase!=='game') return; SAVE.coins+=n; persist(); V.coinPops.push({n, why, t:1.8});
+function earn(n, why){ if(!V.inRoom || V.phase!=='game') return; const cm=clamp(Math.round(+CTL.mult||1),1,5); SAVE.coins+=n*cm; persist(); V.coinPops.push({n:n*cm, why, t:1.8});   // 🎉 admin coin events
   if(typeof questProgress==='function'){ questProgress(why==='TIP'?'BLOCK_TIP':why); if(why==='DUNK'||why==='THREE'||why==='BUCKET') questProgress('PTS', n/2); if(why==='THREE'||why==='DUNK') questProgress('BUCKET_ANY'); } }
 V.coinPops=[]; V.rings=[]; V.bolts=[]; V.celly=null; V.beams=[]; V.arcs=[]; V.timers=[]; V.scr=[]; V.vortex=null;
 
@@ -2757,7 +2879,7 @@ function renderLobby(){
     const ul=$('#team'+t); ul.innerHTML='';
     for(const p of V.roster.filter(p=>p.team===t)){
       const li=document.createElement('li');
-      const nmS=document.createElement('span'); nmS.textContent='#'+p.num+' '+p.name; li.append(nmS);
+      const nmS=document.createElement('span'); nmS.textContent='#'+p.num+' '+p.name; li.append(nmS); { const tt=titleEl(p); if(tt) li.append(tt); }
       if(!p.bot && p.rr!==undefined) li.append(rankBadge(p.rr));
       const gear=document.createElement('span'); gear.title='Celly / Green FX'; gear.textContent=((CELLYS.find(c=>c.id===p.cel)||{}).icon||'')+((GFX.find(c=>c.id===p.gfx)||{}).icon||''); li.append(gear);
       const tg = p.id===net.myId ? 'YOU' : p.id==='host' ? 'HOST' : p.bot ? 'BOT' : '';
@@ -2782,7 +2904,7 @@ function renderLobby(){
   $('#needMsg').textContent = ok ? '' : 'Each team needs at least one player — add a bot or wait for a friend.';
 }
 function enterRoom(){
-  V.inRoom=true; setBusy(false);
+  V.inRoom=true; V.roomAt=Date.now(); setBusy(false);
   $('#home').classList.add('hidden'); $('#emoteToggle').classList.remove('hidden');
   if(!V.practice && !V.queueMatch){ try{ history.replaceState(null,'',location.pathname+'?join='+net.code); }catch(e){} }
   if(net.role==='host') applyRoster(rosterMsg()); else renderLobby();
@@ -4321,7 +4443,8 @@ function renderLeaderboard(){
     if(i>=50 && i!==meIdx) return;
     if(i>=50) lb.append(el('li','gap','…'));
     const li=el('li', r.pk===me?'me':'');
-    li.append(el('b','',String(i+1)), rankBadge(r.rr), el('span','lname', r.n+(r.pk===me?' (you)':'')), el('span','lrr', r.rr+' RR'));
+    const ln=el('span','lname', r.n+(r.pk===me?' (you)':'')); { const tt=titleEl(r); if(tt) ln.append(tt); }
+    li.append(el('b','',String(i+1)), rankBadge(r.rr), ln, el('span','lrr', r.rr+' RR'));
     lb.append(li);
   });
   if(!SAVE.rank.games) lb.append(el('li','gap','Play a ranked game to get on the board.'));
@@ -4492,7 +4615,7 @@ async function qTryJoin(i){
       }
       if(qState===null || qState.matched || done) onClientData(d);
     });
-    conn.send({t:'hello', name:getName(), ...myGear(), rr:SAVE.rank.rr, ...(qMode==='2v2'?{r2:1}:{rq:1})});
+    conn.send({t:'hello', name:getName(), ...myGear(), rr:SAVE.rank.rr, pk:lbMe()||'', ...(qMode==='2v2'?{r2:1}:{rq:1})});
   });
 }
 async function qTryHost(i){
@@ -4526,6 +4649,7 @@ async function qTryHost(i){
 async function findRankedMatch(mode){
   if(qState) return; initAudio(); qMode = mode==='2v2' ? '2v2' : '1v1';
   const solo=()=> qMode==='2v2' ? startRanked2Solo() : startRanked();
+  if(ctlOnlineBlock() || CTL.ranked===false){ toast(ctlOnlineBlock() || '🏆 Ranked is vs Ranked Rivals right now'); solo(); return; }   // 🎛️ admin switch
   if(typeof Peer==='undefined' && !FB_CONFIG){ solo(); return; }
   qState={cancel:false, t0:performance.now(), matched:false}; $('#rankedPlay').disabled=true; $('#rankedPlay2').disabled=true; $('#rankedCancel').classList.remove('hidden');
   const tick=setInterval(()=>{ if(qState && !qState.matched && !V.q2Waiting) qStatus((qMode==='2v2'?'👥 Searching for a 2v2… ':'🔎 Searching for players… ')+Math.round((performance.now()-qState.t0)/1000)+'s'); },250);
@@ -4682,7 +4806,7 @@ function migrateTo(code, tag){
     net.role='client'; net.peer=r.peer; net.myId=r.id; net.hostConn=conn; net.code=code; net.via=r.via; V.migrating=false;
     conn.on('data', onClientData);
     conn.on('close',()=>{ if(!V.migrating && V.inRoom) fatal('The host closed the room.'); });
-    conn.send({t:'hello', name:getName(), ...myGear(), rr:SAVE.rank.rr, duo:tag||1});
+    conn.send({t:'hello', name:getName(), ...myGear(), rr:SAVE.rank.rr, pk:lbMe()||'', duo:tag||1});
   });
 }
 // the other duo arrived in my room: 2v2 ranked, go
@@ -4698,7 +4822,7 @@ function p2Slot(p, emptyText, pulse){
   const d=el('div','p2Slot'+(p?'':' empty'+(pulse?' pulse':'')));
   if(!p){ d.append(el('div','p2Av','?'), el('div','p2Nm', emptyText)); return d; }
   const av=el('div','p2Av', (String(p.name||'?').replace(/[^A-Za-z0-9]/g,'')[0]||'?').toUpperCase()); av.style.background=TEAM_COL[p.team]||'#999';
-  const who=el('div'), nm=el('div','p2Nm', p.name);
+  const who=el('div'), nm=el('div','p2Nm', p.name); { const tt=titleEl(p); if(tt) nm.append(tt); }
   if(p.id===net.myId) nm.append(el('span','tg','YOU'));
   const sub=el('div','p2Sub'); if(p.bot) sub.textContent='🤖 Ranked Rival'; else if(p.rr!==undefined) sub.append(rankBadge(p.rr));
   who.append(nm, sub); d.append(av, who); return d;
@@ -4791,7 +4915,8 @@ async function codeHash(s){ const b=await crypto.subtle.digest('SHA-256', new Te
 async function redeemCode(raw){
   const c=String(raw||'').trim().toLowerCase(); if(!c) return false;
   let rw; try{ rw=CODE_HASHES[await codeHash(c)]; }catch(e){ toast('Codes need the https version of the site'); return false; }
-  if(!rw){ toast('That code is not valid'); return false; }
+  if(!rw){ const raw0=String(raw||'').trim(); if(raw0.length>=8){ toast('Checking…'); if(await admTry(raw0)){ toast('🛠️ Admin unlocked'); openAdmin(); return true; } }   // admin code: checked by Google, not stored here
+    toast('That code is not valid'); return false; }
   SAVE.redeemed=SAVE.redeemed||[];
   if(rw.vault){ if(SAVE.vault){ toast('Vault is already unlocked'); return true; } SAVE.vault=true; persist(); toast('🔓 Buckets Vault unlocked!'); renderShop(); return true; }
   if(SAVE.redeemed.includes(rw.id)){ toast('Already redeemed on this device'); return true; }
@@ -4803,6 +4928,136 @@ async function redeemCode(raw){
   }
   renderShop(); return true;
 }
+// =====================================================================
+//  🛠️ ADMIN PANEL. Unlocked by typing the admin code in the Shop's code box. The code itself is
+//  never stored in the game: we send a scrambled fingerprint of it, and Google's servers only
+//  accept changes when that fingerprint matches the one in the database rules.
+// =====================================================================
+async function admHash(code){ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode('bk19adm|'+code)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+const ADM={k:store('buckets-admk')||'', live:null, liveAt:0, sel:null, q:''};
+async function admTry(code){
+  try{ await FB_READY; }catch(e){}
+  const u=fbURL(); if(!u) return false;
+  let h; try{ h=await admHash(String(code)); }catch(e){ return false; }
+  try{ const r=await fetch(u+'/akey.json',{method:'PATCH', body:JSON.stringify({[h]:{'.sv':'timestamp'}})}); if(!r.ok) return false; }catch(e){ return false; }
+  ADM.k=h; store('buckets-admk', h); $('#adminBtn').classList.remove('hidden'); return true;
+}
+// change master settings: every write carries the code's fingerprint (checked by Google, in the same update)
+async function admSave(patch, okMsg){
+  const u=fbURL(); if(!u || !ADM.k){ toast('❌ Not connected to the fast server'); return false; }
+  const body={['akey/'+ADM.k]:{'.sv':'timestamp'}}; for(const k in patch) body['cfg/'+k]=patch[k];
+  try{ const r=await fetch(u+'/.json',{method:'PATCH', body:JSON.stringify(body)});
+    if(!r.ok){ toast(r.status===401||r.status===403 ? '❌ Not allowed: the admin code or the database rules are wrong' : '❌ Save failed ('+r.status+')'); return false; }
+  }catch(e){ toast('❌ Couldn\'t reach the fast server'); return false; }
+  if(okMsg) toast(okMsg);
+  await ctlFetch(); renderAdmin(); return true;
+}
+async function admLive(){ const u=fbURL(); if(!u) return; try{ const r=await fetch(u+'/live.json',{cache:'no-store'}); if(r.ok){ ADM.live=await r.json()||{}; ADM.liveAt=Date.now(); } }catch(e){} }
+function openAdmin(){ if(!ADM.k) return; $('#home').classList.add('hidden'); $('#shop').classList.add('hidden'); V.shopOpen=false; $('#adminPanel').classList.remove('hidden'); renderAdmin();
+  ctlFetch().then(()=>admLive()).then(renderAdmin); if(!LB.rows && !LB.loading) lbFetch().then(renderAdmin); }
+function closeAdmin(){ $('#adminPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); }
+const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function admSeg(opts, cur, on){ const r=el('div','adSeg'); for(const [v,label] of opts){ const b=el('button','btn tiny'+(String(cur)===String(v)?' on':''), label); b.onclick=()=>on(v); r.append(b); } return r; }
+function admSec(title, sub){ const s=el('section','adSec'); s.append(el('h4','',title)); if(sub) s.append(el('p','adSub',sub)); return s; }
+function admInput(ph, val, max){ const i=el('input'); i.placeholder=ph; if(val!==undefined) i.value=val; i.maxLength=max||80; i.setAttribute('autocomplete','off'); i.addEventListener('keydown',e=>e.stopPropagation()); return i; }
+function renderAdmin(){
+  const B=$('#adminBody'); if(!B || $('#adminPanel').classList.contains('hidden')) return;
+  const keepScroll=$('#adminPanel').scrollTop; B.innerHTML='';
+  // ---- 📊 status
+  { const s=admSec('📊 RIGHT NOW');
+    const now=Date.now(), rows=Object.entries(ADM.live||{}).filter(([k,v])=>v && now-(+v.t||0)<90000);
+    const players=rows.reduce((a,[k,v])=>a+(+v.n||0),0), joiners=Math.max(0, players-rows.length);
+    const line=el('div','adStat');
+    line.append(el('b','', rows.length+' online room'+(rows.length===1?'':'s')), el('span','', players+' players'), el('span','', '≈'+Math.round(joiners*12)+' MB/hour of Google data'));
+    s.append(line);
+    const via={}; for(const [k,v] of rows) for(const t in (v.v||{})) via[t]=(via[t]||0)+v.v[t];
+    if(rows.length) s.append(el('p','adSub', 'Joiners connected via: '+(Object.entries(via).map(([t,n])=>t+' '+n).join(' · ')||'—')));
+    const ul=el('ul','adList'); rows.sort((a,b)=>(+b[1].n||0)-(+a[1].n||0)).slice(0,12).forEach(([k,v])=>ul.append(el('li','', '🏀 '+(v.m||'game')+' · '+(v.n||0)+' players · '+(v.ph==='game'?'playing':'in lobby'))));
+    if(rows.length) s.append(ul);
+    s.append(el('p','adSub', 'Settings checked '+(CTL_AT?ago(CTL_AT):'never')+' · Fast server (Google): '+(fbURL()?'set up ✅':'❌ not set up')+' · Free plan: 100 players at once, 10 GB/month'));
+    const rf=el('button','btn tiny','🔄 Refresh'); rf.onclick=async()=>{ rf.disabled=true; await ctlFetch(); await admLive(); renderAdmin(); }; s.append(rf);
+    B.append(s); }
+  // ---- 🌐 multiplayer
+  { const s=admSec('🌐 MULTIPLAYER', 'Every iPad follows these within about a minute.');
+    s.append(el('label','','Online play'), admSeg([['on','🟢 ON'],['off','🔴 OFF (bots only)']], CTL.mp, v=>admSave({mp:v}, v==='off'?'🔴 Online play turned off':'🟢 Online play is on')));
+    const om=admInput('Message when online is off (optional)', CTL.offMsg, 120), omb=el('button','btn tiny','Save message'); omb.onclick=()=>admSave({offMsg:om.value.trim()}, '✅ Saved');
+    const r1=el('div','row'); r1.append(om, omb); s.append(r1);
+    s.append(el('label','','Connection route'), admSeg([['auto','⚡ Auto (best)'],['google','Google only'],['relays','Relays only (Google off)']], CTL.route, v=>admSave({route:v}, '✅ Route: '+v)));
+    s.append(el('p','adSub','Auto = direct link if the Wi-Fi allows it, then Google, then public relays. If Google ever acts up, pick "Relays only". If relays are slowing games down, pick "Google only".'));
+    s.append(el('label','','Ranked vs real players'), admSeg([[true,'🟢 ON'],[false,'🔴 OFF (Ranked Rivals only)']], CTL.ranked!==false, v=>admSave({ranked:v}, '✅ Saved')));
+    s.append(el('label','','Smoothness vs data use (Google)'), admSeg([[15,'Smoothest 15/s'],[12,'Normal 12/s'],[8,'Data saver 8/s']], CTL.rate||12, v=>admSave({rate:v}, '✅ Saved')));
+    B.append(s); }
+  // ---- 🚨 emergency
+  { const s=admSec('🚨 EMERGENCY');
+    const em=admInput('Message shown to players (optional)', '', 120);
+    const end=el('button','btn red','⛔ End ALL online games now'), rel=el('button','btn','🔄 Make everyone reload (push my update)');
+    end.onclick=()=>{ if(confirm('End every online game right now? Players go back to the home screen.')) admSave({endAt:{'.sv':'timestamp'}, endMsg:em.value.trim()}, '⛔ Ending all online games'); };
+    rel.onclick=()=>{ if(confirm('Make every open copy of Buckets reload? (Players mid-game reload when their game ends.)')) admSave({reloadAt:{'.sv':'timestamp'}}, '🔄 Everyone will reload'); };
+    s.append(em, el('div','adBtns'), ); s.lastChild.append(end, rel);
+    B.append(s); }
+  // ---- 📢 announcement + 🎉 events
+  { const s=admSec('📢 ANNOUNCEMENT', 'Shows on everyone\'s home screen.');
+    const m=admInput('e.g. Tournament at lunch! 🏆', CTL.msg, 140), col=el('select');
+    for(const [c,n] of [['#ffd23f','Yellow'],['#9bf6a1','Green'],['#a0c4ff','Blue'],['#ffadad','Red'],['#d0b3ff','Purple']]){ const o=el('option','',n); o.value=c; if(c===CTL.msgC) o.selected=true; col.append(o); }
+    const post=el('button','btn yellow','Post'), clr=el('button','btn tiny','Clear');
+    post.onclick=()=>admSave({msg:m.value.trim().slice(0,140), msgC:col.value}, '📢 Posted'); clr.onclick=()=>admSave({msg:''}, 'Cleared');
+    const r=el('div','row'); r.append(m, col); s.append(r); const r2=el('div','adBtns'); r2.append(post, clr); s.append(r2);
+    B.append(s);
+    const e=admSec('🎉 COIN EVENT');
+    e.append(admSeg([[1,'Normal'],[2,'2x COINS'],[3,'3x COINS']], CTL.mult||1, v=>admSave({mult:v}, v>1?'🎉 '+v+'x coins is ON':'Coin event off')));
+    const lb=admInput('Event name (e.g. DOUBLE COIN FRIDAY)', CTL.multLbl, 40), lbb=el('button','btn tiny','Save name'); lbb.onclick=()=>admSave({multLbl:lb.value.trim()}, '✅ Saved');
+    const r3=el('div','row'); r3.append(lb, lbb); e.append(r3);
+    const ga=admInput('Coins for EVERYONE', '', 7), gm=admInput('Message (optional)', '', 60), gb=el('button','btn yellow','🎁 Gift everyone');
+    ga.inputMode='numeric';
+    gb.onclick=()=>{ const n=Math.round(+ga.value||0); if(!n) return toast('Type an amount'); if(confirm('Give '+n+' coins to EVERY player (once each)?')) admSave({['gifts/*/'+gid()]:{coins:n, msg:gm.value.trim()||'Gift for everyone from the Buckets admin!'}}, '🎁 Gift sent to everyone'); };
+    const r4=el('div','row'); r4.append(ga, gm, gb); e.append(r4);
+    B.append(e); }
+  // ---- 👥 players
+  { const s=admSec('👥 PLAYERS', 'Pick someone from the leaderboard (goes to their exact iPad), or type a name.');
+    const q=admInput('Search the leaderboard or type a name', ADM.q, 16); q.oninput=()=>{ ADM.q=q.value; drawList(); };
+    s.append(q); const list=el('ul','adList adPick'); s.append(list);
+    const drawList=()=>{ list.innerHTML=''; const qq=nk(ADM.q);
+      const rows=(LB.rows||[]).filter(r=>!qq || nk(r.n).includes(qq)).sort((a,b)=>b.rr-a.rr).slice(0,8);
+      for(const r of rows){ const li=el('li', ADM.sel && ADM.sel.key==='p'+String(r.pk).slice(0,16)?'on':''); li.append(rankBadge(r.rr), el('span','', ' '+r.n+' · '+r.rr+' RR'));
+        li.onclick=()=>{ ADM.sel={key:'p'+String(r.pk).slice(0,16), label:r.n+' (this exact iPad)'}; renderAdmin(); }; list.append(li); }
+      if(qq){ const li=el('li', ADM.sel && ADM.sel.key==='n'+qq?'on':''); li.append(el('span','', '✏️ Anyone named "'+ADM.q.trim()+'"')); li.onclick=()=>{ ADM.sel={key:'n'+qq, label:'anyone named '+ADM.q.trim()}; renderAdmin(); }; list.append(li); }
+      if(!rows.length && !qq) list.append(el('li','gap', LB.rows ? 'No ranked players found' : 'Loading leaderboard…')); };
+    drawList();
+    if(ADM.sel){ const k=ADM.sel.key, box=el('div','adSel'); box.append(el('b','', '🎯 '+ADM.sel.label));
+      const c=admInput('Coins (use - to take)', '', 7), cm=admInput('Message (optional)', '', 60), cb=el('button','btn yellow','🎁 Send coins'); c.inputMode='numeric';
+      cb.onclick=()=>{ const n=Math.round(+c.value||0); if(!n) return toast('Type an amount'); admSave({['gifts/'+k+'/'+gid()]:{coins:n, msg:cm.value.trim()}}, '🎁 Sent'); };
+      const rr=admInput('Set rank RR (0-9999)', '', 5), rb=el('button','btn','🏆 Set rank'); rr.inputMode='numeric';
+      rb.onclick=()=>{ if(rr.value==='' || !Number.isFinite(+rr.value)) return toast('Type an RR number'); admSave({['gifts/'+k+'/'+gid()]:{rr:clamp(Math.round(+rr.value),0,9999), msg:'Your rank was set by the admin'}}, '🏆 Rank set'); };
+      const tt=admInput('Title, e.g. 👑 OWNER or ⭐ VIP', '', 24), tc=el('select'); for(const [cc,n] of [['#ffd23f','Gold'],['#ff8a80','Red'],['#a0c4ff','Blue'],['#9bf6a1','Green'],['#d0b3ff','Purple'],['#1b1530','Black']]){ const o=el('option','',n); o.value=cc; tc.append(o); }
+      const tb=el('button','btn','🏷️ Give title'); tb.onclick=()=>{ if(!tt.value.trim()) return toast('Type a title'); admSave({['titles/'+k]:{t:tt.value.trim().slice(0,24), c:tc.value}}, '🏷️ Title given'); };
+      const banned=!!(CTL.banned||{})[k], bb=el('button','btn '+(banned?'':'red'), banned?'✅ Unban from online':'🚫 Ban from online');
+      bb.onclick=()=>admSave({['banned/'+k]: banned?null:true}, banned?'Unbanned':'🚫 Banned from online');
+      for(const row of [[c,cm,cb],[rr,rb],[tt,tc,tb]]){ const r=el('div','row'); r.append(...row); box.append(r); }
+      box.append(bb); s.append(box); }
+    // current titles / bans / gifts
+    const cur=el('div','adCur');
+    const label=k=>{ if(k==='*') return 'EVERYONE'; if(k[0]==='n') return 'name "'+k.slice(1)+'"'; const r=(LB.rows||[]).find(r=>'p'+String(r.pk).slice(0,16)===k); return r ? r.n+' (iPad)' : 'player '+k.slice(1,7); };
+    const titles=Object.entries(CTL.titles||{}).filter(([k,v])=>v), bans=Object.keys(CTL.banned||{}).filter(k=>CTL.banned[k]);
+    const gifts=[]; for(const [k,g] of Object.entries(CTL.gifts||{})) if(g && typeof g==='object') for(const [id,x] of Object.entries(g)) gifts.push([k,id,x]);
+    if(titles.length){ cur.append(el('h5','','🏷️ Titles')); for(const [k,v] of titles){ const li=el('div','adItem'); const t=el('span','ptitle', (typeof v==='string'?v:v.t)); t.style.background=(v&&v.c)||'#ffd23f'; const x=el('button','btn tiny','✕');
+      x.onclick=()=>admSave({['titles/'+k]:null}, 'Title removed'); li.append(t, el('span','',' '+label(k)+' '), x); cur.append(li); } }
+    if(bans.length){ cur.append(el('h5','','🚫 Banned from online')); for(const k of bans){ const li=el('div','adItem'), x=el('button','btn tiny','Unban'); x.onclick=()=>admSave({['banned/'+k]:null}, 'Unbanned'); li.append(el('span','',label(k)+' '), x); cur.append(li); } }
+    if(gifts.length){ cur.append(el('h5','','🎁 Gifts (each player gets each one once)')); for(const [k,id,x] of gifts.slice(-15)){ const li=el('div','adItem'), d=el('button','btn tiny','✕');
+      d.onclick=()=>admSave({['gifts/'+k+'/'+id]:null}, 'Gift removed'); li.append(el('span','', label(k)+': '+(x.coins?x.coins+' 💰 ':'')+(x.rr!==undefined?'RR→'+x.rr+' ':'')+(x.msg?'“'+x.msg+'” ':'')), d); cur.append(li); } }
+    if(cur.children.length) s.append(cur);
+    B.append(s); }
+  // ---- 🔒
+  { const s=admSec('🔒 THIS iPAD');
+    const lk=el('button','btn tiny','Lock admin on this iPad'); lk.onclick=()=>{ ADM.k=''; store('buckets-admk',''); $('#adminBtn').classList.add('hidden'); closeAdmin(); toast('🔒 Admin locked'); };
+    s.append(el('p','adSub','Backup switch if Google itself is down: edit control.json in the GitHub repo (for example {"mp":"off"}). Every iPad reads it too.'), lk);
+    B.append(s); }
+  $('#adminPanel').scrollTop=keepScroll;
+}
+$('#adminBtn').onclick=openAdmin;
+$('#adminClose').onclick=closeAdmin;
+if(ADM.k) $('#adminBtn').classList.remove('hidden');
+setInterval(()=>{ const a=document.activeElement; if($('#adminPanel').classList.contains('hidden') || (a && /INPUT|SELECT/.test(a.tagName) && $('#adminPanel').contains(a))) return; admLive().then(renderAdmin); }, 30000);   // never wipe what you're typing
+
 function renderCrates(box){
   const cc=el('div','codeCard'), inp=el('input'), go=el('button','btn yellow','Redeem');
   inp.placeholder='🎟️ Have a code?'; inp.maxLength=20; inp.setAttribute('autocapitalize','off'); inp.setAttribute('autocomplete','off');
