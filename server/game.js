@@ -222,7 +222,7 @@ export class GameRoom {
       case 'rematch': if (this.RM && this.RM.phase === 'over') { this.toLobby(); this.startMatch(); } return;
       case 'tolobby': if (this.RM && this.RM.phase === 'over') this.toLobby(); return;
       case 'srch': G.srch = !!d.on; this.pushRoster(); return;
-      case 'p2bots': if (G.party && G.phase === 'lobby') { G.srch = false; this.clearBots();
+      case 'p2bots': if (G.party && G.phase === 'lobby' && this.humans(0) >= 2) {   // ranked 2v2 needs a real teammate G.srch = false; this.clearBots();
         const near = Math.max(0, ...[...G.players.values()].filter(p => !p.bot && p.team === 0).map(p => p.rr || 0)); this.startRanked2(near); } return;
     }
   }

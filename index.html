@@ -401,8 +401,8 @@
     </section>
     <section class="hCard hRanked">
       <h4>🏆 RANKED</h4>
-      <div class="grandRow hRankBtns"><button id="rankedHome1" class="grandBtn gR1"><span class="gi">🏆</span><b>1v1</b><small>Climb the ladder</small></button><button id="rankedHome2" class="grandBtn gR2"><span class="gi">👥</span><b>2v2</b><small>Solo queue</small></button></div>
-      <button id="partyBtn" class="btn hParty">👫 Ranked 2v2 with a friend</button>
+      <div class="grandRow hRankBtns"><button id="rankedHome1" class="grandBtn gR1"><span class="gi">🏆</span><b>1v1</b><small>Climb the ladder</small></button><button id="rankedHome2" class="grandBtn gR2"><span class="gi">👥</span><b>2v2</b><small>Team up with a friend</small></button></div>
+      <button id="partyBtn" class="btn hParty hidden">👫 Ranked 2v2 with a friend</button>
       <button id="rankedBtn" class="btn hLadder">📊 My rank &amp; leaderboard</button>
       <p class="how">Hold <b>SHOOT</b>, let go in the <b style="color:#1e9e4a">green</b> = bucket. Smother shooters to take their green away. <b>CROSS</b> + stick = crossover · spin · stepback · hesi.</p>
     </section>
@@ -500,7 +500,7 @@
 <div id="rankedPanel" class="panel hidden">
   <div class="head"><h2>🏆 Ranked</h2><span class="coinPill">💰 <span class="coinCount">0</span></span></div>
   <div id="rankCard"></div>
-  <div class="grandRow" style="margin-top:6px"><button id="rankedPlay" class="grandBtn gR1"><span class="gi">🏆</span><b>RANKED 1v1</b><small>Find a match</small></button><button id="rankedPlay2" class="grandBtn gR2"><span class="gi">👥</span><b>RANKED 2v2</b><small>Solo queue · rivals fill in</small></button></div>
+  <div class="grandRow" style="margin-top:6px"><button id="rankedPlay" class="grandBtn gR1"><span class="gi">🏆</span><b>RANKED 1v1</b><small>Find a match</small></button><button id="rankedPlay2" class="grandBtn gR2"><span class="gi">👥</span><b>RANKED 2v2</b><small>Team up with a friend</small></button></div>
   <div class="row"><p id="rankedStatus" class="hidden" style="flex:1;font-weight:700;margin:6px 0"></p><button id="rankedCancel" class="btn tiny hidden">Cancel</button></div>
   <p class="how" style="margin:6px 0 10px">1v1 to 11, win by 2. Finds a real player searching at the same time. If nobody's in the queue, one of the <b>Ranked Rivals</b> (CPU regulars with their own styles) picks up the game. The leaderboard is real players only.</p>
   <h3 style="margin:4px 0 6px">Leaderboard <small style="font-weight:600;opacity:.6">real players only</small></h3>
@@ -661,7 +661,9 @@ function resetP(p){ p.y=0;p.vx=0;p.vy=0;p.vz=0;p.act='';p.shootT=0;p.burstT=0;p.
   p.wantA=p.wantB=p.wantC=false;p.relA=null;p.reacted=false;p.shotRange=0;p.stuckT=0;p.cutT=0;p.spot=null;
   p.hesiT=0;p.rhythmT=0;p.boostT=0;p.moveKind='';p.pull=0;p.wantRhythm=false; }
 function setupPossession(M, team, wait){
-  const off=M.players.filter(p=>p.team===team), def=M.players.filter(p=>p.team!==team);
+  // the inbounder rotates: each time this team gets the ball, the next teammate starts with it
+  const mates=M.players.filter(p=>p.team===team); M.inb=M.inb||[0,0]; const k=mates.length ? (M.inb[team]++)%mates.length : 0;
+  const off=mates.slice(k).concat(mates.slice(0,k)), def=M.players.filter(p=>p.team!==team);
   const dh=defendHoop(team), out=-dh.dir;
   off.forEach((p,i)=>{ resetP(p); p.x=dh.cx+out*(170+i*50); p.z=(i-(off.length-1)/2)*130; p.face=out; });
   def.forEach((p,i)=>{ resetP(p); p.x=COURT_W/2+out*(40+i*30); p.z=(i-(def.length-1)/2)*130; p.face=-out; });
@@ -4440,9 +4442,9 @@ setInterval(()=>{ const n=$('#netInfo'); if(!n || !V.inRoom || V.practice) retur
   if(n.textContent!==t) n.textContent=t; const n2=$('#p2Net'); if(n2 && n2.textContent!==t) n2.textContent=t; },1000);
 $('#rankedClose').onclick=closeRanked;
 $('#rankedPlay').onclick=()=>{ if(!nameBlocked()) findRankedMatch('1v1'); };
-$('#rankedPlay2').onclick=()=>{ if(!nameBlocked()) findRankedMatch('2v2'); };
+$('#rankedPlay2').onclick=()=>{ if(nameBlocked()) return; closeRanked(); $('#partyBtn').onclick(); };   // ranked 2v2 = the team-up menu
 $('#rankedHome1').onclick=()=>{ if(nameBlocked()) return; openRanked(); findRankedMatch('1v1'); };
-$('#rankedHome2').onclick=()=>{ if(nameBlocked()) return; openRanked(); findRankedMatch('2v2'); };
+$('#rankedHome2').onclick=()=>$('#partyBtn').onclick();                     // ranked 2v2 = the team-up menu
 $('#partyBtn').onclick=()=>{ if(nameBlocked()) return; initAudio(); goFull(); V.partyMode=true; G.party=true; hostGame(getName()); };
 $('#duoBtn').onclick=()=>duoSearch();
 $('#duoCancel').onclick=()=>{ if(V.duoState) V.duoState.cancel=true; duoStatus('Cancelling…'); };
@@ -5028,8 +5030,8 @@ function renderParty2(){
   const f=$('#p2Find'), b=$('#p2Bots');
   f.disabled=!isHost || searching || !mate || (typeof Peer==='undefined' && !FB_CONFIG);
   $('#p2FindSub').textContent = searching ? 'searching…' : mate ? '2 real players' : 'needs your teammate first';
-  b.disabled=!isHost;
-  $('#p2BotsSub').textContent = oppHum ? 'start now · rivals fill the open spot' : mate ? 'you two vs 2 Ranked Rivals' : 'you + a rival vs 2 rivals';
+  b.disabled=!isHost || !mate;                                   // ranked 2v2 needs a real teammate
+  $('#p2BotsSub').textContent = !mate ? 'needs your teammate first' : oppHum ? 'start now · rivals fill the open spot' : 'you two vs 2 Ranked Rivals';
   const st=$('#p2Status');
   if(!isHost){ const h=R.find(p=>p.id==='host'); st.textContent = searching ? '🔎 '+(h?h.name:'Your teammate')+' is finding opponents…' : '⏳ Waiting for '+(h?h.name:'the host')+' to find opponents or pick bots'; }
   else if(!searching) st.textContent = V.p2Msg || (mate ? '✅ Teammate in! Find two real opponents, or play the bots.' : '📨 Send your friend the code above.');

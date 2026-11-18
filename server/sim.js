@@ -86,7 +86,9 @@ function resetP(p){ p.y=0;p.vx=0;p.vy=0;p.vz=0;p.act='';p.shootT=0;p.burstT=0;p.
   p.wantA=p.wantB=p.wantC=false;p.relA=null;p.reacted=false;p.shotRange=0;p.stuckT=0;p.cutT=0;p.spot=null;
   p.hesiT=0;p.rhythmT=0;p.boostT=0;p.moveKind='';p.pull=0;p.wantRhythm=false; }
 function setupPossession(M, team, wait){
-  const off=M.players.filter(p=>p.team===team), def=M.players.filter(p=>p.team!==team);
+  // the inbounder rotates: each time this team gets the ball, the next teammate starts with it
+  const mates=M.players.filter(p=>p.team===team); M.inb=M.inb||[0,0]; const k=mates.length ? (M.inb[team]++)%mates.length : 0;
+  const off=mates.slice(k).concat(mates.slice(0,k)), def=M.players.filter(p=>p.team!==team);
   const dh=defendHoop(team), out=-dh.dir;
   off.forEach((p,i)=>{ resetP(p); p.x=dh.cx+out*(170+i*50); p.z=(i-(off.length-1)/2)*130; p.face=out; });
   def.forEach((p,i)=>{ resetP(p); p.x=COURT_W/2+out*(40+i*30); p.z=(i-(def.length-1)/2)*130; p.face=-out; });
