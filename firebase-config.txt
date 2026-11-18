@@ -1,0 +1,4 @@
+# Buckets fast server (Google Firebase)
+# Paste your Firebase web config below this line. The whole "const firebaseConfig = { ... };" snippet is fine.
+# Steps: see FIREBASE_SETUP.md
+

@@ -48,6 +48,31 @@
   .msg{color:#c0392b;text-align:center;font-weight:600;min-height:1em;margin:10px 0 0}
 
   #lobby{width:min(580px,calc(100vw - 32px))}
+  /* ranked 2v2 team-up menu */
+  #party2{width:min(620px,calc(100vw - 32px));text-align:center;background:linear-gradient(160deg,#fff6e5,#f3e8ff)}
+  .p2Tag{display:inline-block;background:linear-gradient(135deg,#5b2a86,#8c46ff 50%,#c77dff);color:#fff;font-weight:800;letter-spacing:2px;font-size:13px;padding:4px 12px;border-radius:999px;border:3px solid var(--ink)}
+  #party2 h2{margin:6px 0 10px;font-size:34px;letter-spacing:3px}
+  .p2Code{background:#fff;border:3px solid var(--ink);border-radius:16px;padding:8px 12px;margin:0 auto 12px;max-width:340px}
+  .p2Code small{display:block;font-size:12px;opacity:.75}
+  #p2Code{font-size:38px;font-weight:800;letter-spacing:8px;line-height:1.1}
+  .p2Board{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch;margin:4px 0 10px}
+  .p2Side{background:#fff;border:3px solid var(--ink);border-radius:16px;padding:8px;display:flex;flex-direction:column;gap:8px}
+  .p2Side h4{margin:0;font-size:13px;letter-spacing:2px}
+  .p2Side.mine h4{color:#a8291f} .p2Side.opp h4{color:#1d4fa8}
+  .p2Vs{align-self:center;font-weight:900;font-size:26px;color:#8c46ff;text-shadow:0 2px 0 var(--ink)}
+  .p2Slot{display:flex;align-items:center;gap:8px;text-align:left;border:2px solid var(--ink);border-radius:12px;padding:6px 8px;min-height:50px;background:#fffdf7}
+  .p2Slot.empty{border-style:dashed;opacity:.75;background:transparent}
+  .p2Slot.empty.pulse{animation:p2pulse 1.4s ease-in-out infinite}
+  @keyframes p2pulse{50%{opacity:.35}}
+  .p2Av{flex:none;width:34px;height:34px;border-radius:50%;border:2px solid var(--ink);display:grid;place-items:center;font-weight:800;color:#fff;background:#bbb}
+  .p2Nm{font-weight:800;font-size:15px;line-height:1.1;word-break:break-word}
+  .p2Nm .tg{margin-left:6px}
+  .p2Sub{font-size:12px;opacity:.85;margin-top:2px}
+  .p2Status{min-height:1.3em;font-weight:700;font-size:14px;margin:4px 0 10px}
+  .p2Btns{display:flex;gap:10px;margin-bottom:8px}
+  .p2Btns .grandBtn b{font-size:18px}
+  .p2Net{font-size:12px;opacity:.7;margin-top:6px}
+  @media (max-width:520px){ .p2Board{grid-template-columns:1fr} .p2Vs{font-size:20px} .p2Btns{flex-direction:column} }
   .codeBox{text-align:center;background:var(--ink);color:var(--cream);border-radius:14px;padding:10px;margin-bottom:14px}
   .codeBox small{opacity:.7}
   #roomCode{font-size:44px;font-weight:700;letter-spacing:8px;color:var(--yellow);line-height:1.1}
@@ -420,6 +445,23 @@
   <div class="row"><button id="netRerun" class="btn" style="flex:1">Run again</button><button id="netClose" class="btn orange" style="flex:1">Done</button></div>
 </div>
 
+<div id="party2" class="panel center hidden">
+  <span class="p2Tag">🏆 RANKED 2v2</span>
+  <h2>TEAM UP</h2>
+  <div class="p2Code"><small>Your teammate taps <b>Join</b> on the home screen and types</small><div id="p2Code">----</div><button id="p2Copy" class="btn tiny">Copy invite link</button></div>
+  <div class="p2Board">
+    <div class="p2Side mine"><h4>YOUR TEAM</h4><div id="p2Mine"></div></div>
+    <div class="p2Vs">VS</div>
+    <div class="p2Side opp"><h4>OPPONENTS</h4><div id="p2Opp"></div></div>
+  </div>
+  <div id="p2Status" class="p2Status"></div>
+  <div class="p2Btns" id="p2Btns">
+    <button id="p2Find" class="grandBtn gR2"><span class="gi">🔎</span><b>FIND OPPONENTS</b><small id="p2FindSub">2 real players</small></button>
+    <button id="p2Bots" class="grandBtn gR1"><span class="gi">🤖</span><b>PLAY VS BOTS</b><small id="p2BotsSub">Ranked Rivals · counts for rank</small></button>
+  </div>
+  <div class="row" style="justify-content:center"><button id="p2Stop" class="btn tiny hidden">Stop searching</button><button id="p2Leave" class="btn tiny ghost">Leave</button></div>
+  <div id="p2Net" class="p2Net"></div>
+</div>
 <div id="rankedPanel" class="panel hidden">
   <div class="head"><h2>🏆 Ranked</h2><span class="coinPill">💰 <span class="coinCount">0</span></span></div>
   <div id="rankCard"></div>
@@ -1242,7 +1284,7 @@ function addRosterPlayer(id, name, bot, team){
   if(bot) Object.assign(r, botGear());
   G.players.set(id,r); return r;
 }
-function rosterMsg(){ return {t:'roster', code:net.code, phase:G.phase, toWin:G.toWin, diff:G.diff, winBy2:!!G.winBy2, ranked:!!G.ranked, ranked2:!!G.ranked2, players:[...G.players.values()].map(({emAt,...r})=>r)}; }
+function rosterMsg(){ return {t:'roster', code:net.code, phase:G.phase, toWin:G.toWin, diff:G.diff, winBy2:!!G.winBy2, ranked:!!G.ranked, ranked2:!!G.ranked2, party:!!G.party, srch:!!V.duoState, players:[...G.players.values()].map(({emAt,...r})=>r)}; }
 function broadcastRoster(){ const m=rosterMsg(); for(const c of net.conns.values()) if(c.open) c.send(m); applyRoster(m); }
 
 function netErrMsg(type, what){
@@ -1549,14 +1591,29 @@ function ServerClientConn(ws0, code, rid){
 
 // =====================================================================
 //  ⚡ FAST SERVER: Google Firebase (Realtime Database). School filters block our Cloudflare server and
-//  throttle the public relays, but they can't block Google (Classroom, Docs and Drive run on it).
+//  throttle the public relays. Google's servers are almost never blocked (Classroom, Docs and Drive run on them).
 //  The host's iPad still runs the game; Firebase just carries the messages, over a normal secure
 //  websocket (and plain web requests if even websockets are blocked). Reconnects itself after blips.
-//  Paste your project's config here (Firebase console → Project settings → Your apps → Config).
+//  SETUP: paste your Firebase web config (the whole "const firebaseConfig = {...}" snippet is fine)
+//  into the file firebase-config.txt in this repo. You can do that on github.com from any device.
 // =====================================================================
-const FB_REAL=null;
-const FB_CONFIG=(()=>{ try{ if(localStorage.getItem('buckets-fbfake')) return {fake:1}; }catch(e){} return null; })() || FB_REAL;
-const FB_SNAP_MS=66;                                          // 15 snapshots/s (players' own movement is instant anyway)
+let FB_CONFIG=(()=>{ try{ if(localStorage.getItem('buckets-fbfake')) return {fake:1}; }catch(e){} return null; })();
+// read the pasted snippet: pull out the fields we need, whatever format it was pasted in
+function fbParseConfig(txt){
+  const c={}; for(const m of String(txt||'').matchAll(/["']?(apiKey|authDomain|databaseURL|projectId|storageBucket|messagingSenderId|appId)["']?\s*[:=]\s*["']([^"'\s]+)["']/g)) c[m[1]]=m[2];
+  if(!c.projectId) return null;
+  if(!c.databaseURL) c.databaseURL='https://'+c.projectId+'-default-rtdb.firebaseio.com';
+  if(!/^https:\/\/[a-z0-9.-]+\.(firebaseio\.com|firebasedatabase\.app)\/?$/i.test(c.databaseURL)) return null;
+  return c;
+}
+const FB_READY=FB_CONFIG ? Promise.resolve(FB_CONFIG) : (()=>{
+  let cached=null; try{ cached=JSON.parse(localStorage.getItem('buckets-fbcfg')||'null'); }catch(e){}
+  if(cached && cached.projectId) FB_CONFIG=cached;               // last known config: works instantly, even if the file is slow
+  return fetch('firebase-config.txt',{cache:'no-cache'}).then(r=>r.ok?r.text():'').then(t=>{ const c=fbParseConfig(t);
+    FB_CONFIG=c; try{ if(c) localStorage.setItem('buckets-fbcfg', JSON.stringify(c)); else localStorage.removeItem('buckets-fbcfg'); }catch(e){}
+    return c; }).catch(()=>FB_CONFIG);
+})();
+const FB_SNAP_MS=80;                                          // 12.5 snapshots/s: smooth (your own player moves instantly), easy on the free data limit
 const FB_LATEST={s:1, in:1, ping:1, pong:1, hb:1};             // only the newest of these matters
 let FBdb=null, FBload=null, FBusers=0, FBoffT=0;
 const fbKey=code=>(PREFIX+code).replace(/[.#$\[\]\/]/g,'_');
@@ -1639,8 +1696,15 @@ function FireHub(code, onConn){
   // one write per snapshot for the whole room. Events go as their own important messages so none get lost.
   S.snap=s=>{ if(!S.open || !S.all || !S.conns.size) return;
     if(s.ev && s.ev.length) for(const e of s.ev) S.all.send({t:'ev', e});
-    const now=performance.now(); if(now-S.last<FB_SNAP_MS-4) return; S.last=now;
-    const {ev, ...d}=s; S.all.send(d); };
+    const now=performance.now(); if(now-S.last<FB_SNAP_MS-4) return;
+    // less data = the free plan lasts longer: whole-number positions (invisible on screen), and nothing
+    // at all when the picture hasn't changed (timeouts, between points), except a keep-alive each second
+    const {ev, ...d}=s; d.p=d.p.map(q=>{ const a=q.slice(); a[1]=Math.round(a[1]); a[2]=Math.round(a[2]); a[3]=Math.round(a[3]); return a; });
+    d.b=d.b.slice(); d.b[0]=Math.round(d.b[0]); d.b[1]=Math.round(d.b[1]); d.b[2]=Math.round(d.b[2]);
+    const {pt, sct, ...same}=d, key=JSON.stringify(same);
+    if(key===S.lastKey && now-S.last<1000){ S.skipped=true; return; }
+    if(S.skipped){ d.rs=1; S.skipped=false; }                 // "resumed after a pause": players don't count this gap as lag
+    S.last=now; S.lastKey=key; S.all.send(d); };
   S.close=()=>{ if(S.dead) return; for(const c of S.conns.values()) c.raw({t:'bye'});
     S.dead=true; S.open=false; clearInterval(S.tick); for(const f of S.offs) try{ f(); }catch(e){}
     setTimeout(()=>{ try{ S.root && S.root.remove(); S.root && S.root.onDisconnect().cancel(); }catch(e){} fbRelease(); }, 400); };
@@ -1651,12 +1715,12 @@ function fireProbe(code){
   return new Promise(res=>{
     if(!FB_CONFIG) return res(null);
     let done=false; const t0=performance.now(); fbUse();
-    const fin=v=>{ if(done) return; done=true; clearTimeout(to); if(!v) fbRelease(); res(v); };
+    const fin=v=>{ if(done) return; done=true; clearTimeout(to); if(!v || v.none) fbRelease(); res(v); };
     const to=setTimeout(()=>fin(null), 7000);
     fbLoad().then(db=>{ if(!db || done) return fin(null);
       const root=db.ref('rooms/'+fbKey(code));
       root.child('host').once('value', s=>{ const v=s.val();
-        if(!v || !v.sid) return fin(null);
+        if(!v || !v.sid) return fin({none:true});             // Firebase answered: nobody is hosting this code
         let closed=false;
         fin({fire:true, root, sid:String(v.sid), rtt:performance.now()-t0, close:()=>{ if(closed) return; closed=true; fbRelease(); }}); }, ()=>fin(null));
     });
@@ -1695,9 +1759,9 @@ function dial(code, o={}){
     const t0=performance.now(), directWait=o.directWait??2500;
     const useDirect=NET_FORCE!=='relay' && typeof Peer!=='undefined', useRelay=NET_FORCE!=='direct';
     // our own game server: ask it in parallel. If the host is there, it beats every public relay.
-    const srid=Math.random().toString(36).slice(2,10); let srv=null, srvDone=!(SERVER_URL||FB_CONFIG) || NET_FORCE==='direct' || NET_FORCE==='relays';
+    const srid=Math.random().toString(36).slice(2,10); let srv=null, fbNone=false, srvDone=!(SERVER_URL||FB_CONFIG) || NET_FORCE==='direct' || NET_FORCE==='relays';
     const srvClose=r=>{ try{ r.fire ? r.close() : r.ws.close(); }catch(e){} };
-    if(!srvDone) (SERVER_URL ? serverProbe(code, srid) : fireProbe(code)).then(r=>{ srvDone=true; if(done){ if(r) srvClose(r); return; } srv=r; });
+    if(!srvDone) (SERVER_URL ? serverProbe(code, srid) : fireProbe(code)).then(r=>{ srvDone=true; if(r && r.none){ fbNone=true; r=null; } if(done){ if(r) srvClose(r); return; } srv=r; });
     const cleanup=()=>{ try{ peer&&peer.destroy(); }catch(e){} if(D) D.close(); if(srv) srvClose(srv); };
     const fin=r=>{ if(done) return; done=true; clearInterval(iv); clearTimeout(to);
       if(r.via!=='server' && srv) srvClose(srv);
@@ -1727,7 +1791,9 @@ function dial(code, o={}){
         const sorted=[...acks].sort((a,b)=>score(a)-score(b)), picks=sorted.filter(s=>s.sid===sorted[0].sid).slice(0,2);
         const c=D.choose(picks); try{ peer&&peer.destroy(); }catch(e){}
         fin({conn:c, peer:null, id:'r_'+D.rid, via:c.relay}); return; }
-      if(unavailable && el>(o.unavailWait??7000)){ cleanup(); fin({fail:'none'}); }   // relay-only rooms aren't on the PeerJS server, so give relays time
+      // matchmaking slots: every slot host is on Firebase, so Firebase saying "nobody here" settles it fast
+      if(o.fbAuth && fbNone && el>300){ cleanup(); fin({fail:'none'}); return; }
+      if(unavailable && (srvDone || el>5000) && !srv && el>(o.unavailWait??7000)){ cleanup(); fin({fail:'none'}); }   // relay-only rooms aren't on the PeerJS server, so give relays time
       if(o.onTick) o.onTick(el, D);
     },100);
     const to=setTimeout(()=>{ cleanup(); fin({fail:unavailable?'none':'timeout'}); }, o.timeout??16000);
@@ -1867,7 +1933,7 @@ function onClientData(d){
   else if(d.t==='pong'){ const r=performance.now()-(+d.ts||0); if(r>0 && r<5000) V.rtt=V.rtt?lerp(V.rtt,r,.3):r; }
   else if(d.t==='migrate') migrateTo(String(d.code||'').slice(0,8), d.tag);
   else if(d.t==='s'){
-    d.rt=performance.now(); if(V.lastSnap && V.lastSnap.rt){ const g=Math.min(400,d.rt-V.lastSnap.rt); V.gapA=V.gapA?lerp(V.gapA,g,.06):g; V.gapJ=V.gapJ!==undefined?lerp(V.gapJ,Math.abs(g-V.gapA),.06):10; }
+    d.rt=performance.now(); if(V.lastSnap && V.lastSnap.rt && !d.rs){ const g=Math.min(400,d.rt-V.lastSnap.rt); V.gapA=V.gapA?lerp(V.gapA,g,.06):g; V.gapJ=V.gapJ!==undefined?lerp(V.gapJ,Math.abs(g-V.gapA),.06):10; }
     V.snaps.push(d); if(V.snaps.length>40) V.snaps.shift(); V.lastSnap=d;
     if(d.ev) d.ev.forEach(e=>handleEvent(e,false));
   }
@@ -2657,13 +2723,16 @@ setInterval(()=>{
 
 function applyRoster(m){
   const prev=V.phase;
-  V.roster=m.players; V.rmap=new Map(m.players.map(p=>[p.id,p])); V.phase=m.phase; V.toWin=m.toWin; V.diff=m.diff||'pro'; V.winBy2=!!m.winBy2; V.rankedRoom=!!m.ranked; V.ranked2=!!m.ranked2; if(m.code) net.code=m.code;
+  V.roster=m.players; V.rmap=new Map(m.players.map(p=>[p.id,p])); V.phase=m.phase; V.toWin=m.toWin; V.diff=m.diff||'pro'; V.winBy2=!!m.winBy2; V.rankedRoom=!!m.ranked; V.ranked2=!!m.ranked2; V.party2Room=!!m.party; V.p2Srch=!!m.srch; if(m.code) net.code=m.code;
   if(!V.inRoom) return;
   if(V.phase==='game' && prev!=='game'){ V.snaps=[]; $('#over').classList.add('hidden'); }
   if(V.phase==='lobby' && prev==='game') $('#over').classList.add('hidden');
   renderLobby(); updateControlsVisibility();
 }
 function renderLobby(){
+  const p2=!!V.party2Room && !V.practice && V.phase==='lobby' && !V.shopOpen;
+  $('#party2').classList.toggle('hidden', !p2);
+  if(p2){ $('#lobby').classList.add('hidden'); renderParty2(); return; }
   $('#lobby').classList.toggle('hidden', V.phase!=='lobby' || !!V.shopOpen);
   $('#roomCode').textContent=net.code;
   document.querySelector('.codeBox').classList.toggle('hidden', !!V.practice);
@@ -4036,14 +4105,13 @@ setInterval(()=>{ const n=$('#netInfo'); if(!n || !V.inRoom || V.practice) retur
     const cs=[...net.conns.values()], sc=cs.filter(c=>c.isServer).length, rc=cs.filter(c=>c.isRelay&&!c.isServer).length;
     if(sc) t+=' · '+sc+' on server'; if(rc) t+=' · '+rc+' on relay'; }
   else if(net.role==='client') t=net.via==='server'?'🟢 Connected through the fast server':isRelay()?'🟡 Connected through backup relay ('+net.via+')':'🟢 Connected direct';
-  if(n.textContent!==t) n.textContent=t; },1000);
+  if(n.textContent!==t) n.textContent=t; const n2=$('#p2Net'); if(n2 && n2.textContent!==t) n2.textContent=t; },1000);
 $('#rankedClose').onclick=closeRanked;
 $('#rankedPlay').onclick=()=>{ if(!nameBlocked()) findRankedMatch('1v1'); };
 $('#rankedPlay2').onclick=()=>{ if(!nameBlocked()) findRankedMatch('2v2'); };
 $('#rankedHome1').onclick=()=>{ if(nameBlocked()) return; openRanked(); findRankedMatch('1v1'); };
 $('#rankedHome2').onclick=()=>{ if(nameBlocked()) return; openRanked(); findRankedMatch('2v2'); };
-$('#partyBtn').onclick=()=>{ if(nameBlocked()) return; initAudio(); goFull(); V.partyMode=true; hostGame(getName());
-  setTimeout(()=>toast('👫 Send your friend the room code. Once they join, tap FIND RANKED 2v2'), 1500); };
+$('#partyBtn').onclick=()=>{ if(nameBlocked()) return; initAudio(); goFull(); V.partyMode=true; G.party=true; hostGame(getName()); };
 $('#duoBtn').onclick=()=>duoSearch();
 $('#duoCancel').onclick=()=>{ if(V.duoState) V.duoState.cancel=true; duoStatus('Cancelling…'); };
 $('#rankedCancel').onclick=()=>{ if(qState) qState.cancel=true; qStatus('Cancelling…'); };
@@ -4309,6 +4377,39 @@ function startRanked(){
 // a 1v1 room with exactly two humans can be played for rank
 function rankedRoomOk(){ const h=V.roster.filter(p=>!p.bot); return !V.practice && V.roster.length===2 && h.length===2 && h[0].team!==h[1].team; }
 
+// ---------------------------------------------------------------- matchmaking slots
+// Claim a public matchmaking slot. With Firebase on, Firebase decides who owns a slot, which works on
+// school Wi-Fi even when the PeerJS server is blocked; the PeerJS id is a bonus for direct links.
+// Without Firebase, the PeerJS id decides (as before). Resolves {peer, srv} | {taken:true} | null.
+function claimSlot(slot, onConn){
+  return new Promise(res=>{
+    let done=false, peer=null, fh=null, peerOk=false, peerTaken=false; const t0=performance.now();
+    const fin=v=>{ if(done) return; done=true; clearInterval(iv);
+      if(!v || v.taken){ try{peer&&peer.destroy()}catch(e){} try{fh&&fh.close()}catch(e){} }
+      else if(peer && !v.peer){ try{peer.destroy()}catch(e){} }
+      res(v); };
+    if(typeof Peer!=='undefined' && NET_FORCE!=='relay'){ try{ peer=new Peer(PREFIX+slot,{debug:0});
+      peer.on('open',()=>{ peerOk=true; }); peer.on('error',e=>{ if(e.type==='unavailable-id') peerTaken=true; });
+      peer.on('connection', onConn);
+      peer.on('disconnected',()=>{ if(peerOk && !peer.destroyed) setTimeout(()=>{ try{peer.reconnect()}catch(e){} },1000); });   // keep the slot on flaky Wi-Fi
+    }catch(e){ peer=null; } }
+    if(FB_CONFIG && !SERVER_URL) fh=FireHub(slot, onConn);
+    const iv=setInterval(()=>{ const el=performance.now()-t0;
+      if(fh){
+        if(fh.taken) return fin({taken:true});
+        if(fh.open) return fin({peer:peerTaken?null:peer, srv:fh});
+        if(el>4500){                                        // Firebase isn't answering on this Wi-Fi: fall back to PeerJS
+          if(peerTaken) return fin({taken:true});
+          if(peerOk){ try{fh.close()}catch(e){} fh=null; return fin({peer, srv:null}); } }
+      } else {
+        if(peerTaken) return fin({taken:true});
+        if(peerOk) return fin({peer, srv:ServerHub(slot, onConn)});
+        if(!peer) return fin(null);
+      }
+      if(el>8000) fin(null);
+    },100);
+  });
+}
 // ---------------------------------------------------------------- ranked queue: real players first, bot if nobody's searching
 // A few public "queue slots" on the PeerJS server. If a slot has someone waiting, you join them;
 // if it's empty, you wait in it. Nobody shows up in ~15s -> you play a bot (and we say so).
@@ -4330,7 +4431,7 @@ function qClientPeer(){
 async function qTryJoin(i){
   if(!qState || qState.cancel) return 'empty';
   // queue slots always register on the PeerJS server, so "no such peer" really means empty
-  const r=await dial(qSlot(i), {unavailWait:600, timeout:8000, cancel:()=>!qState || qState.cancel});
+  const r=await dial(qSlot(i), {unavailWait:600, timeout:8000, fbAuth:true, cancel:()=>!qState || qState.cancel});
   if(r.fail || !qState || qState.cancel){ if(r.conn) try{r.conn.close()}catch(_){} return 'empty'; }
   const conn=r.conn;
   return new Promise(res=>{
@@ -4352,22 +4453,21 @@ async function qTryJoin(i){
     conn.send({t:'hello', name:getName(), ...myGear(), rr:SAVE.rank.rr, ...(qMode==='2v2'?{r2:1}:{rq:1})});
   });
 }
-function qTryHost(i){
+async function qTryHost(i){
+  const cl=await claimSlot(qSlot(i), acceptConn);
+  if(!cl) return 'none'; if(cl.taken) return 'taken';
+  const peer=cl.peer;
   return new Promise(res=>{
     let settled=false; const fin=v=>{ if(settled) return; settled=true; res(v); };
-    const peer=new Peer(PREFIX+qSlot(i),{debug:0});
-    peer.on('error',e=>{ if(e.type==='unavailable-id'){ try{peer.destroy()}catch(_){} fin('taken'); } });
-    peer.on('open',()=>{
-      if(!qState || qState.cancel){ try{peer.destroy()}catch(_){} fin('none'); return; }
+    {
+      if(!qState || qState.cancel){ try{peer&&peer.destroy()}catch(_){} try{cl.srv&&cl.srv.close()}catch(_){} fin('none'); return; }
       if(qState.cp){ try{qState.cp.destroy()}catch(_){} qState.cp=null; }
       // we're the one waiting: act as the host of a 1v1 room
       net.role='host'; net.peer=peer; net.myId='host'; net.code='RANKED'; if(qMode==='2v2') V.q2Waiting=true; else V.queueWaiting=true;
       const tHost=performance.now(); let lastJoin=tHost, lastN=1;
       const me=addRosterPlayer('host', getName(), false, 0); Object.assign(me, myGear()); me.rr=SAVE.rank.rr;
-      peer.on('connection', acceptConn);
-      peer.on('disconnected', ()=>{ if(!peer.destroyed) setTimeout(()=>{ try{peer.reconnect()}catch(e){} }, 1000); });   // keep our queue slot on flaky Wi-Fi
-      net.hub=RelayHub(qSlot(i), acceptConn);         // challengers on blocked Wi-Fi come in through our server or a relay
-      net.srv=ServerHub(qSlot(i), acceptConn);
+      net.hub=RelayHub(qSlot(i), acceptConn);         // challengers on blocked Wi-Fi come in through the fast server or a relay
+      net.srv=cl.srv;
       const wait=setInterval(()=>{
         const now=performance.now(), n=G.players.size; if(n!==lastN){ lastN=n; lastJoin=now; }
         if(qMode==='2v2'){
@@ -4376,16 +4476,15 @@ function qTryHost(i){
           if(n>=4 || (n>=2 && now-tHost>Q2WAIT && now-lastJoin>4000)){ clearInterval(wait); V.q2Waiting=false; qState.matched=true; startQueueMatch2(); fin('matched'); return; }
         } else if(n>=2){ clearInterval(wait); V.queueWaiting=false; qState.matched=true; startQueueMatch(); fin('matched'); return; }
         const giveUp = !qState || qState.cancel || now-tHost>(qMode==='2v2'?Q2WAIT:QWAIT);
-        if(giveUp){ clearInterval(wait); V.queueWaiting=false; V.q2Waiting=false; try{peer.destroy()}catch(_){} try{net.hub&&net.hub.close()}catch(_){} try{net.srv&&net.srv.close()}catch(_){} net.hub=null; net.srv=null; net.role=null; net.peer=null; G.players.clear(); net.conns.clear(); fin('none'); }
+        if(giveUp){ clearInterval(wait); V.queueWaiting=false; V.q2Waiting=false; try{peer&&peer.destroy()}catch(_){} try{net.hub&&net.hub.close()}catch(_){} try{net.srv&&net.srv.close()}catch(_){} net.hub=null; net.srv=null; net.role=null; net.peer=null; G.players.clear(); net.conns.clear(); fin('none'); }
       },200);
-    });
-    setTimeout(()=>{ if(!peer.open){ try{peer.destroy()}catch(_){} fin('none'); } },8000);
+    }
   });
 }
 async function findRankedMatch(mode){
   if(qState) return; initAudio(); qMode = mode==='2v2' ? '2v2' : '1v1';
   const solo=()=> qMode==='2v2' ? startRanked2Solo() : startRanked();
-  if(typeof Peer==='undefined'){ solo(); return; }
+  if(typeof Peer==='undefined' && !FB_CONFIG){ solo(); return; }
   qState={cancel:false, t0:performance.now(), matched:false}; $('#rankedPlay').disabled=true; $('#rankedPlay2').disabled=true; $('#rankedCancel').classList.remove('hidden');
   const tick=setInterval(()=>{ if(qState && !qState.matched && !V.q2Waiting) qStatus((qMode==='2v2'?'👥 Searching for a 2v2… ':'🔎 Searching for players… ')+Math.round((performance.now()-qState.t0)/1000)+'s'); },250);
   let retries=0;
@@ -4446,26 +4545,25 @@ function startRanked2Solo(){
 // signpost answers with its room code; the joining duo then moves both of its players into that
 // room on the other team. Nobody else searching in ~20s -> your duo plays two ranked bots.
 const DUO_WAIT=20000;
-function duoStatus(t){ $('#duoStatus').textContent=t||''; $('#duoCancel').classList.toggle('hidden', !V.duoState); $('#duoBtn').disabled=!!V.duoState; }
+function duoStatus(t){ $('#duoStatus').textContent=t||''; V.p2Msg=t||''; const ps=$('#p2Status'); if(ps && net.role==='host') ps.textContent=t||''; $('#duoCancel').classList.toggle('hidden', !V.duoState); $('#duoBtn').disabled=!!V.duoState; }
 function duoEnd(){ const s=V.duoState; V.duoState=null; V.duoWaiting=false; V.duoTaken=false;
-  if(s){ clearInterval(s.tick); for(const p of [s.cp, s.sign]) if(p){ try{p.destroy()}catch(e){} } try{s.signHub&&s.signHub.close()}catch(e){} try{s.signSrv&&s.signSrv.close()}catch(e){} } duoStatus(''); renderLobby(); }
+  if(s){ clearInterval(s.tick); for(const p of [s.cp, s.sign]) if(p){ try{p.destroy()}catch(e){} } try{s.signHub&&s.signHub.close()}catch(e){} try{s.signSrv&&s.signSrv.close()}catch(e){} } duoStatus(''); if(net.role==='host' && V.inRoom) broadcastRoster(); else renderLobby(); }
 // while our duo searches, also host a solo-2v2 lobby slot: solo players who hit RANKED 2v2 join us as the other team.
 // (Its connections carry those players for the whole game, so it stays open until the game ends.)
 function duo2Claim(s){
   return new Promise(res=>{ let i=0;
-    const tryI=()=>{ if(i>=QSLOTS || s.cancel) return res(false);
-      const slot='r2q'+i, sp=new Peer(PREFIX+slot,{debug:0}); let done=false; const fin=v=>{ if(done) return; done=true; res(v); };
-      sp.on('error',e=>{ if(e.type==='unavailable-id' && !done){ done=true; try{sp.destroy()}catch(_){} i++; tryI(); } });
-      sp.on('open',()=>{ if(s.cancel || V.duoState!==s){ try{sp.destroy()}catch(_){} return fin(false); }
-        s.r2Peer=sp; sp.on('connection', acceptConn); s.r2Hub=RelayHub(slot, acceptConn); s.r2Srv=ServerHub(slot, acceptConn);
-        V.q2Waiting=true; V.party2=true; fin(true); });
-      setTimeout(()=>{ if(!sp.open && !done){ done=true; try{sp.destroy()}catch(_){} i++; tryI(); } },6000); };
+    const tryI=async()=>{ if(i>=QSLOTS || s.cancel) return res(false);
+      const slot='r2q'+i, cl=await claimSlot(slot, acceptConn);
+      if(!cl || cl.taken){ i++; return tryI(); }
+      if(s.cancel || V.duoState!==s){ try{cl.peer&&cl.peer.destroy()}catch(_){} try{cl.srv&&cl.srv.close()}catch(_){} return res(false); }
+      s.r2Peer=cl.peer; s.r2Hub=RelayHub(slot, acceptConn); s.r2Srv=cl.srv;
+      V.q2Waiting=true; V.party2=true; res(true); };
     tryI(); });
 }
 function duo2Close(s){ V.q2Waiting=false; V.party2=false; if(!s) return; try{s.r2Peer&&s.r2Peer.destroy()}catch(e){} try{s.r2Hub&&s.r2Hub.close()}catch(e){} try{s.r2Srv&&s.r2Srv.close()}catch(e){} }
 function duoTempPeer(s){ return new Promise(res=>{ const p=new Peer({debug:0}); s.cp=p; let ok=false; p.on('open',()=>{ ok=true; res(p); }); p.on('error',e=>{ if(s.onErr) s.onErr(e); }); setTimeout(()=>{ if(!ok) res(null); },8000); }); }
 async function duoAsk(s, i){
-  const r=await dial('rq2'+i, {unavailWait:600, timeout:8000, cancel:()=>s.cancel});
+  const r=await dial('rq2'+i, {unavailWait:600, timeout:8000, fbAuth:true, cancel:()=>s.cancel});
   if(r.fail) return {r:'empty'};
   const conn=r.conn;
   return new Promise(res=>{
@@ -4478,7 +4576,7 @@ async function duoAsk(s, i){
 }
 function duoClaim(s, i){
   return new Promise(res=>{
-    const sp=new Peer(PREFIX+'rq2'+i,{debug:0}); let settled=false; const fin=v=>{ if(settled) return; settled=true; res(v); };
+    let settled=false; const fin=v=>{ if(settled) return; settled=true; res(v); };
     const onSign=c=>c.on('data',d=>{
       if(!d || d.t!=='duo?') return;
       if(V.duoWaiting && !V.duoTaken){ V.duoTaken=true; c.send({t:'goto', code:net.code});
@@ -4486,23 +4584,21 @@ function duoClaim(s, i){
       else c.send({t:'busy'});
       setTimeout(()=>{ try{c.close()}catch(_){} },500);
     });
-    sp.on('error',e=>{ if(e.type==='unavailable-id'){ try{sp.destroy()}catch(_){} fin(false); } });
-    sp.on('open',()=>{ s.sign=sp; s.signHub=RelayHub('rq2'+i, onSign); s.signSrv=ServerHub('rq2'+i, onSign); fin(true); });
-    sp.on('connection',onSign);
-    setTimeout(()=>{ if(!sp.open){ try{sp.destroy()}catch(_){} fin(false); } },8000);
+    claimSlot('rq2'+i, onSign).then(cl=>{ if(!cl || cl.taken) return fin(false);
+      s.sign=cl.peer; s.signHub=RelayHub('rq2'+i, onSign); s.signSrv=cl.srv; fin(true); });
   });
 }
 async function duoSearch(){
-  if(V.duoState || net.role!=='host' || typeof Peer==='undefined') return;
+  if(V.duoState || net.role!=='host' || (typeof Peer==='undefined' && !FB_CONFIG)) return;
   for(const [id,r] of [...G.players]) if(r.bot) G.players.delete(id);
   const hum=[...G.players.values()]; if(hum.length!==2 || hum[0].team!==hum[1].team){ toast('Put you and your friend on the same team first'); return; }
   for(const r of hum) r.team=0;                                    // our duo plays red
   broadcastRoster();
-  const s=V.duoState={t0:performance.now(), cancel:false};
+  const s=V.duoState={t0:performance.now(), cancel:false}; broadcastRoster();          // teammate's screen shows "searching"
   s.tick=setInterval(()=>{ if(V.duoState===s) duoStatus('🔎 Searching for a duo… '+Math.round((performance.now()-s.t0)/1000)+'s'); },250);
   duoStatus('🔎 Searching for a duo…');
   try{
-    const cp=await duoTempPeer(s);
+    const cp=FB_CONFIG ? true : await duoTempPeer(s);             // with Firebase, asking slots doesn't need a PeerJS id
     let empty=-1;
     for(let i=0;i<QSLOTS && cp && !s.cancel;i++){
       const a=await duoAsk(s,i);
@@ -4513,12 +4609,14 @@ async function duoSearch(){
       V.duoWaiting=true;
       duo2Claim(s);                                                   // also let solo 2v2 queuers find us
       const oppHumans=()=>[...G.players.values()].filter(p=>!p.bot && p.team===1).length;
-      while(!s.cancel && V.duoState===s && V.duoWaiting && performance.now()-s.t0<DUO_WAIT && oppHumans()<2) await new Promise(r=>setTimeout(r,250));
+      while(!s.cancel && V.duoState===s && V.duoWaiting && (V.partyMode || performance.now()-s.t0<DUO_WAIT) && oppHumans()<2) await new Promise(r=>setTimeout(r,250));
       if(V.duoState!==s) return;                                   // matched (duoMatchReady took over)
     }
   }catch(e){ console.warn(e); }
   if(V.duoState!==s) return;
-  const cancelled=s.cancel; duoEnd();
+  const cancelled=s.cancel && !s.botsNow;
+  if(V.partyMode && !cancelled && !s.botsNow){ duoEnd(); duo2Close(s); duoStatus('😕 Couldn\'t reach the matchmaking servers on this Wi-Fi. Play vs bots, or try again.'); return; }
+  duoEnd();
   if(!cancelled) duoVsBots(); else duo2Close(s);
 }
 // we found a waiting duo: send my friend over, then go myself
@@ -4553,6 +4651,41 @@ function duoMatchReady(){
   RM=newMatch([...G.players.values()], 11, false, 'pro', true); G.phase='game'; broadcastRoster();
   V.banner={text:'RANKED 2v2', sub:'vs a real duo', c:'#ffd23f', t:2.4};
 }
+// ---------------------------------------------------------------- 🏆 ranked 2v2 team-up menu
+function p2Slot(p, emptyText, pulse){
+  const d=el('div','p2Slot'+(p?'':' empty'+(pulse?' pulse':'')));
+  if(!p){ d.append(el('div','p2Av','?'), el('div','p2Nm', emptyText)); return d; }
+  const av=el('div','p2Av', (String(p.name||'?').replace(/[^A-Za-z0-9]/g,'')[0]||'?').toUpperCase()); av.style.background=TEAM_COL[p.team]||'#999';
+  const who=el('div'), nm=el('div','p2Nm', p.name);
+  if(p.id===net.myId) nm.append(el('span','tg','YOU'));
+  const sub=el('div','p2Sub'); if(p.bot) sub.textContent='🤖 Ranked Rival'; else if(p.rr!==undefined) sub.append(rankBadge(p.rr));
+  who.append(nm, sub); d.append(av, who); return d;
+}
+function renderParty2(){
+  const isHost=net.role==='host', R=V.roster||[];
+  if(isHost && !V.duoState && R.some(p=>p.bot)){ for(const [id,r] of [...G.players]) if(r.bot) G.players.delete(id); broadcastRoster(); return; }   // back from a game: clear the rivals
+  $('#p2Code').textContent=net.code;
+  const myT=(R.find(p=>p.id===net.myId)||{team:0}).team, mine=R.filter(p=>p.team===myT), opp=R.filter(p=>p.team!==myT), searching=isHost ? !!V.duoState : !!V.p2Srch;
+  const m=$('#p2Mine'), o=$('#p2Opp'); m.innerHTML=''; o.innerHTML='';
+  for(let i=0;i<2;i++) m.append(p2Slot(mine[i], 'Waiting for your teammate…', !mine[i]));
+  for(let i=0;i<2;i++) o.append(p2Slot(opp[i], searching?'Searching…':'Open spot', searching && !opp[i]));
+  const mate=mine.filter(p=>!p.bot).length>=2, oppHum=opp.filter(p=>!p.bot).length;
+  $('#p2Btns').classList.toggle('hidden', !isHost);
+  $('#p2Stop').classList.toggle('hidden', !(isHost && searching));
+  const f=$('#p2Find'), b=$('#p2Bots');
+  f.disabled=!isHost || searching || !mate || (typeof Peer==='undefined' && !FB_CONFIG);
+  $('#p2FindSub').textContent = searching ? 'searching…' : mate ? '2 real players' : 'needs your teammate first';
+  b.disabled=!isHost;
+  $('#p2BotsSub').textContent = oppHum ? 'start now · rivals fill the open spot' : mate ? 'you two vs 2 Ranked Rivals' : 'you + a rival vs 2 rivals';
+  const st=$('#p2Status');
+  if(!isHost){ const h=R.find(p=>p.id==='host'); st.textContent = searching ? '🔎 '+(h?h.name:'Your teammate')+' is finding opponents…' : '⏳ Waiting for '+(h?h.name:'the host')+' to find opponents or pick bots'; }
+  else if(!searching) st.textContent = V.p2Msg || (mate ? '✅ Teammate in! Find two real opponents, or play the bots.' : '📨 Send your friend the code above.');
+}
+$('#p2Find').onclick=()=>{ V.p2Msg=''; duoSearch(); };
+$('#p2Bots').onclick=()=>{ if(net.role!=='host') return; const s=V.duoState; if(s){ s.botsNow=true; s.cancel=true; duoStatus('Starting…'); return; } V.p2Msg=''; duoVsBots(); };
+$('#p2Stop').onclick=()=>{ if(V.duoState){ V.duoState.cancel=true; duoStatus('Stopping…'); } };
+$('#p2Copy').onclick=()=>$('#copyBtn').onclick();
+$('#p2Leave').onclick=()=>{ try{ net.peer&&net.peer.destroy(); }catch(e){} location.href=location.pathname; };
 // no other duo: your duo vs whoever solo-queued into your game, Ranked Rivals fill the rest
 function duoVsBots(){
   V.q2Waiting=false;
