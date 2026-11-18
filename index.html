@@ -876,6 +876,12 @@ function movePlayer(M,p,dt){
     }
   }
   p.x=clamp(p.x+p.vx*dt, COURT_L+P_R, COURT_R-P_R);
+  // a joiner's own iPad decides where they are while they're just running around (no lag for them).
+  // The host follows it within reason; during moves, shots, stumbles etc. the host stays in charge.
+  if(!p.bot && p.authAt && ground && !locked && p.burstT<=0 && p.hesiT<=0 && p.stumbleT<=0 && p.downT<=0 && p.act!=='reach' && performance.now()-p.authAt<450){
+    const ex=p.authX-p.x, ez=p.authZ-p.z, d=hyp(ex,ez);
+    if(d<180){ const k=Math.min(1,dt*12); p.x+=ex*k; p.z+=ez*k; }
+  }
   p.z=clamp(p.z+p.vz*dt, -HALF_D+12, HALF_D-12);
   // "set" = planted on the floor; set defenders hold their ground and can take charges
   p.setT = (p.y<=0.01 && hyp(p.vx,p.vz)<80 && p.act==='' && p.burstT<=0) ? (p.setT||0)+dt : 0;
@@ -1450,7 +1456,9 @@ function relayDial(code, onAck){
 //  first choice: one fast websocket to a server we control, no public relays, no throttling.
 //  The public relays stay as a backup if the server can't be reached.
 // =====================================================================
-const SERVER_URL='wss://buckets-server.buckets19.workers.dev';   // our Cloudflare game server (server/worker.js)
+// Our Cloudflare server (server/worker.js) is blocked by the school's filter, so it's switched off.
+// Put 'wss://buckets-server.buckets19.workers.dev' back here to turn it on again.
+const SERVER_URL='';
 const SERVER_SNAP_MS=50;                                     // 20 snapshots/s through our server
 const srvRoom=code=>SERVER_URL+'/room/'+encodeURIComponent(PREFIX+code);
 function connObj(extra){ const c=Object.assign({open:true, _h:{}, lastIn:performance.now()}, extra);
@@ -1686,7 +1694,8 @@ function hostApply(id, d){
     return; }
   if(!RM) return;
   const p=findP(RM,id); if(!p) return;
-  if(d.t==='in'){ p.inX=clamp(+d.x||0,-1,1); p.inZ=clamp(+d.z||0,-1,1); }
+  if(d.t==='in'){ p.inX=clamp(+d.x||0,-1,1); p.inZ=clamp(+d.z||0,-1,1);
+    if(Number.isFinite(+d.px) && Number.isFinite(+d.pz)){ p.authX=clamp(+d.px,COURT_L+P_R,COURT_R-P_R); p.authZ=clamp(+d.pz,-HALF_D+12,HALF_D-12); p.authAt=performance.now(); } }
   else if(d.t==='a'){ if(d.d) p.wantA=true; else p.relA=clamp(+d.m||0,0,1.5); }
   else if(d.t==='b') p.wantB=true;
   else if(d.t==='c') p.wantC=true;
@@ -2781,8 +2790,11 @@ function clientSendInput(){
   if(net.role!=='client' || V.phase!=='game' || !net.hostConn || !net.hostConn.open) return;
   // stick snapped to 1/8 steps and rate-capped: a thumb on an iPad joystick changes every frame, and 60 msgs/s
   // through a relay piles up into SECONDS of delay. Direct: up to 30/s. Server/relay: up to 12/s. Keepalive every 250ms.
-  const a=ctl.axis(), x=Math.round(a.x*8)/8, z=Math.round(a.z*8)/8, key=x+','+z, now=performance.now(), gap=isRelay()?80:33;
-  if((key!==lastIn && now-lastInAt>=gap) || now-lastInAt>250){ net.hostConn.send({t:'in', x, z}); lastIn=key; lastInAt=now; }
+  const a=ctl.axis(), x=Math.round(a.x*8)/8, z=Math.round(a.z*8)/8, now=performance.now(), gap=isRelay()?80:33;
+  // also send where MY screen says I am, so the host follows me instead of the other way around
+  const P=V.pred, mine=P && P.blend>0.5 ? {px:Math.round(P.x), pz:Math.round(P.z)} : null;
+  const key=x+','+z+(mine?','+(mine.px>>2)+','+(mine.pz>>2):'');
+  if((key!==lastIn && now-lastInAt>=gap) || now-lastInAt>250){ net.hostConn.send({t:'in', x, z, ...(mine||{})}); lastIn=key; lastInAt=now; }
 }
 
 // =====================================================================
@@ -2881,8 +2893,11 @@ function predictMe(S, dt){
     else { P.vx=approach(P.vx, a.x*RUN*k, ACC*dt); P.vz=approach(P.vz, a.z*RUN*0.85*k, ACC*dt); }
     P.x=clamp(P.x+P.vx*dt, COURT_L+P_R, COURT_R-P_R); P.z=clamp(P.z+P.vz*dt, -HALF_D+12, HALF_D-12);
     // the host's snapshot is ~half a round trip old: aim that far ahead of it, snap if way off (collisions etc.)
-    const lead=clamp((V.rtt||80)/2000, .03, .3), ex=srv[Q.x]+srv[Q.vx]*lead-P.x, ez=srv[Q.z]+srv[Q.vz]*lead-P.z;
-    if(hyp(ex,ez)>110){ P.x+=ex; P.z+=ez; } else { const c=Math.min(1,dt*(P.bt>0?2:5)); P.x+=ex*c; P.z+=ez*c; }
+    // YOUR iPad is in charge of where you are (the host follows your position), so we don't pull you back
+    // toward the host's older copy. Only if the host really disagrees (you got bodied by a defender, etc.)
+    // do we ease over, and snap only if it's way off.
+    const lead=clamp((V.rtt||80)/2000, .03, .3), ex=srv[Q.x]+srv[Q.vx]*lead-P.x, ez=srv[Q.z]+srv[Q.vz]*lead-P.z, err=hyp(ex,ez);
+    if(err>170){ P.x+=ex; P.z+=ez; } else if(err>70){ const c=Math.min(1,dt*1.5); P.x+=ex*c; P.z+=ez*c; }
     P.blend=Math.min(1,P.blend+dt*8);   // fade prediction in so it never pops
   }
   const P=V.pred, q=S.p[i].slice();
@@ -4696,6 +4711,7 @@ function acctCode(){
   return k;
 }
 async function api(path, body, key){
+  if(!SERVER_URL) return null;                         // server switched off
   const ac=new AbortController(), to=setTimeout(()=>ac.abort(),7000);
   try{ const r=await fetch(API+path,{method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({key:key||acctCode(), ...body}), signal:ac.signal});
     return await r.json(); }catch(e){ return null; } finally{ clearTimeout(to); }
@@ -4756,6 +4772,7 @@ function renderAcct(){
 function renderAcctStatus(st){ st.textContent='☁️ Cloud backup: '+ago(+store('buckets-lastbk')||0); }
 function openAcct(){ $('#home').classList.add('hidden'); $('#acctPanel').classList.remove('hidden'); renderAcct(); }
 $('#acctBtn').onclick=openAcct;
+if(!SERVER_URL) $('#acctBtn').classList.add('hidden');   // accounts need our server
 $('#acctClose').onclick=()=>{ $('#acctPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); };
 // first backup shortly after opening the game
 setTimeout(()=>{ if(SERVER_URL && Date.now()-(+store('buckets-lastbk')||0)>60000) scheduleBackup(); }, 4000);
