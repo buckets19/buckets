@@ -173,6 +173,7 @@ function shotWindow(M,p){
   }
   p.contest=c;
   if(c<0.4) return 0;                                   // smothered: there is no green
+  if(dist>HEAVE_D) return 0.005;                         // past half court: a sliver of green (a few ms), super rare
   return clamp(w*0.8*Math.pow(c,1.5), 0.01, 0.16);       // tighter greens (2K-style); contests bite hard
 }
 // judge HOW the shot started: set shot, in rhythm off a move, on the run, or fading away
@@ -263,12 +264,12 @@ function releaseShot(M,p,m){
   if(w<=0 || Math.abs(e)>w){                                   // smothered (no green) or outside the green
     err = w<=0 ? e : e-Math.sign(e)*w; if(Math.abs(err)<0.004) err=0.004*(Math.sign(e)||pick([-1,1]));
     q = Math.abs(err)<0.06 ? (err<0?'Slightly early':'Slightly late') : (err<0?'Early':'Late'); }
-  // 2K-style: GREEN = bucket (past half court it's luck, ~22%). Missing the green is a CHANCE, not a sure miss:
+  // 2K-style: GREEN = bucket (past half court the green is tiny). Missing the green is a CHANCE, not a sure miss:
   // the closer to green, the more open you are, and the cleaner you got into the shot, the better the odds.
   const c0=(p.contest===undefined?1:p.contest), cm=1-c0, green=q==='perfect';
   const band = dist<220 ? 0 : dist<THREE_D ? 1 : dist<THREE_D+260 ? 2 : dist<HEAVE_D ? 3 : 4;   // layup · mid · three · deep · heave
   let made;
-  if(green) made = band<4 || Math.random()<0.22;
+  if(green) made = true;                                 // (past half court the green is a sliver, so this is rare)
   else {
     const ODDS=[[0.62,0.38,0.15],[0.40,0.18,0.05],[0.28,0.10,0.03],[0.14,0.05,0.01],[0.08,0.03,0.01]];   // slightly off · off · way off
     const ae=Math.abs(err); let pr=ODDS[band][ae<0.05?0:ae<0.12?1:2];
@@ -762,33 +763,33 @@ const STYLES={
 };
 const RIVALS=[
   // Bronze
-  {k:'timmy',   n:'Lil Timmy',     rr:90,   style:'shooter',  bio:'4\'9". Lives in the corner. Do NOT leave him open.'},
-  {k:'steve',   n:'Big Steve',     rr:170,  style:'bully',    bio:'Can\'t shoot. Doesn\'t need to.'},
-  {k:'waffles', n:'Waffles',       rr:250,  style:'troll',    bio:'Talks more than he scores. Usually.'},
+  {k:'timmy',   n:'Lil Timmy',     rr:120,   style:'shooter',  bio:'4\'9". Lives in the corner. Do NOT leave him open.'},
+  {k:'steve',   n:'Big Steve',     rr:225,  style:'bully',    bio:'Can\'t shoot. Doesn\'t need to.'},
+  {k:'waffles', n:'Waffles',       rr:325,  style:'troll',    bio:'Talks more than he scores. Usually.'},
   // Silver
-  {k:'sweaty',  n:'Sweaty D',      rr:350,  style:'lockdown', bio:'Picks you up full court. Every. Possession.'},
-  {k:'noodle',  n:'Lil Noodle',    rr:450,  style:'slasher',  bio:'Arms everywhere. Always ends up at the rim.'},
-  {k:'toaster', n:'Toaster',       rr:550,  style:'iso',      bio:'Hesi, hesi, hesi… then the stepback.'},
+  {k:'sweaty',  n:'Sweaty D',      rr:450,  style:'lockdown', bio:'Picks you up full court. Every. Possession.'},
+  {k:'noodle',  n:'Lil Noodle',    rr:570,  style:'slasher',  bio:'Arms everywhere. Always ends up at the rim.'},
+  {k:'toaster', n:'Toaster',       rr:690,  style:'iso',      bio:'Hesi, hesi, hesi… then the stepback.'},
   // Gold
-  {k:'ted',     n:'Coach Ted',     rr:650,  style:'shooter',  bio:'Old school. Bank shots. Somehow never misses.'},
-  {k:'brick',   n:'Mr. Brick',     rr:750,  style:'troll',    bio:'The name was true once. He fixed his jumper.'},
-  {k:'kyle',    n:'Tall Kyle',     rr:860,  style:'bully',    bio:'6\'8" in middle school. Owns the paint.'},
+  {k:'ted',     n:'Coach Ted',     rr:810,  style:'shooter',  bio:'Old school. Bank shots. Somehow never misses.'},
+  {k:'brick',   n:'Mr. Brick',     rr:930,  style:'troll',    bio:'The name was true once. He fixed his jumper.'},
+  {k:'kyle',    n:'Tall Kyle',     rr:1062,  style:'bully',    bio:'6\'8" in middle school. Owns the paint.'},
   // Platinum
-  {k:'faye',    n:'FadeAwayFaye',  rr:950,  style:'shooter',  bio:'Silky. If she\'s in rhythm, it\'s over.'},
-  {k:'ankles',  n:'AnkleTaker',    rr:1050, style:'iso',      bio:'Has a jar of everyone\'s ankles. Wants yours.'},
-  {k:'glove',   n:'The Glove',     rr:1150, style:'lockdown', bio:'Hasn\'t given up a clean look since 2019.'},
+  {k:'faye',    n:'FadeAwayFaye',  rr:1170,  style:'shooter',  bio:'Silky. If she\'s in rhythm, it\'s over.'},
+  {k:'ankles',  n:'AnkleTaker',    rr:1290, style:'iso',      bio:'Has a jar of everyone\'s ankles. Wants yours.'},
+  {k:'glove',   n:'The Glove',     rr:1410, style:'lockdown', bio:'Hasn\'t given up a clean look since 2019.'},
   // Diamond
-  {k:'dunk',    n:'DunkDaddy',     rr:1260, style:'bully',    bio:'Every drive ends with somebody on a poster.'},
-  {k:'ice',     n:'IceVeins',      rr:1360, style:'shooter',  bio:'Never blinks. Never misses late.'},
-  {k:'cruz',    n:'CrossoverCruz', rr:1460, style:'iso',      bio:'The spin move is a crime.'},
+  {k:'dunk',    n:'DunkDaddy',     rr:1542, style:'bully',    bio:'Every drive ends with somebody on a poster.'},
+  {k:'ice',     n:'IceVeins',      rr:1664, style:'shooter',  bio:'Never blinks. Never misses late.'},
+  {k:'cruz',    n:'CrossoverCruz', rr:1804, style:'iso',      bio:'The spin move is a crime.'},
   // Champion
-  {k:'nate',    n:'NoLookNate',    rr:1720, style:'slasher',  bio:'You\'ll look up and he\'s already scored.'},
-  {k:'kai',     n:'ClutchKai',     rr:1840, style:'troll',    bio:'Loud. Annoying. Unfortunately, really good.'},
-  {k:'lou',     n:'Lockdown Lou',  rr:2020, style:'lockdown', bio:'Ask anyone in Grandmaster. Nobody likes Lou.'},
+  {k:'nate',    n:'NoLookNate',    rr:2180, style:'slasher',  bio:'You\'ll look up and he\'s already scored.'},
+  {k:'kai',     n:'ClutchKai',     rr:2360, style:'troll',    bio:'Loud. Annoying. Unfortunately, really good.'},
+  {k:'lou',     n:'Lockdown Lou',  rr:2650, style:'lockdown', bio:'Ask anyone in Grandmaster. Nobody likes Lou.'},
   // Legend
-  {k:'splash',  n:'SplashKing',    rr:2300, style:'shooter',  bio:'The best shooter in the queue. He knows it.'},
-  {k:'ghost',   n:'Ghost',         rr:2550, style:'iso',      bio:'Nobody\'s seen his face. Everybody\'s seen his stepback.'},
-  {k:'goat',    n:'The GOAT',      rr:2850, style:'slasher',  bio:'Final boss of Buckets. Beat him and you\'re the best.'},
+  {k:'splash',  n:'SplashKing',    rr:3170, style:'shooter',  bio:'The best shooter in the queue. He knows it.'},
+  {k:'ghost',   n:'Ghost',         rr:3733, style:'iso',      bio:'Nobody\'s seen his face. Everybody\'s seen his stepback.'},
+  {k:'goat',    n:'The GOAT',      rr:4433, style:'slasher',  bio:'Final boss of Buckets. Beat him and you\'re the best.'},
 ];
 const RIVAL_BY={}; RIVALS.forEach((R,i)=>{ R.i=i; R.num=1+hash(R.k)%45; RIVAL_BY[R.k]=R; });
 function dayNum(){ return Math.floor(Date.now()/86400000); }
@@ -813,8 +814,8 @@ function rivalDiff(R){
 // @@DIFF-BEGIN (also copied by the game server)
 // bots get tougher as you climb: blend Rookie -> Pro -> Legend by rating
 function diffForRR(rr){
-  // Bronze-Silver: Scrub -> Rookie, Gold-Platinum: Rookie -> Pro, Diamond+: Pro -> Legend
-  const L=[[0,BOTDIFF.scrub],[650,BOTDIFF.rookie],[1500,BOTDIFF.pro],[2400,BOTDIFF.legend]], d={};
+  // Bronze-Silver: Scrub -> Rookie, Gold-Emerald: Rookie -> Pro, Master+: Pro -> Legend
+  const L=[[0,BOTDIFF.scrub],[810,BOTDIFF.rookie],[1860,BOTDIFF.pro],[3390,BOTDIFF.legend]], d={};
   let j=0; while(j<L.length-2 && rr>=L[j+1][0]) j++;
   const [r0,x]=L[j], [r1,y]=L[j+1], k=clamp((rr-r0)/(r1-r0),0,1);
   for(const key of ['shotSd','burst','dodge','slide','jump','steal','speed','cushion']) d[key]=lerp(x[key],y[key],k);
