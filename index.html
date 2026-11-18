@@ -71,6 +71,7 @@
   .adCur h5{margin:6px 0 2px;font-size:13px}
   .adItem{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;padding:2px 0}
   .btn.red{background:#ff5a4f;color:#fff}
+  .adVerdict{margin:0;font-weight:700;font-size:13px;background:#fff6c9;border:2px solid var(--ink);border-radius:10px;padding:6px 8px}
   /* ranked 2v2 team-up menu */
   #party2{width:min(620px,calc(100vw - 32px));text-align:center;background:linear-gradient(160deg,#fff6e5,#f3e8ff)}
   .p2Tag{display:inline-block;background:linear-gradient(135deg,#5b2a86,#8c46ff 50%,#c77dff);color:#fff;font-weight:800;letter-spacing:2px;font-size:13px;padding:4px 12px;border-radius:999px;border:3px solid var(--ink)}
@@ -562,6 +563,16 @@
     return p?new OW(u,p):new OW(u); };
   window.WebSocket.prototype=OW.prototype; window.WebSocket.CONNECTING=0; window.WebSocket.OPEN=1; window.WebSocket.CLOSING=2; window.WebSocket.CLOSED=3;
   console.warn('[buckets] simulating blocked network:', sim);
+})();
+// connection report: count websockets that open / fail / drop, per kind (google, relay, matchmaking)
+window.WSST={};
+(function(){ var OW=window.WebSocket; if(!OW) return;
+  var kind=function(u){ u=String(u); return /firebaseio\.com|firebasedatabase/.test(u)?'google':/peerjs/.test(u)?'match':/workers\.dev/.test(u)?'cf':'relay'; };
+  var W=function(u,p){ var s=p?new OW(u,p):new OW(u), k=kind(u), st=WSST[k]=WSST[k]||{open:0,fail:0,drop:0}, opened=false;
+    s.addEventListener('open',function(){ opened=true; st.open++; });
+    s.addEventListener('close',function(){ if(opened) st.drop++; else st.fail++; });
+    return s; };
+  W.prototype=OW.prototype; W.CONNECTING=0; W.OPEN=1; W.CLOSING=2; W.CLOSED=3; window.WebSocket=W;
 })();
 </script>
 <script>
@@ -1465,7 +1476,7 @@ function RelayHub(code, onConn){
   // every hosted game gets a random session id: two games that end up with the same code/slot can never mix
   const H={code, sid:Math.random().toString(36).slice(2,9), socks:[], conns:new Map(), sn:0, last:0, pend:[], dead:false};
   const tin=relayTopic(code,'h');
-  for(const R of RELAYS){
+  for(const R of (CTL_NORELAY ? [] : RELAYS)){          // admin "Google only": no background relay connections
     const s=relaySock(R); H.socks.push(s); s.sub(tin);
     s.onmsg=(t,str)=>{
       if(t!==tin) return;
@@ -1688,7 +1699,7 @@ function FbOut(ref, to){
   o.flush=()=>{ o.t=0; if(o.dead) return; const now=performance.now();
     while(o.tail.length && (now-o.tail[0].at>1000 || o.tail.length>30)) o.tail.shift();
     const es=o.tail.map(x=>x.e).concat([...o.lw.values()]).sort((a,b)=>a[0]-b[0]); o.lw.clear();
-    try{ ref.set(JSON.stringify({i:o.i, h:to||'', e:es})); }catch(e){} };
+    const t0=performance.now(); try{ ref.set(JSON.stringify({i:o.i, h:to||'', e:es}), err=>{ if(!err) diagAdd('leg', performance.now()-t0); }); }catch(e){} };
   o.stop=()=>{ o.dead=true; };
   return o;
 }
@@ -1882,6 +1893,31 @@ function liveTick(){
 setInterval(liveTick, 30000);
 addEventListener('pagehide', ()=>{ const u=fbURL(); if(u && liveTick.was) try{ fetch(u+'/live/'+LIVE_ID+'.json',{method:'DELETE', keepalive:true}); }catch(e){} });
 
+// =====================================================================
+//  📶 CONNECTION REPORT. During online games each iPad keeps a few numbers and sends a tiny summary
+//  every 30s, so the admin can see what school Wi-Fi is really doing:
+//   leg   = this iPad -> Google -> back (its own Wi-Fi/VPN trip)      ping = joiner <-> host, the in-game number
+//   stall = the game froze on this iPad for 150ms+ (slow iPad / too much on screen)
+//   ws    = websockets opened / failed / dropped (does Google's fast connection get through the filter?)
+// =====================================================================
+const DIAG={id:Math.random().toString(36).slice(2,10), leg:[], ping:[], stall:0, frames:0, t0:0};
+function diagAdd(k,v){ const a=DIAG[k]; if(!a) return; a.push(Math.round(v)); if(a.length>600) a.splice(0,a.length-600); }
+(function stallWatch(){ let last=performance.now();
+  const f=now=>{ if(document.visibilityState==='visible' && V.inRoom && !V.practice){ DIAG.frames++; if(now-last>150) DIAG.stall++; } last=now; requestAnimationFrame(f); };
+  requestAnimationFrame(f); })();
+function pct(a,q){ if(!a.length) return null; const b=[...a].sort((x,y)=>x-y); return b[Math.min(b.length-1, Math.floor(q*b.length))]; }
+function diagDay(){ const d=new Date(); return d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0'); }
+function diagSend(){
+  const u=fbURL(); if(!u || !V.inRoom || V.practice || !net.role) return;
+  if(!DIAG.t0) DIAG.t0=Date.now();
+  const sum=a=>a.length?{p50:pct(a,.5), p90:pct(a,.9), max:Math.max(...a), n:a.length, over300:a.filter(x=>x>300).length}:null;
+  const via = net.role==='host' ? [...new Set([...net.conns.values()].map(c=>c.isFire?'google':c.isRelay?'relay':'direct'))].join('+')||'none' : (net.via==='server'?'google':isRelay()?'relay':'direct');
+  const rec={r:net.role, via, m:G.ranked2||V.ranked2?'ranked2v2':V.queueMatch?'ranked':'friends', leg:sum(DIAG.leg), ping:sum(DIAG.ping), stall:DIAG.stall, frames:DIAG.frames,
+    ws:window.WSST||{}, mins:Math.round((Date.now()-DIAG.t0)/60000), ua:/iPad|Macintosh/.test(navigator.userAgent)&&'ontouchend' in document?'iPad':/iPhone/.test(navigator.userAgent)?'iPhone':'other', t:{'.sv':'timestamp'}};
+  fetch(u+'/rooms/_diag'+diagDay()+'/'+DIAG.id+'.json',{method:'PUT', body:JSON.stringify(rec)}).catch(()=>{});
+}
+setInterval(diagSend, 30000);
+addEventListener('pagehide', diagSend);
 // ---- connect to a room. Direct WebRTC and every relay at once: direct wins if it opens quickly,
 //      otherwise the two FASTEST relays the host answered on. Resolves {conn, peer, id, via} or {fail}.
 function dial(code, o={}){
@@ -2067,7 +2103,7 @@ function onClientData(d){
   else if(d.t==='banned') fatal('🚫 This name can\'t play online right now.');
   else if(d.t==='roster') applyRoster(d);
   else if(d.t==='ev') handleEvent(d.e,false);
-  else if(d.t==='pong'){ const r=performance.now()-(+d.ts||0); if(r>0 && r<5000) V.rtt=V.rtt?lerp(V.rtt,r,.3):r; }
+  else if(d.t==='pong'){ const r=performance.now()-(+d.ts||0); if(r>0 && r<5000){ V.rtt=V.rtt?lerp(V.rtt,r,.3):r; diagAdd('ping', r); } }
   else if(d.t==='migrate') migrateTo(String(d.code||'').slice(0,8), d.tag);
   else if(d.t==='s'){
     d.rt=performance.now(); if(V.lastSnap && V.lastSnap.rt && !d.rs){ const g=Math.min(400,d.rt-V.lastSnap.rt); V.gapA=V.gapA?lerp(V.gapA,g,.06):g; V.gapJ=V.gapJ!==undefined?lerp(V.gapJ,Math.abs(g-V.gapA),.06):10; }
@@ -4952,9 +4988,10 @@ async function admSave(patch, okMsg){
   if(okMsg) toast(okMsg);
   await ctlFetch(); renderAdmin(); return true;
 }
+async function admDiag(){ const u=fbURL(); if(!u) return; try{ const r=await fetch(u+'/rooms/_diag'+diagDay()+'.json',{cache:'no-store'}); if(r.ok) ADM.diag=await r.json()||{}; }catch(e){} }
 async function admLive(){ const u=fbURL(); if(!u) return; try{ const r=await fetch(u+'/live.json',{cache:'no-store'}); if(r.ok){ ADM.live=await r.json()||{}; ADM.liveAt=Date.now(); } }catch(e){} }
 function openAdmin(){ if(!ADM.k) return; $('#home').classList.add('hidden'); $('#shop').classList.add('hidden'); V.shopOpen=false; $('#adminPanel').classList.remove('hidden'); renderAdmin();
-  ctlFetch().then(()=>admLive()).then(renderAdmin); if(!LB.rows && !LB.loading) lbFetch().then(renderAdmin); }
+  ctlFetch().then(()=>Promise.all([admLive(), admDiag()])).then(renderAdmin); if(!LB.rows && !LB.loading) lbFetch().then(renderAdmin); }
 function closeAdmin(){ $('#adminPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); }
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 function admSeg(opts, cur, on){ const r=el('div','adSeg'); for(const [v,label] of opts){ const b=el('button','btn tiny'+(String(cur)===String(v)?' on':''), label); b.onclick=()=>on(v); r.append(b); } return r; }
@@ -4976,6 +5013,39 @@ function renderAdmin(){
     if(rows.length) s.append(ul);
     s.append(el('p','adSub', 'Settings checked '+(CTL_AT?ago(CTL_AT):'never')+' · Fast server (Google): '+(fbURL()?'set up ✅':'❌ not set up')+' · Free plan: 100 players at once, 10 GB/month'));
     const rf=el('button','btn tiny','🔄 Refresh'); rf.onclick=async()=>{ rf.disabled=true; await ctlFetch(); await admLive(); renderAdmin(); }; s.append(rf);
+    B.append(s); }
+  // ---- 📶 connection report (today, from real iPads)
+  { const s=admSec('📶 CONNECTION REPORT (TODAY)', 'Real numbers from iPads that played online today. Updates every 30s while people play.');
+    const D=ADM.diag, recs=D?Object.values(D).filter(x=>x && typeof x==='object'):[];
+    if(!D) s.append(el('p','adSub','Loading…'));
+    else if(!recs.length) s.append(el('p','adSub','No online games reported yet today.'));
+    else {
+      const med=a=>{ a=a.filter(x=>x!=null).sort((x,y)=>x-y); return a.length?a[a.length>>1]:null; };
+      const hosts=recs.filter(r=>r.r==='host'), joins=recs.filter(r=>r.r==='client');
+      const legH=med(hosts.map(r=>r.leg&&r.leg.p50)), legJ=med(joins.map(r=>r.leg&&r.leg.p50)), legJ90=med(joins.map(r=>r.leg&&r.leg.p90));
+      const pg=med(joins.map(r=>r.ping&&r.ping.p50)), pg90=med(joins.map(r=>r.ping&&r.ping.p90));
+      const spikes=joins.reduce((a,r)=>a+(r.ping?r.ping.over300:0),0), pings=joins.reduce((a,r)=>a+(r.ping?r.ping.n:0),0);
+      const stallRate=r=>r.frames?r.stall/r.frames*100:0;
+      const g={open:0,fail:0,drop:0}; for(const r of recs){ const w=(r.ws||{}).google; if(w){ g.open+=w.open||0; g.fail+=w.fail||0; g.drop+=w.drop||0; } }
+      const st=el('div','adStat'); st.append(el('b','', recs.length+' iPads'), el('span','', hosts.length+' hosts · '+joins.length+' joiners'));
+      s.append(st);
+      const ul=el('ul','adList');
+      const L=(t)=>ul.append(el('li','',t));
+      L('🎮 In-game ping (blue side): usually '+(pg??'—')+'ms, bad moments '+(pg90??'—')+'ms · '+(pings?Math.round(spikes/pings*100):0)+'% of pings over 300ms');
+      L('📡 Host iPad → Google: '+(legH??'—')+'ms   ·   Joiner iPad → Google: '+(legJ??'—')+'ms (bad moments '+(legJ90??'—')+'ms)');
+      L('🔌 Google fast connection: '+g.open+' opened, '+g.fail+' blocked/failed, '+g.drop+' dropped');
+      L('🧊 iPad freezes (150ms+): hosts '+(med(hosts.map(stallRate))??0).toFixed(1)+'% of frames · joiners '+(med(joins.map(stallRate))??0).toFixed(1)+'%');
+      const vias={}; for(const r of joins) vias[r.via]=(vias[r.via]||0)+1; L('🛣️ Joiners connected via: '+Object.entries(vias).map(([k,n])=>k+' '+n).join(' · '));
+      s.append(ul);
+      // plain-English verdict
+      let v='';
+      if(g.fail>g.open) v='Google\'s fast connection is being blocked by the filter, so it falls back to a slow mode. That alone explains the lag.';
+      else if(legJ!=null && legH!=null && pg!=null && pg>(legJ+legH)*1.6) v='Each iPad\'s own trip to Google is OK, but the in-game ping is much bigger. The host iPads are slowing things down (freezing or overloaded).';
+      else if(legJ90!=null && legJ90>250) v='The school Wi-Fi/VPN itself is slow and spiky (each iPad\'s own trip to Google has bad moments). A game server that runs the game would halve this and make it fair, but can\'t remove the Wi-Fi spikes.';
+      else if(pg!=null) v='Lag mostly comes from going through Google twice (joiner → Google → host → Google → joiner). A game server that runs the game would cut that in half.';
+      if(v) s.append(el('p','adVerdict','💡 '+v));
+    }
+    const rf=el('button','btn tiny','🔄 Refresh report'); rf.onclick=async()=>{ await admDiag(); renderAdmin(); }; s.append(rf);
     B.append(s); }
   // ---- 🌐 multiplayer
   { const s=admSec('🌐 MULTIPLAYER', 'Every iPad follows these within about a minute.');
