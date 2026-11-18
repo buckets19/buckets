@@ -77,6 +77,7 @@ function newMatch(roster, toWin, demo, diff, winBy2){
   const cnt=[0,0];
   for(const r of roster) M.players.push(mkPlayer(r, cnt[r.team]++));
   M.gp=[false,false];
+  M.ones = !demo && cnt[0]===1 && cnt[1]===1;                          // 1v1: 1s and 2s (longer games)
   setupPossession(M, Math.random()<0.5?0:1, 2.2);
   if(!demo) pushEv(M,{k:'tip'});
   return M;
@@ -211,7 +212,7 @@ function handleActions(M,p){
         pushEv(M,{k:'dunkgo', id:p.id});
       } else {
         [p.shotForm, p.formTag]=shotFormAt(p,v); if(v.d<220) p.formTag=""; p.rhythmT=0;
-        p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.25; p.vz*=0.25; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.hesiT=0; p.meterWin=shotWindow(M,p);
+        p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.4; p.vz*=0.4; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.hesiT=0; p.meterWin=shotWindow(M,p);
       }
     } else if(!has && ground && p.act===''){ p.act='jump'; p.vy=JUMP_V; p.vx*=0.6; p.vz*=0.6; }
   }
@@ -458,9 +459,9 @@ function collidePlayers(M){
       const toward=h.vx*sx+h.vz*sz;
       if(toward>60 && df.y<5 && df.downT<=0){
         // bulldoze a planted defender = offensive foul (not under the rim)
-        if(M.phase==='play' && df.setT>0.35 && (h.burstT>0 || toward>330) && hyp(df.x-defendHoop(df.team).cx, df.z)>65 && M.time-(h.lastBump||0)>0.5){
+        if(M.phase==='play' && df.setT>0.6 && h.burstT>0 && toward>300 && hyp(df.x-defendHoop(df.team).cx, df.z)>65 && M.time-(h.lastBump||0)>0.5){
           h.lastBump=M.time;
-          if(Math.random()<0.4){ df.downT=0.9; df.stumbleT=0.9; pushEv(M,{k:'charge', id:df.id, by:h.id}); turnover(M, df.team, 'CHARGE'); return; }
+          if(Math.random()<0.25){ df.downT=0.9; df.stumbleT=0.9; pushEv(M,{k:'charge', id:df.id, by:h.id}); turnover(M, df.team, 'CHARGE'); return; }
         }
         // body up: a set defender holds their ground and slows the driver down
         if(h.burstT<=0 || df.setT>0.3){
@@ -588,11 +589,12 @@ function rimTouch(M,kind,v){
 }
 function scored(M,h){
   const b=M.ball, team = h.i===1?0:1;
-  const pts = (b.st==='shot' && b.shotTeam===team && b.pts3) ? 3 : 2;
+  const three = b.st==='shot' && b.shotTeam===team && b.pts3;
+  const pts = M.ones ? (three ? 2 : 1) : (three ? 3 : 2);              // 1v1 games are played by 1s and 2s
   M.score[team]+=pts;
   const sh = b.st==='shot' ? findP(M,b.shooter) : null;
   if(sh && sh.team===team) sh.pts+=pts;
-  pushEv(M,{k:'score', team, pts, swish:b.st==='shot'&&!b.touchedRim&&!b.dunk, dunk:!!b.dunk, by:sh&&sh.team===team?sh.id:null, hx:h.cx, post:b.dunk?b.post:null, fire:!!(sh&&sh.fire)});
+  pushEv(M,{k:'score', team, pts, three:!!three, swish:b.st==='shot'&&!b.touchedRim&&!b.dunk, dunk:!!b.dunk, by:sh&&sh.team===team?sh.id:null, hx:h.cx, post:b.dunk?b.post:null, fire:!!(sh&&sh.fire)});
   if(sh && sh.team===team){
     sh.streak++; sh.miss=0;
     if(sh.cold){ sh.cold=false; pushEv(M,{k:'thaw', id:sh.id}); }

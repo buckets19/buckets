@@ -71,6 +71,21 @@
   .adCur h5{margin:6px 0 2px;font-size:13px}
   .adItem{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;padding:2px 0}
   .btn.red{background:#ff5a4f;color:#fff}
+  .pbadge{display:inline-block;margin-left:6px;font-size:10px;font-weight:900;color:#fff;background:var(--tc,#555);border:2px solid var(--ink);border-radius:7px;padding:0 5px;vertical-align:middle;white-space:nowrap}
+  .seasonCard{background:linear-gradient(135deg,#1b1530,#3b2a6b);color:#fff;border:3px solid var(--ink);border-radius:16px;padding:10px 12px;margin:0 0 10px;text-align:left}
+  .seasonCard .scTop{display:flex;justify-content:space-between;align-items:center;font-size:15px;letter-spacing:1px}
+  .seasonCard .scTop span{font-size:12px;opacity:.85}
+  .seasonCard .scBest{margin:6px 0;font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+  .seasonCard .scRoad{display:flex;gap:6px;justify-content:space-between}
+  .seasonCard .scStep{flex:1;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.15);border-radius:10px;padding:4px 2px;display:flex;flex-direction:column;align-items:center;font-size:10px;opacity:.6}
+  .seasonCard .scStep.on{opacity:1;border-color:#ffd23f;background:rgba(255,210,63,.18)}
+  .seasonCard .scIcon{font-size:20px}
+  .seasonCard .how{color:#fff;opacity:.7;margin-top:6px}
+  #seasonPop{width:min(420px,calc(100vw - 32px));text-align:center;z-index:30;background:linear-gradient(160deg,#fff6e5,#ffe9a8)}
+  #seasonPop .spTop{font-size:26px;font-weight:900;letter-spacing:2px} #seasonPop .spSub{font-size:13px;opacity:.7;margin:4px 0}
+  #seasonPop .spList{display:flex;flex-direction:column;gap:6px;margin:10px 0} #seasonPop .spItem{background:#fff;border:2px solid var(--ink);border-radius:10px;padding:6px;font-weight:800}
+  .evBox{text-align:left} .evLine{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;font-size:13px}
+  .evBar{flex:1;min-width:80px;height:10px;background:rgba(255,255,255,.3);border-radius:6px;overflow:hidden} .evFill{height:100%;background:#ffd23f}
   .adVerdict{margin:0;font-weight:700;font-size:13px;background:#fff6c9;border:2px solid var(--ink);border-radius:10px;padding:6px 8px}
   /* ranked 2v2 team-up menu */
   #party2{width:min(620px,calc(100vw - 32px));text-align:center;background:linear-gradient(160deg,#fff6e5,#f3e8ff)}
@@ -502,9 +517,11 @@
   <div class="row" style="justify-content:center"><button id="p2Stop" class="btn tiny hidden">Stop searching</button><button id="p2Leave" class="btn tiny ghost">Leave</button></div>
   <div id="p2Net" class="p2Net"></div>
 </div>
+<div id="seasonPop" class="panel center hidden"></div>
 <div id="adminPanel" class="panel center hidden"><div class="adHead"><h2>🛠️ MASTER CONTROLS</h2><button id="adminClose" class="btn tiny">✕ Close</button></div><div id="adminBody"></div></div>
 <div id="rankedPanel" class="panel hidden">
   <div class="head"><h2>🏆 Ranked</h2><span class="coinPill">💰 <span class="coinCount">0</span></span></div>
+  <div id="seasonCard" class="seasonCard"></div>
   <div id="rankCard"></div>
   <div class="grandRow" style="margin-top:6px"><button id="rankedPlay" class="grandBtn gR1"><span class="gi">🏆</span><b>RANKED 1v1</b><small>Find a match</small></button><button id="rankedPlay2" class="grandBtn gR2"><span class="gi">👥</span><b>RANKED 2v2</b><small>Team up with a friend</small></button></div>
   <div class="row"><p id="rankedStatus" class="hidden" style="flex:1;font-weight:700;margin:6px 0"></p><button id="rankedCancel" class="btn tiny hidden">Cancel</button></div>
@@ -658,6 +675,7 @@ function newMatch(roster, toWin, demo, diff, winBy2){
   const cnt=[0,0];
   for(const r of roster) M.players.push(mkPlayer(r, cnt[r.team]++));
   M.gp=[false,false];
+  M.ones = !demo && cnt[0]===1 && cnt[1]===1;                          // 1v1: 1s and 2s (longer games)
   setupPossession(M, Math.random()<0.5?0:1, 2.2);
   if(!demo) pushEv(M,{k:'tip'});
   return M;
@@ -792,7 +810,7 @@ function handleActions(M,p){
         pushEv(M,{k:'dunkgo', id:p.id});
       } else {
         [p.shotForm, p.formTag]=shotFormAt(p,v); if(v.d<220) p.formTag=""; p.rhythmT=0;
-        p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.25; p.vz*=0.25; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.hesiT=0; p.meterWin=shotWindow(M,p);
+        p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.4; p.vz*=0.4; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.hesiT=0; p.meterWin=shotWindow(M,p);
       }
     } else if(!has && ground && p.act===''){ p.act='jump'; p.vy=JUMP_V; p.vx*=0.6; p.vz*=0.6; }
   }
@@ -1039,9 +1057,9 @@ function collidePlayers(M){
       const toward=h.vx*sx+h.vz*sz;
       if(toward>60 && df.y<5 && df.downT<=0){
         // bulldoze a planted defender = offensive foul (not under the rim)
-        if(M.phase==='play' && df.setT>0.35 && (h.burstT>0 || toward>330) && hyp(df.x-defendHoop(df.team).cx, df.z)>65 && M.time-(h.lastBump||0)>0.5){
+        if(M.phase==='play' && df.setT>0.6 && h.burstT>0 && toward>300 && hyp(df.x-defendHoop(df.team).cx, df.z)>65 && M.time-(h.lastBump||0)>0.5){
           h.lastBump=M.time;
-          if(Math.random()<0.4){ df.downT=0.9; df.stumbleT=0.9; pushEv(M,{k:'charge', id:df.id, by:h.id}); turnover(M, df.team, 'CHARGE'); return; }
+          if(Math.random()<0.25){ df.downT=0.9; df.stumbleT=0.9; pushEv(M,{k:'charge', id:df.id, by:h.id}); turnover(M, df.team, 'CHARGE'); return; }
         }
         // body up: a set defender holds their ground and slows the driver down
         if(h.burstT<=0 || df.setT>0.3){
@@ -1169,11 +1187,12 @@ function rimTouch(M,kind,v){
 }
 function scored(M,h){
   const b=M.ball, team = h.i===1?0:1;
-  const pts = (b.st==='shot' && b.shotTeam===team && b.pts3) ? 3 : 2;
+  const three = b.st==='shot' && b.shotTeam===team && b.pts3;
+  const pts = M.ones ? (three ? 2 : 1) : (three ? 3 : 2);              // 1v1 games are played by 1s and 2s
   M.score[team]+=pts;
   const sh = b.st==='shot' ? findP(M,b.shooter) : null;
   if(sh && sh.team===team) sh.pts+=pts;
-  pushEv(M,{k:'score', team, pts, swish:b.st==='shot'&&!b.touchedRim&&!b.dunk, dunk:!!b.dunk, by:sh&&sh.team===team?sh.id:null, hx:h.cx, post:b.dunk?b.post:null, fire:!!(sh&&sh.fire)});
+  pushEv(M,{k:'score', team, pts, three:!!three, swish:b.st==='shot'&&!b.touchedRim&&!b.dunk, dunk:!!b.dunk, by:sh&&sh.team===team?sh.id:null, hx:h.cx, post:b.dunk?b.post:null, fire:!!(sh&&sh.fire)});
   if(sh && sh.team===team){
     sh.streak++; sh.miss=0;
     if(sh.cold){ sh.cold=false; pushEv(M,{k:'thaw', id:sh.id}); }
@@ -1912,6 +1931,16 @@ function ctlBanner(){
   if(CTL.mp==='off') add(CTL.offMsg || '🔴 Online play is off right now. Practice and Ranked vs bots still work!', '#ff8a80');
   if(CTL.msg) add(CTL.msg, CTL.msgC||'#ffd23f');
   if(+CTL.mult>1) add('🎉 '+(CTL.multLbl || (CTL.mult+'x COINS!'))+' · every coin you earn is x'+CTL.mult, '#9bf6a1');
+  const ev=typeof eventNow==='function' && eventNow();
+  if(ev){ const box=el('div','ctlMsg evBox'); box.style.background='linear-gradient(90deg,#c77dff,#7b5cff)'; box.style.color='#fff';
+    const what = ev.kind==='rr2' ? ' · ⚡ 2x RR on ranked wins' : ev.kind==='coins2' ? ' · 💰 2x coins' : '';
+    box.append(el('b','', '🎪 '+String(ev.name||'EVENT').slice(0,40)+what), el('small','', ' · ends in '+ago2(+ev.end-Date.now())));
+    if(ev.goal && ev.goal.n){ const pr=evProg(), done=pr.n>=ev.goal.n, rw=ev.reward||{}, it=rw.item&&itemOf('trail',rw.item);
+      const line=el('div','evLine'); line.append(el('span','', (ev.goal.t==='win'?'Win ':'Play ')+ev.goal.n+' ranked game'+(ev.goal.n>1?'s':'')+' → '+(+rw.coins?'💰'+rw.coins+' ':'')+(it?it.icon+' '+it.name:'')));
+      const bar=el('div','evBar'), fill=el('div','evFill'); fill.style.width=Math.round(pr.n/ev.goal.n*100)+'%'; bar.append(fill); line.append(bar, el('small','', pr.claimed?'✅ claimed':pr.n+'/'+ev.goal.n));
+      if(done && !pr.claimed){ const cl=el('button','btn tiny yellow','🎁 Claim'); cl.onclick=eventClaim; line.append(cl); }
+      box.append(line); }
+    b.append(box); }
   b.classList.toggle('hidden', !b.children.length);
 }
 // 🎁 gifts from the admin (to me, or to everyone '*'): each one is applied once per device
@@ -2222,7 +2251,7 @@ function onHostData(conn,d){
   }
   hostApply(id, d);
 }
-function setGear(r, d){ for(const k in KINDS) if(typeof d[k]==='string' && KINDS[k].list.some(i=>i.id===d[k])) r[k]=d[k]; if(parseLook(d.lk)) r.lk=d.lk; }
+function setGear(r, d){ for(const k in KINDS) if(typeof d[k]==='string' && KINDS[k].list.some(i=>i.id===d[k])) r[k]=d[k]; if(parseLook(d.lk)) r.lk=d.lk; if(typeof d.bdg==='string' && /^S\d{1,3}:\d{1,2}$/.test(d.bdg)) r.bdg=d.bdg; }
 function hostApply(id, d){
   if(d.t==='gear'){ const r=G.players.get(id); if(r){ setGear(r,d); broadcastRoster(); } return; }
   if(d.t==='team'){ if(G.phase!=='lobby') return; const r=G.players.get(id); if(!r) return; const t=1-r.team; if(teamCount(t)<MAX_PER_TEAM){ r.team=t; broadcastRoster(); } return; }
@@ -2543,6 +2572,15 @@ TRAILS.push(
   {id:'ghostT',    r:'epic',     s:'spooky', name:'Ghost Trail',       icon:'👻', desc:'Wispy ghosts follow the ball.'},
   {id:'hellT',     r:'mythic',   s:'spooky', name:'Hellfire Trail',    icon:'😈', desc:'Dark red fire and embers.'},
 );
+// 🗓️ season rewards + 🎪 event rewards: exclusive, earned only (never in crates)
+TRAILS.push(
+  {id:'szgold',    r:'exclusive',s:'season', noCrate:1, name:'Gold Rush',      icon:'🥇', desc:'SEASON REWARD · Gold or higher. Glittering gold dust.'},
+  {id:'szdiamond', r:'exclusive',s:'season', noCrate:1, name:'Diamond Cut',    icon:'💎', desc:'SEASON REWARD · Diamond or higher. Prism light and diamonds.'},
+  {id:'szcrown',   r:'exclusive',s:'season', noCrate:1, name:'Royal Crown',    icon:'👑', desc:'SEASON REWARD · Champion or higher. Red and gold with crowns.'},
+  {id:'szgoat',    r:'secret',   s:'season', noCrate:1, name:'G.O.A.T.',       icon:'🐐', desc:'SEASON REWARD · GOAT only. Black and gold. Everybody knows.'},
+  {id:'evspark',   r:'exclusive',s:'event',  noCrate:1, name:'Event Spark',    icon:'⚡', desc:'EVENT REWARD · Crackling electric gold.'},
+  {id:'evaurora',  r:'exclusive',s:'event',  noCrate:1, name:'Aurora',         icon:'🌌', desc:'EVENT REWARD · Northern lights follow the ball.'},
+);
 const KINDS={
   cel:  {label:'Cellys',     icon:'🎉', list:CELLYS, def:'flex'},
   gfx:  {label:'Green FX',   icon:'🟢', list:GFX,    def:'basic'},
@@ -2605,9 +2643,9 @@ for(const k in KINDS){
   if(!SAVE.owned[k].includes(SAVE[k])) SAVE[k]=KINDS[k].def;
 }
 SAVE.stats=SAVE.stats||{games:0,wins:0,pts:0,greens:0};
-function myGear(){ const g={}; for(const k in KINDS) g[k]=SAVE[k]; if(SAVE.look) g.lk=SAVE.look; return g; }
+function myGear(){ const g={}; for(const k in KINDS) g[k]=SAVE[k]; if(SAVE.look) g.lk=SAVE.look; if(SAVE.badge) g.bdg='S'+SAVE.badge.s+':'+SAVE.badge.ti; return g; }
 function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }catch(e){} updateCoinUI(); if(typeof scheduleBackup==='function') try{ scheduleBackup(); }catch(e){} }
-function earn(n, why){ if(!V.inRoom || V.phase!=='game') return; const cm=clamp(Math.round(+CTL.mult||1),1,5); SAVE.coins+=n*cm; persist(); V.coinPops.push({n:n*cm, why, t:1.8});   // 🎉 admin coin events
+function earn(n, why){ if(!V.inRoom || V.phase!=='game') return; const evc=eventNow(), cm=clamp(Math.round(Math.max(+CTL.mult||1, evc&&evc.kind==='coins2'?2:1)),1,5); SAVE.coins+=n*cm; persist(); V.coinPops.push({n:n*cm, why, t:1.8});   // 🎉 admin coin events
   if(typeof questProgress==='function'){ questProgress(why==='TIP'?'BLOCK_TIP':why); if(why==='DUNK'||why==='THREE'||why==='BUCKET') questProgress('PTS', n/2); if(why==='THREE'||why==='DUNK') questProgress('BUCKET_ANY'); } }
 V.coinPops=[]; V.rings=[]; V.bolts=[]; V.celly=null; V.beams=[]; V.arcs=[]; V.timers=[]; V.scr=[]; V.vortex=null;
 
@@ -3079,7 +3117,7 @@ function renderLobby(){
     const ul=$('#team'+t); ul.innerHTML='';
     for(const p of V.roster.filter(p=>p.team===t)){
       const li=document.createElement('li');
-      const nmS=document.createElement('span'); nmS.textContent='#'+p.num+' '+p.name; li.append(nmS); { const tt=titleEl(p); if(tt) li.append(tt); }
+      const nmS=document.createElement('span'); nmS.textContent='#'+p.num+' '+p.name; li.append(nmS); { const bg=badgeEl(p); if(bg) li.append(bg); const tt=titleEl(p); if(tt) li.append(tt); }
       if(!p.bot && p.rr!==undefined) li.append(rankBadge(p.rr));
       const gear=document.createElement('span'); gear.title='Celly / Green FX'; gear.textContent=((CELLYS.find(c=>c.id===p.cel)||{}).icon||'')+((GFX.find(c=>c.id===p.gfx)||{}).icon||''); li.append(gear);
       const tg = p.id===net.myId ? 'YOU' : p.id==='host' ? 'HOST' : p.bot ? 'BOT' : '';
@@ -3195,22 +3233,22 @@ function handleEvent(e, demo){
     case 'score':{
       const label = e.dunk?'DUNK!':e.swish?'SWISH!':'+'+e.pts;
       floatText(label, e.hx, RIM_Y+95, 0, TEAM_COL[e.team], e.dunk?48:38, 1.5);
-      if(!e.dunk && e.pts===3) floatText('+3', e.hx, RIM_Y+150, 0, '#ffd23f', 32, 1.5);
+      if(!e.dunk && (e.three||e.pts===3)) floatText('+'+e.pts, e.hx, RIM_Y+150, 0, '#ffd23f', 32, 1.5);
       V.net[e.hx<900?0:1]=0.6; V.pop[e.team]=1; V.lastScoreTeam=e.team;
       burstParts(e.hx, RIM_Y-20, 0, 18, TEAM_COL[e.team], 260);
       V.cheer=1.5;
       if(e.dunk){ V.shake=14; V.flash=Math.max(V.flash,.45); V.zoom=.09; V.rimShake[e.hx<900?0:1]=.7; camFlashes(30); }
-      else if(e.pts===3){ V.zoom=.05; camFlashes(14); }
+      else if(e.three||e.pts===3){ V.zoom=.05; camFlashes(14); }
       if(e.by){ const inf=infoOf(e.by); V.celly={id:e.by, kind:(inf&&inf.cel)||'flex', t:0}; }
       if(!demo){
         const n=nm(e.by);
         if(e.dunk) say(e.post?'post':'dunk',{n, v:nm(e.post)});
-        else if(e.pts===3) say('three',{n});
+        else if(e.three||e.pts===3) say('three',{n});
         else if(e.swish) say('swish',{n});
         else if(Math.random()<.5) say('layup',{n});
-        if(mine(e.by)){ earn(e.pts*2, e.dunk?'DUNK':e.pts===3?'THREE':'BUCKET'); SAVE.stats.pts+=e.pts; persist(); }
+        if(mine(e.by)){ const th=e.three||e.pts===3; earn((th?3:2)*2, e.dunk?'DUNK':th?'THREE':'BUCKET'); SAVE.stats.pts+=e.pts; persist(); }
       }
-      if(loud){ sfx('swish'); sfx('cheer', e.dunk||e.pts===3?1.4:1); }
+      if(loud){ sfx('swish'); sfx('cheer', e.dunk||e.three||e.pts===3?1.4:1); }
       break;}
     case 'dunk': {
       if(loud){ V.shake=16; sfx('slam'); }
@@ -3484,13 +3522,20 @@ function predictMe(S, dt){
   const srv=V.lastSnap && V.lastSnap.p.find(q=>q[0]===net.myId); if(!srv) return;
   // predicted jump-shot: your player leaves the floor the instant you press SHOOT (the host catches up)
   let jy=-1;
-  if(V.pj){ V.pj.t+=dt; const tt=V.pj.t; jy=SHOT_JUMP*tt-0.5*GRAV*tt*tt; if(jy<=0 && tt>0.1){ V.pj=null; jy=-1; } }
+  if(V.pj){ V.pj.t+=dt; const tt=V.pj.t; jy=SHOT_JUMP*tt-0.5*GRAV*tt*tt;
+    if(jy<=0 && tt>0.1){ jy=0; if((srv[Q.y]<1 && srv[Q.act]!==2) || tt>1.6){ V.pj=null; jy=-1; } } }   // landed: stay down until the server agrees
   const free = srv[Q.act]===0 && srv[Q.stum]===0 && srv[Q.y]<1 && V.lastSnap.ph==='play';
-  if(!V.pred || (!free && !V.pj && !(V.pred.bt>0))){ V.pred={x:srv[Q.x], z:srv[Q.z], vx:srv[Q.vx], vz:srv[Q.vz], blend:0, bt:0}; }
+  if(!V.pred){ V.pred={x:srv[Q.x], z:srv[Q.z], vx:srv[Q.vx], vz:srv[Q.vz], blend:0, bt:0}; }
+  else if(!free && !V.pj && !(V.pred.bt>0)){
+    // the server is moving you (follow-through, dunk, stumble): glide along with it instead of snapping to the delayed copy
+    const P=V.pred, lead=clamp((V.rtt||80)/2000,.03,.3), tx=srv[Q.x]+srv[Q.vx]*lead, tz=srv[Q.z]+srv[Q.vz]*lead, c=Math.min(1,dt*10);
+    P.vx=srv[Q.vx]; P.vz=srv[Q.vz];
+    if(hyp(tx-P.x,tz-P.z)>220){ P.x=tx; P.z=tz; } else { P.x+=(tx-P.x)*c; P.z+=(tz-P.z)*c; }
+  }
   else {
     const P=V.pred, a=ctl.axis(), has=S.b[3]===0 && S.b[4]===net.myId, k=has?0.93:1;
     if(P.bt>0){ P.bt-=dt; P.vx=P.bdx*BURST_V; P.vz=P.bdz*BURST_V*0.85; }          // predicted crossover / move burst
-    else if(jy>=0){ P.vx=approach(P.vx,0,ACC*dt); P.vz=approach(P.vz,0,ACC*dt); }  // in the air on a shot
+    else if(jy>=0){ P.vx=approach(P.vx,a.x*RUN*0.25,AIR_ACC*dt); P.vz=approach(P.vz,a.z*RUN*0.2,AIR_ACC*dt); }  // in the air on a shot: keep your drift (fadeaways)
     else { P.vx=approach(P.vx, a.x*RUN*k, ACC*dt); P.vz=approach(P.vz, a.z*RUN*0.85*k, ACC*dt); }
     P.x=clamp(P.x+P.vx*dt, COURT_L+P_R, COURT_R-P_R); P.z=clamp(P.z+P.vz*dt, -HALF_D+12, HALF_D-12);
     // the host's snapshot is ~half a round trip old: aim that far ahead of it, snap if way off (collisions etc.)
@@ -3505,7 +3550,7 @@ function predictMe(S, dt){
   }
   const P=V.pred, q=S.p[i].slice();
   q[Q.x]=lerp(q[Q.x],P.x,P.blend); q[Q.z]=lerp(q[Q.z],P.z,P.blend); q[Q.vx]=P.vx; q[Q.vz]=P.vz;
-  if(jy>=0){ q[Q.y]=Math.max(q[Q.y],jy); if(q[Q.act]===0) q[Q.act]=2; }
+  if(jy>=0){ q[Q.y]=jy; if(q[Q.act]===0) q[Q.act]=2; }
   if(P.bt>0 && q[Q.burst]===0){ q[Q.burst]=1; }
   S.p[i]=q;
 }
@@ -3514,7 +3559,7 @@ function predictLocalMove(kind){
   if(net.role!=='client' || V.phase!=='game' || !V.lastSnap || !V.pred) return;
   const S=V.lastSnap, me=S.p.find(q=>q[0]===net.myId); if(!me || me[Q.y]>1 || me[Q.act]!==0 || S.ph!=='play') return;
   const has=S.b[3]===0 && S.b[4]===net.myId;
-  if(kind==='a'){ if(has && !V.pj) V.pj={t:0}; return; }
+  if(kind==='a'){ if(has && !V.pj){ V.pj={t:0}; V.pred.vx*=0.4; V.pred.vz*=0.4; } return; }   // same momentum the server keeps
   if(kind==='c'){ if((V.pred.cdT||0)>performance.now()) return;
     const a=ctl.axis(), l=hyp(a.x,a.z); if(l<0.2) return;                 // hesi = stop, nothing to predict
     if(has){ const h=attackHoop(me[Q.team]), v=hoopVec({x:me[Q.x],z:me[Q.z]},h); if((a.x*v.ux+a.z*v.uz)/l<-0.5) return; }   // stepback: let the host do it
@@ -3797,6 +3842,12 @@ function drawTrail(style, dt){
       case 'plasma':   { const a=T[i-1], b=T[i]; seg(i,`rgba(60,140,255,${k*.35})`,26*k);
         for(let s2=0;s2<2;s2++){ ctx.strokeStyle=s2?`rgba(255,255,255,${k})`:`rgba(120,200,255,${k})`; ctx.lineWidth=s2?2:4*k+1; ctx.beginPath();
           ctx.moveTo(PX(a.x,a.z)+rnd(-9,9),PY(a.y,a.z)+rnd(-9,9)); ctx.lineTo(PX(b.x,b.z)+rnd(-4,4),PY(b.y,b.z)+rnd(-4,4)); ctx.stroke(); } break; }
+      case 'szgold':   seg(i,`rgba(255,190,30,${k*.35})`,22*k); seg(i,`rgba(255,226,120,${k*.95})`,7*k); seg(i,`rgba(255,255,255,${k*.7})`,2*k); break;
+      case 'szdiamond':seg(i,`hsla(${200+Math.sin(clock*6+i*.5)*30},100%,75%,${k*.35})`,24*k); seg(i,`rgba(190,235,255,${k*.95})`,6*k); seg(i,`rgba(255,255,255,${k})`,2*k); break;
+      case 'szcrown':  { const o=Math.sin(i*.7+clock*10)*7*k; seg(i,`rgba(200,20,40,${k*.45})`,20*k); seg(i,`rgba(255,200,40,${k*.95})`,5*k+1,o); seg(i,`rgba(255,200,40,${k*.95})`,5*k+1,-o); break; }
+      case 'szgoat':   seg(i,`rgba(0,0,0,${k*.6})`,26*k); seg(i,`rgba(255,200,40,${k*.95})`,6*k); seg(i,`hsla(${(clock*200+i*12)%360},100%,70%,${k*.5})`,2*k); break;
+      case 'evspark':  { const a=T[i-1], b=T[i]; seg(i,`rgba(255,210,60,${k*.3})`,18*k); ctx.strokeStyle=`rgba(255,250,200,${k})`; ctx.lineWidth=3*k+1; ctx.beginPath(); ctx.moveTo(PX(a.x,a.z)+rnd(-7,7),PY(a.y,a.z)+rnd(-7,7)); ctx.lineTo(PX(b.x,b.z),PY(b.y,b.z)); ctx.stroke(); break; }
+      case 'evaurora': { const o=Math.sin(i*.5+clock*5)*12*k; seg(i,`rgba(40,255,160,${k*.45})`,10*k,o); seg(i,`rgba(170,90,255,${k*.45})`,10*k,-o); seg(i,`rgba(255,255,255,${k*.6})`,2*k); break; }
       default:         seg(i,`rgba(255,255,255,${k*.45})`,9*k);
     }
   }
@@ -3815,6 +3866,12 @@ function drawTrail(style, dt){
     else if(style==='brain' && Math.random()<.6) emo(h.x,h.y,h.z,pick(['🗿','💀','🧠','🚽']),{vy:30,vx:rnd(-30,30),g:200,life:.9,max:.9,s:15});
     else if(style==='nebula') P(h.x+rnd(-10,10),h.y+rnd(-10,10),h.z,{g:0,life:.9,max:.9,c:pick(['rgba(199,125,255,.5)','rgba(0,229,255,.5)','rgba(255,111,181,.5)']),s:rnd(6,12)});
     else if(style==='plasma' && Math.random()<.5) spray(h.x,h.y,h.z,3,['#fff','#9fe7ff','#3d8bff'],160,{g:0,life:.3,max:.3});
+    else if(style==='szgold') P(h.x+rnd(-8,8),h.y+rnd(-8,8),h.z,{vy:rnd(-20,20),g:120,life:.6,max:.6,c:pick(['#ffd23f','#fff3a0','#ffb400']),s:rnd(1.5,3.5)});
+    else if(style==='szdiamond' && Math.random()<.5) emo(h.x,h.y,h.z,'💎',{vy:30,vx:rnd(-30,30),g:120,life:.7,max:.7,s:12});
+    else if(style==='szcrown' && Math.random()<.35) emo(h.x,h.y,h.z,'👑',{vy:40,vx:rnd(-30,30),g:150,life:.8,max:.8,s:14});
+    else if(style==='szgoat' && Math.random()<.3) emo(h.x,h.y,h.z,'🐐',{vy:30,vx:rnd(-40,40),g:150,life:.9,max:.9,s:15});
+    else if(style==='evspark' && Math.random()<.5) spray(h.x,h.y,h.z,3,['#fff','#ffe066','#ffd23f'],150,{g:0,life:.3,max:.3});
+    else if(style==='evaurora') P(h.x+rnd(-10,10),h.y+rnd(-10,10),h.z,{g:-20,life:.8,max:.8,c:pick(['rgba(40,255,160,.6)','rgba(170,90,255,.6)']),s:rnd(4,8)});
     else if(style==='hyperspace'){ const a=T[Math.max(0,n-3)]; for(let j=0;j<3;j++) P(h.x+rnd(-12,12),h.y+rnd(-12,12),h.z,{vx:(a.x-h.x)*rnd(6,12),vy:(a.y-h.y)*rnd(6,12),g:0,life:.35,max:.35,c:pick(['#fff','#9fe7ff','#c77dff']),s:rnd(1.5,3)}); }
   }
 }
@@ -4642,7 +4699,7 @@ async function lbPublish(){
   const nt=await loadNostr(); if(!nt) return;
   const sk=lbKey(), R=SAVE.rank;
   const ev=nt.finalizeEvent({kind:LB_KIND, created_at:Math.floor(Date.now()/1000), tags:[['d',LB_TAG],['t',LB_TAG]],
-    content:JSON.stringify({n:getName(), rr:R.rr|0, g:R.games|0, w:R.wins|0, b:R.best|0})}, sk);
+    content:JSON.stringify({n:getName(), rr:R.rr|0, g:R.games|0, w:R.wins|0, b:R.best|0, bdg:SAVE.badge?'S'+SAVE.badge.s+':'+SAVE.badge.ti:''})}, sk);
   for(const u of LB_RELAYS){ try{ const ws=new WebSocket(u); ws.onopen=()=>{ ws.send(JSON.stringify(['EVENT',ev])); setTimeout(()=>{ try{ws.close()}catch(e){} },3000); }; ws.onerror=()=>{}; }catch(e){} }
   LB.posted=true;
   if(LB.rows){ LB.rows=LB.rows.filter(r=>r.pk!==ev.pubkey); LB.rows.push({pk:ev.pubkey, n:getName(), rr:R.rr, g:R.games, t:ev.created_at}); }
@@ -4681,7 +4738,7 @@ function renderLeaderboard(){
     if(i>=50 && i!==meIdx) return;
     if(i>=50) lb.append(el('li','gap','…'));
     const li=el('li', r.pk===me?'me':'');
-    const ln=el('span','lname', cleanName(r.n)+(r.pk===me?' (you)':'')); { const tt=titleEl(r); if(tt) ln.append(tt); }
+    const ln=el('span','lname', cleanName(r.n)+(r.pk===me?' (you)':'')); { const bg=badgeEl(r); if(bg) ln.append(bg); const tt=titleEl(r); if(tt) ln.append(tt); }
     li.append(el('b','',String(i+1)), rankBadge(r.rr), ln, el('span','lrr', r.rr+' RR'));
     lb.append(li);
   });
@@ -4701,25 +4758,92 @@ function diffForRR(rr){
 // rating change: Elo-style (beating someone better pays more), plus margin + streak bonus on wins
 function rrDelta(win, myRR, oppRR, margin){
   const exp=1/(1+Math.pow(10,(oppRR-myRR)/400));
-  let d=Math.round(44*((win?1:0)-exp));
-  if(win){ d+=Math.min(6,Math.max(0,margin-2)); d+=Math.min(9,SAVE.rank.streak*3); d=Math.max(d,12); }
-  else d=Math.min(d,-8);
+  let d=Math.round(70*((win?1:0)-exp));                                // ranked games are worth more (longer 1v1s, longer climb)
+  if(win){ d+=Math.min(6,Math.max(0,margin-2)); d+=Math.min(9,SAVE.rank.streak*3); d=Math.max(d,19); }
+  else d=Math.min(d,-13);
   // longer climb at the top (like Fortnite / Valorant ranked): wins shrink to about half, losses grow by a third
   const top=clamp(myRR/4200,0,1);
-  d = win ? Math.max(6, Math.round(d*lerp(1,0.5,top))) : Math.round(d*lerp(1,1.33,top));
+  d = win ? Math.max(10, Math.round(d*lerp(1,0.5,top))) : Math.round(d*lerp(1,1.33,top));
   return d;
 }
 function applyRanked(win, myScore, oppScore, oppRR){
-  const R=SAVE.rank, before=rankOf(R.rr), d=rrDelta(win, R.rr, oppRR, Math.abs(myScore-oppScore));
+  const R=SAVE.rank, before=rankOf(R.rr), ev=eventNow(); let d=rrDelta(win, R.rr, oppRR, Math.abs(myScore-oppScore));
+  if(win && ev && ev.kind==='rr2') d*=2;                                        // 🎪 2x RR event
   R.rr=Math.max(0,R.rr+d); R.games++; if(win){ R.wins++; R.streak++; } else R.streak=0; R.best=Math.max(R.best,R.rr);
   const after=rankOf(R.rr);
   let coins = win ? 25+after.ti*10 : 5, promo=null;
   if(after.ti>before.ti){ coins+=300; promo='PROMOTED TO '+after.t.n.toUpperCase()+' '+after.t.icon; }
   else if(after.ti===before.ti && after.div>before.div){ coins+=50; promo='Division up: '+after.short; }
   else if(after.ti<before.ti || (after.ti===before.ti && after.div<before.div)) promo='Dropped to '+after.short;
-  SAVE.coins+=coins; persist();
+  SAVE.coins+=coins;
+  seasonTrack(); if(SAVE.season) SAVE.season.games=(SAVE.season.games||0)+1;           // 🗓️ season progress
+  eventGame(win);                                                                  // 🎪 event challenge
+  persist();
+  if(win && ev && ev.kind==='rr2' && !promo) promo='⚡ 2x RR EVENT';
   return {d, rr:R.rr, before, after, coins, promo, win};
 }
+
+// ---------------------------------------------------------------- 🗓️ SEASONS
+// 5-week seasons (Season 1 started Nov 18). Your best rank in a season earns rewards when it ends
+// (play at least 3 ranked games), then RR partly resets (you keep 70%) so everybody climbs again.
+const SEASON_START=Date.UTC(2026,10,18), SEASON_LEN=35*86400000;
+function seasonNow(){ const n=Math.max(1, Math.floor((Date.now()-SEASON_START)/SEASON_LEN)+1), start=SEASON_START+(n-1)*SEASON_LEN; return {n, start, end:start+SEASON_LEN}; }
+const SEASON_COINS=[100,200,300,450,600,800,1000,1300,1700,2200,2800,3500];
+const SEASON_ITEMS=[[3,'szgold'],[6,'szdiamond'],[9,'szcrown'],[11,'szgoat']];   // [tier needed, trail]
+function seasonRewardsFor(ti){ return {coins:SEASON_COINS[ti]||0, items:SEASON_ITEMS.filter(([t])=>ti>=t).map(([,id])=>id)}; }
+function badgeText(b){ const m=/^S(\d+):(\d+)$/.exec(String(b||'')); if(!m || !TIERS[+m[2]]) return ''; return 'S'+m[1]+' '+TIERS[+m[2]].icon; }
+function badgeEl(p){ const t=badgeText(p && p.bdg); if(!t) return null; const m=/:(\d+)$/.exec(p.bdg); const sp=el('span','pbadge',t); sp.style.setProperty('--tc', TIERS[+m[1]].c); sp.title='Season finish: '+TIERS[+m[1]].n; return sp; }
+function seasonTrack(){
+  const S=seasonNow(); if(!SAVE.season || typeof SAVE.season.n!=='number') SAVE.season={n:S.n, peak:SAVE.rank.rr, games:0};
+  if(SAVE.season.n<S.n) return seasonEnd(S);
+  SAVE.season.peak=Math.max(SAVE.season.peak||0, SAVE.rank.rr);
+}
+function seasonEnd(S){
+  const old=SAVE.season, ti=rankOf(old.peak||0).ti; let won=null;
+  if((old.games||0)>=3){ const rw=seasonRewardsFor(ti); SAVE.coins+=rw.coins;
+    for(const id of rw.items) if(!SAVE.owned.trail.includes(id)) SAVE.owned.trail.push(id);
+    SAVE.badges=SAVE.badges||[]; SAVE.badges.push({s:old.n, ti}); SAVE.badge={s:old.n, ti};   // your latest season finish shows next to your name
+    won={n:old.n, ti, rw}; }
+  SAVE.rank.rr=Math.round(SAVE.rank.rr*0.7); SAVE.rank.streak=0;
+  SAVE.season={n:S.n, peak:SAVE.rank.rr, games:0}; persist();
+  setTimeout(()=> won ? seasonPopup(won) : toast('🗓️ Season '+S.n+' started! Ranks were partly reset. Climb again.'), 1500);
+}
+function seasonPopup(w){
+  const c=$('#seasonPop'); c.innerHTML='';
+  c.append(el('div','spTop','🎉 SEASON '+w.n+' COMPLETE'), el('div','spSub','Your best rank this season'), rankBadge(TIERS[w.ti].min, true));
+  const ul=el('div','spList'); ul.append(el('div','spItem','💰 +'+w.rw.coins+' coins'), el('div','spItem','🏅 Badge "'+badgeText('S'+w.n+':'+w.ti)+'" next to your name'));
+  for(const id of w.rw.items){ const it=itemOf('trail',id); if(it) ul.append(el('div','spItem', it.icon+' '+it.name+' trail (exclusive)')); }
+  const go=el('button','btn yellow big','Let\u2019s go'); go.onclick=()=>c.classList.add('hidden');
+  c.append(ul, el('p','how','Season '+(w.n+1)+' has started: ranks were partly reset (you kept 70% of your RR).'), go);
+  c.classList.remove('hidden'); try{ confetti(0); }catch(e){}
+}
+function ago2(ms){ const d=Math.floor(ms/86400000), h=Math.floor(ms%86400000/3600000), m=Math.floor(ms%3600000/60000); return d>0 ? d+'d '+h+'h' : h>0 ? h+'h '+m+'m' : m+'m'; }
+function renderSeasonCard(){
+  const S=seasonNow(), c=$('#seasonCard'); if(!c) return; c.innerHTML='';
+  const peak=SAVE.season ? SAVE.season.peak : SAVE.rank.rr, pk=rankOf(peak), games=SAVE.season ? SAVE.season.games||0 : 0;
+  const top=el('div','scTop'); top.append(el('b','','🗓️ SEASON '+S.n), el('span','','ends in '+ago2(S.end-Date.now())));
+  const best=el('div','scBest'); best.append(el('span','','Season best: '), rankBadge(peak), el('small','', games<3 ? ' · play '+(3-games)+' more ranked game'+(3-games>1?'s':'')+' to earn rewards' : ''));
+  const road=el('div','scRoad');
+  for(const [t,id] of [[0,null],[3,'szgold'],[6,'szdiamond'],[9,'szcrown'],[11,'szgoat']]){
+    const it=id && itemOf('trail',id), got=pk.ti>=t, d=el('div','scStep'+(got?' on':''));
+    d.append(el('span','scIcon', TIERS[t].icon), el('small','', TIERS[t].n+'+'), el('small','', (it?it.icon+' ':'')+'💰'+SEASON_COINS[t]));
+    road.append(d); }
+  c.append(top, best, road, el('p','how','When the season ends you get coins + a badge for your best rank, and exclusive trails at Gold, Diamond, Champion and GOAT. Then RR partly resets.'));
+}
+seasonTrack();
+setInterval(()=>{ const n=seasonNow().n; if(SAVE.season && SAVE.season.n<n && !V.inRoom) seasonTrack(); }, 60000);
+
+// ---------------------------------------------------------------- 🎪 EVENTS (the admin starts them)
+// 2x RR on ranked wins, 2x coins, and challenges ("win 3 ranked games") with exclusive rewards.
+function eventNow(){ const e=CTL.event; return e && e.id && +e.end>Date.now() ? e : null; }
+function evProg(){ const e=eventNow(); if(!e) return null; if(!SAVE.evp || SAVE.evp.id!==e.id) SAVE.evp={id:e.id, n:0, claimed:false}; return SAVE.evp; }
+function eventGame(win){ const e=eventNow(); if(!e || !e.goal || !e.goal.n) return; const pr=evProg(); if(pr.claimed) return;
+  if(e.goal.t==='play' || (e.goal.t==='win' && win)){ pr.n=Math.min(e.goal.n, pr.n+1); persist(); if(pr.n>=e.goal.n) toast('🎪 Event challenge done! Claim your reward on the home screen'); } }
+function eventClaim(){ const e=eventNow(), pr=evProg(); if(!e || !pr || pr.claimed || !e.goal || pr.n<e.goal.n) return;
+  pr.claimed=true; const rw=e.reward||{}; if(+rw.coins) SAVE.coins+=Math.round(+rw.coins);
+  if(rw.item && itemOf('trail', rw.item) && !SAVE.owned.trail.includes(rw.item)) SAVE.owned.trail.push(rw.item);
+  persist(); try{ confetti(0); }catch(x){} toast('🎁 Event reward: '+(+rw.coins?'+'+rw.coins+' 💰 ':'')+(rw.item&&itemOf('trail',rw.item)?itemOf('trail',rw.item).icon+' '+itemOf('trail',rw.item).name+' trail':'')); ctlBanner(); }
+setInterval(()=>{ if(eventNow() || $('#ctlBanner').querySelector('.evBox')) ctlBanner(); }, 30000);
 
 // ----- ranked panel
 function openRanked(){ V.rankedOpen=true; $('#home').classList.add('hidden'); $('#rankedPanel').classList.remove('hidden'); renderRanked(); }
@@ -4727,6 +4851,7 @@ function closeRanked(){ V.rankedOpen=false; $('#rankedPanel').classList.add('hid
 function rankBadge(rr, big){ const r=rankOf(rr), s=el('span','rbadge'+(big?' big':''), r.t.icon+' '+(big?r.label:r.short)); s.style.setProperty('--tc', r.t.c); return s; }
 function renderRanked(){
   updateCoinUI();
+  renderSeasonCard();
   const R=SAVE.rank, rk=rankOf(R.rr), card=$('#rankCard'); card.innerHTML=''; card.style.setProperty('--tc', rk.t.c);
   card.append(el('div','rkIcon', rk.t.icon), el('div','rkName', rk.label));
   const bar=el('div','rkBar'), fill=el('div','rkFill'); fill.style.width=Math.round(rk.prog*100)+'%'; bar.append(fill); card.append(bar);
@@ -5071,7 +5196,7 @@ function p2Slot(p, emptyText, pulse){
   const d=el('div','p2Slot'+(p?'':' empty'+(pulse?' pulse':'')));
   if(!p){ d.append(el('div','p2Av','?'), el('div','p2Nm', emptyText)); return d; }
   const av=el('div','p2Av', (String(p.name||'?').replace(/[^A-Za-z0-9]/g,'')[0]||'?').toUpperCase()); av.style.background=TEAM_COL[p.team]||'#999';
-  const who=el('div'), nm=el('div','p2Nm', p.name); { const tt=titleEl(p); if(tt) nm.append(tt); }
+  const who=el('div'), nm=el('div','p2Nm', p.name); { const bg=badgeEl(p); if(bg) nm.append(bg); const tt=titleEl(p); if(tt) nm.append(tt); }
   if(p.id===net.myId) nm.append(el('span','tg','YOU'));
   const sub=el('div','p2Sub'); if(p.bot) sub.textContent='🤖 Ranked Rival'; else if(p.rr!==undefined) sub.append(rankBadge(p.rr));
   who.append(nm, sub); d.append(av, who); return d;
@@ -5300,6 +5425,37 @@ function renderAdmin(){
     gb.onclick=()=>{ const n=Math.round(+ga.value||0); if(!n) return toast('Type an amount'); if(confirm('Give '+n+' coins to EVERY player (once each)?')) admSave({['gifts/*/'+gid()]:{coins:n, msg:gm.value.trim()||'Gift for everyone from the Buckets admin!'}}, '🎁 Gift sent to everyone'); };
     const r4=el('div','row'); r4.append(ga, gm, gb); e.append(r4);
     B.append(e); }
+  // ---- 🎪 events
+  { const s=admSec('🎪 EVENTS', 'Everyone sees the event on their home screen. Challenges count ranked games (1v1 + 2v2).');
+    const ev=eventNow();
+    if(ev){ const cur=el('div','adSel'); cur.append(el('b','', '🔴 LIVE: '+(ev.name||'Event')+' · ends in '+ago2(+ev.end-Date.now())));
+      cur.append(el('small','', (ev.kind==='rr2'?'2x RR on ranked wins':ev.kind==='coins2'?'2x coins':'challenge only')+(ev.goal&&ev.goal.n?' · '+(ev.goal.t==='win'?'win ':'play ')+ev.goal.n+' ranked → '+((ev.reward||{}).coins||0)+' coins'+((ev.reward||{}).item?' + '+(itemOf('trail',ev.reward.item)||{}).name:''):'')));
+      const stop=el('button','btn red','⏹ End event now'); stop.onclick=()=>{ if(confirm('End the event for everyone?')) admSave({event:null}, 'Event ended'); }; cur.append(stop); s.append(cur); }
+    const H=3600000, midnight=()=>{ const d=new Date(); d.setHours(23,59,0,0); return d.getTime(); };
+    const go=(o,msg)=>admSave({event:{id:gid(), ...o}}, msg||'🎪 Event started');
+    const pre=el('div','adBtns');
+    const P=(label,o)=>{ const b=el('button','btn tiny',label); b.onclick=()=>{ if(!ev || confirm('Replace the event that\u2019s running?')) go(o()); }; pre.append(b); };
+    P('⚡ 2x RR · 1 hour', ()=>({name:'2x RR HOUR', kind:'rr2', end:Date.now()+H}));
+    P('⚡ 2x RR · rest of today', ()=>({name:'2x RR DAY', kind:'rr2', end:midnight()}));
+    P('💰 2x Coins · 1 hour', ()=>({name:'DOUBLE COINS', kind:'coins2', end:Date.now()+H}));
+    P('🏆 Win 3 ranked today → 750 + ⚡ Event Spark', ()=>({name:'DAILY CHALLENGE', kind:'', end:midnight(), goal:{t:'win', n:3}, reward:{coins:750, item:'evspark'}}));
+    P('🌌 Weekend: play 10 ranked → 1500 + Aurora', ()=>({name:'WEEKEND GRIND', kind:'rr2', end:Date.now()+48*H, goal:{t:'play', n:10}, reward:{coins:1500, item:'evaurora'}}));
+    s.append(el('label','','Quick start'), pre);
+    // custom builder
+    const nm=admInput('Event name (e.g. LUNCH RUSH)', '', 30), kind=el('select'), dur=el('select'), goal=el('select'), n=admInput('How many', '3', 3), coins=admInput('Reward coins', '500', 6), item=el('select');
+    for(const [v,t] of [['rr2','⚡ 2x RR on ranked wins'],['coins2','💰 2x coins'],['','Challenge only']]){ const o=el('option','',t); o.value=v; kind.append(o); }
+    for(const [v,t] of [[H,'1 hour'],[3*H,'3 hours'],['today','Rest of today'],[48*H,'2 days'],[168*H,'1 week']]){ const o=el('option','',t); o.value=v; dur.append(o); }
+    for(const [v,t] of [['','No challenge'],['play','Play N ranked'],['win','Win N ranked']]){ const o=el('option','',t); o.value=v; goal.append(o); }
+    for(const [v,t] of [['','No item'],['evspark','⚡ Event Spark trail'],['evaurora','🌌 Aurora trail']]){ const o=el('option','',t); o.value=v; item.append(o); }
+    n.inputMode='numeric'; coins.inputMode='numeric';
+    const start=el('button','btn yellow','🎪 Start event');
+    start.onclick=()=>{ const end = dur.value==='today' ? midnight() : Date.now()+(+dur.value);
+      const o={name:(nm.value.trim()||'EVENT').slice(0,30), kind:kind.value, end};
+      if(goal.value){ o.goal={t:goal.value, n:Math.max(1,Math.min(50,Math.round(+n.value||1)))}; o.reward={coins:Math.max(0,Math.min(20000,Math.round(+coins.value||0))), item:item.value||''}; }
+      if(!ev || confirm('Replace the event that\u2019s running?')) go(o); };
+    const r1=el('div','row'); r1.append(nm, kind); const r2=el('div','row'); r2.append(dur, goal, n); const r3=el('div','row'); r3.append(coins, item);
+    s.append(el('label','','Make your own'), r1, r2, r3, start);
+    B.append(s); }
   // ---- 👥 players
   { const s=admSec('👥 PLAYERS', 'Pick someone from the leaderboard (goes to their exact iPad), or type a name.');
     const q=admInput('Search the leaderboard or type a name', ADM.q, 16); q.oninput=()=>{ ADM.q=q.value; drawList(); };
@@ -5355,7 +5511,7 @@ function renderCrates(box){
   for(const cr of CRATES.filter(c=>c.tab===lockTab && (!c.freeOnly || ((SAVE.freeCrates||{})[c.id]>0)))){
     const locked = cr.code && !SAVE.vault;
     const card=el('div','crate'+(cr.id==='vault'?' vault':cr.id==='secret'?' secretc':'')); card.style.setProperty('--cc', cr.col);
-    const inside=ITEMS.filter(i=>cr.pool.includes(i.kind) && (!cr.set||i.s===cr.set) && i.id!==KINDS[i.kind].def && cr.odds[i.r]);
+    const inside=ITEMS.filter(i=>!i.noCrate && cr.pool.includes(i.kind) && (!cr.set||i.s===cr.set) && i.id!==KINDS[i.kind].def && cr.odds[i.r]);
     const have=inside.filter(i=>SAVE.owned[i.kind].includes(i.id)).length;
     card.append(el('div','cIcon', locked?'🔒':cr.icon), el('b','',cr.name),
       el('small','cKinds', (cr.pool.length===5 ? 'Everything' : inside.slice(0,4).map(i=>i.icon).join(' ')+(inside.length>4?' …':''))+' · '+have+'/'+inside.length+' owned'));
@@ -5434,7 +5590,7 @@ function renderLocker(box){
 }
 function rollCrate(cr){
   // starter items everyone already owns never come out of crates
-  const items=ITEMS.filter(i=>cr.pool.includes(i.kind) && (!cr.set || i.s===cr.set) && i.id!==KINDS[i.kind].def);
+  const items=ITEMS.filter(i=>!i.noCrate && cr.pool.includes(i.kind) && (!cr.set || i.s===cr.set) && i.id!==KINDS[i.kind].def);
   const avail=RORDER.filter(r=>cr.odds[r] && items.some(i=>i.r===r)), tot=avail.reduce((s,r)=>s+cr.odds[r],0);
   let x=Math.random()*tot, rar=avail[avail.length-1];
   for(const r of avail){ x-=cr.odds[r]; if(x<0){ rar=r; break; } }
