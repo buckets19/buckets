@@ -66,4 +66,17 @@ Wait about a minute, then open the game. On the home screen, tap **📶 Test con
 ## Other option: your own domain (what Three Pins does)
 Three Pins runs its live games on a Cloudflare server at its own domain, `live.threepins.golf`. Our Buckets server is the same kind of server, but it lives on `workers.dev`, and school filters block that whole address range.
 
-If you buy a cheap domain (about $10 a year, in your Cloudflare dashboard under **Domain Registration**), Claude can point the Buckets server at it and switch it on (in place of Firebase, or as a backup to it).
+If you buy a cheap domain (about $10 a year), Claude can point the Buckets server at it and switch it on (in place of Firebase, or as a backup to it).
+
+Steps:
+1. Go to **dash.cloudflare.com** and sign in to the account you made for Buckets.
+2. Open **Domain Registration → Register Domains**.
+3. Search for a name and buy one. A normal `.com` is about $10 a year.
+   - Pick a plain name, like `buckets19.com` or `bucketshoops.net`.
+   - **Avoid** words like "game", "games", "unblocked" or "proxy". School filters often block sites based on words like those.
+4. Tell Claude the domain. Claude connects `live.<your domain>` to the Buckets server and switches the game over. You don't need to do anything else.
+
+## Which one should I do?
+- **Firebase:** free, takes 5 minutes, and Google is almost never blocked. Start here.
+- **Domain:** costs about $10 a year, and it's the exact setup Three Pins uses. It's a good backup if your school ever blocks Firebase.
+- **Both:** the most reliable option.

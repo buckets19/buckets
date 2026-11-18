@@ -69,6 +69,12 @@
   .p2Nm .tg{margin-left:6px}
   .p2Sub{font-size:12px;opacity:.85;margin-top:2px}
   .p2Status{min-height:1.3em;font-weight:700;font-size:14px;margin:4px 0 10px}
+  .p2Me{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800;font-size:14px;margin:-4px 0 10px}
+  .p2Me .rbadge{font-size:15px;padding:3px 10px;border:2px solid var(--ink)}
+  .p2Side h4{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap}
+  .p2Side h4 .rbadge{font-size:11px;letter-spacing:0}
+  .p2Stakes{display:inline-flex;gap:14px;align-items:center;background:var(--ink);color:#fff;border-radius:12px;padding:6px 14px;font-weight:800;font-size:14px;margin:0 0 6px}
+  .p2Stakes .w{color:#5dff8f} .p2Stakes .l{color:#ff7a70} .p2Stakes small{font-weight:600;opacity:.8;font-size:11px}
   .p2Btns{display:flex;gap:10px;margin-bottom:8px}
   .p2Btns .grandBtn b{font-size:18px}
   .p2Net{font-size:12px;opacity:.7;margin-top:6px}
@@ -448,12 +454,14 @@
 <div id="party2" class="panel center hidden">
   <span class="p2Tag">🏆 RANKED 2v2</span>
   <h2>TEAM UP</h2>
+  <div id="p2Me" class="p2Me"></div>
   <div class="p2Code"><small>Your teammate taps <b>Join</b> on the home screen and types</small><div id="p2Code">----</div><button id="p2Copy" class="btn tiny">Copy invite link</button></div>
   <div class="p2Board">
-    <div class="p2Side mine"><h4>YOUR TEAM</h4><div id="p2Mine"></div></div>
+    <div class="p2Side mine"><h4>YOUR TEAM <span id="p2MineRank"></span></h4><div id="p2Mine"></div></div>
     <div class="p2Vs">VS</div>
-    <div class="p2Side opp"><h4>OPPONENTS</h4><div id="p2Opp"></div></div>
+    <div class="p2Side opp"><h4>OPPONENTS <span id="p2OppRank"></span></h4><div id="p2Opp"></div></div>
   </div>
+  <div id="p2Stakes" class="p2Stakes"></div>
   <div id="p2Status" class="p2Status"></div>
   <div class="p2Btns" id="p2Btns">
     <button id="p2Find" class="grandBtn gR2"><span class="gi">🔎</span><b>FIND OPPONENTS</b><small id="p2FindSub">2 real players</small></button>
@@ -1306,7 +1314,13 @@ const RELAYS=[
   {id:'primal',   k:'nostr', url:'wss://relay.primal.net'},
   {id:'mosquitto',k:'mqtt',  url:'wss://test.mosquitto.org:8081/mqtt'},
   {id:'hivemq',   k:'mqtt',  url:'wss://broker.hivemq.com:8884/mqtt'},
+  {id:'emqx',     k:'mqtt',  url:'wss://broker.emqx.io:8084/mqtt'},
 ];
+// lighter snapshots for slow links: whole-number positions (invisible on screen) + a key to spot "nothing moved"
+function liteSnap(s){ const {ev, ...d}=s;
+  d.p=d.p.map(q=>{ const a=q.slice(); a[1]=Math.round(a[1]); a[2]=Math.round(a[2]); a[3]=Math.round(a[3]); return a; });
+  d.b=d.b.slice(); d.b[0]=Math.round(d.b[0]); d.b[1]=Math.round(d.b[1]); d.b[2]=Math.round(d.b[2]);
+  const {pt, sct, ...same}=d; return {d, ev, key:JSON.stringify(same)}; }
 const RELAY_SNAP_MS=66;                      // relay players get 20 snapshots/s (direct gets 40)
 const NET_FORCE=(()=>{ try{ return localStorage.getItem('buckets-net')||''; }catch(e){ return ''; } })();   // '' | 'relay' | 'direct' (testing)
 const relayTopic=(code,k)=>'bk19.'+PREFIX+code+'.'+k;
@@ -1455,7 +1469,10 @@ function RelayHub(code, onConn){
     for(const c of H.conns.values()) if(c.open) for(const sk of c.socks) used.add(sk);
     if(!used.size) return;
     if(now-H.last<RELAY_SNAP_MS-4){ if(s.ev && s.ev.length) H.pend.push(...s.ev); return; }
-    H.last=now; const d=H.pend.length?{...s, ev:[...H.pend, ...(s.ev||[])]}:s; H.pend=[];
+    const L=liteSnap(s), evs=[...H.pend, ...(L.ev||[])];
+    if(!evs.length && L.key===H.lastKey && now-H.lastSent<1000){ H.last=now; H.skipped=true; return; }   // nothing moved: send nothing (less throttling)
+    H.last=now; H.lastSent=now; H.lastKey=L.key; H.pend=[]; const d=L.d; if(evs.length) d.ev=evs;
+    if(H.skipped){ d.rs=1; H.skipped=false; }
     const str=JSON.stringify({f:'host', o:'*', s:H.sid, n:++H.sn, d});
     for(const sk of used) sk.pub(relayTopic(code,'c.all'), str); };
   H.anyOpen=()=>H.socks.some(s=>s.open);
@@ -1699,9 +1716,7 @@ function FireHub(code, onConn){
     const now=performance.now(); if(now-S.last<FB_SNAP_MS-4) return;
     // less data = the free plan lasts longer: whole-number positions (invisible on screen), and nothing
     // at all when the picture hasn't changed (timeouts, between points), except a keep-alive each second
-    const {ev, ...d}=s; d.p=d.p.map(q=>{ const a=q.slice(); a[1]=Math.round(a[1]); a[2]=Math.round(a[2]); a[3]=Math.round(a[3]); return a; });
-    d.b=d.b.slice(); d.b[0]=Math.round(d.b[0]); d.b[1]=Math.round(d.b[1]); d.b[2]=Math.round(d.b[2]);
-    const {pt, sct, ...same}=d, key=JSON.stringify(same);
+    const {d, key}=liteSnap(s);
     if(key===S.lastKey && now-S.last<1000){ S.skipped=true; return; }
     if(S.skipped){ d.rs=1; S.skipped=false; }                 // "resumed after a pause": players don't count this gap as lag
     S.last=now; S.lastKey=key; S.all.send(d); };
@@ -3082,12 +3097,33 @@ function interpState(){
   const s=V.snaps; if(!s.length) return null;
   const rt=performance.now()-interpDelay();   // buffer just enough for this connection's jitter
   while(s.length>2 && s[1].rt<=rt) s.shift();
-  if(s.length<2 || rt<=s[0].rt) return s[0];
+  if(s.length<2 || rt<=s[0].rt) return smoothOthers(s[0]);
   const a=s[0], b=s[1], t=clamp((rt-a.rt)/((b.rt-a.rt)||1),0,1);
+  // the next update is late (slow relay / school Wi-Fi): keep everyone moving on their last speed for a
+  // moment instead of freezing them, then jumping when the update lands
+  const over=Math.min(Math.max(0, rt-b.rt), 160)/1000;
   const am=new Map(a.p.map(q=>[q[0],q]));
-  const p=b.p.map(q=>{ const o=am.get(q[0]); if(!o || Math.abs(o[1]-q[1])>200) return q; const r=q.slice(); r[1]=lerp(o[1],q[1],t); r[2]=lerp(o[2],q[2],t); r[3]=lerp(o[3],q[3],t); return r; });
-  let bb=b.b; if(a.b[3]!==0 && b.b[3]!==0 && Math.abs(a.b[0]-b.b[0])<200) bb=[lerp(a.b[0],b.b[0],t), lerp(a.b[1],b.b[1],t), lerp(a.b[2],b.b[2],t), b.b[3], b.b[4], b.b[5], b.b[6]];
-  return {...b, p, b:bb};
+  const p=b.p.map(q=>{ const o=am.get(q[0]); if(!o || Math.abs(o[1]-q[1])>200) return q; const r=q.slice(); r[1]=lerp(o[1],q[1],t); r[2]=lerp(o[2],q[2],t); r[3]=lerp(o[3],q[3],t);
+    if(over>0 && q[Q.y]<1){ r[1]=clamp(r[1]+q[Q.vx]*over, COURT_L+P_R, COURT_R-P_R); r[2]=clamp(r[2]+q[Q.vz]*over*0.85, -HALF_D+12, HALF_D-12); }
+    return r; });
+  let bb=b.b; if(a.b[3]!==0 && b.b[3]!==0 && Math.abs(a.b[0]-b.b[0])<200){ bb=[lerp(a.b[0],b.b[0],t), lerp(a.b[1],b.b[1],t), lerp(a.b[2],b.b[2],t), b.b[3], b.b[4], b.b[5], b.b[6]];
+    if(over>0){ const f=Math.min(over,0.1)/(((b.rt-a.rt)||66)/1000); bb[0]+=(b.b[0]-a.b[0])*f; bb[2]+=(b.b[2]-a.b[2])*f; } }
+  return smoothOthers({...b, p, b:bb});
+}
+// other players: if a late update makes someone's position jump, glide them there over ~0.1s instead
+// of snapping (big jumps like a reset after a score still snap)
+function smoothOthers(S){
+  const now=performance.now(), dt=Math.min(0.1, Math.max(0,(now-(V.smT||now))/1000)); V.smT=now;
+  const M=V.sm||(V.sm=new Map()), k=Math.exp(-dt*11), maxStep=BURST_V*1.5*dt+6;
+  const p=S.p.map(q=>{ if(q[0]===net.myId) return q;
+    let m=M.get(q[0]); if(!m){ m={tx:q[1], tz:q[2], ox:0, oz:0}; M.set(q[0],m); }
+    const sx=q[1]-m.tx, sz=q[2]-m.tz, st=hyp(sx,sz);
+    if(st>250){ m.ox=0; m.oz=0; }                                   // teleport (reset): snap
+    else if(st>maxStep){ const f=(st-maxStep)/st; m.ox-=sx*f; m.oz-=sz*f; }   // keep a normal step, glide the rest
+    m.ox*=k; m.oz*=k; m.tx=q[1]; m.tz=q[2];
+    if(Math.abs(m.ox)<0.3 && Math.abs(m.oz)<0.3) return q;
+    const r=q.slice(); r[1]+=m.ox; r[2]+=m.oz; return r; });
+  return {...S, p};
 }
 // client-side prediction: move my own player instantly from my input, then ease toward the host's truth
 function predictMe(S, dt){
@@ -3109,7 +3145,9 @@ function predictMe(S, dt){
     // toward the host's older copy. Only if the host really disagrees (you got bodied by a defender, etc.)
     // do we ease over, and snap only if it's way off.
     const lead=clamp((V.rtt||80)/2000, .03, .3), ex=srv[Q.x]+srv[Q.vx]*lead-P.x, ez=srv[Q.z]+srv[Q.vz]*lead-P.z, err=hyp(ex,ez);
-    if(err>170){ P.x+=ex; P.z+=ez; } else if(err>70){ const c=Math.min(1,dt*1.5); P.x+=ex*c; P.z+=ez*c; }
+    // on a slow link the host's copy trails you by up to (speed × ping) when you change direction: that's not a disagreement
+    const slack=RUN*clamp(V.rtt||80,0,700)/1000;
+    if(err>170+slack){ P.x+=ex; P.z+=ez; } else if(err>70+slack){ const c=Math.min(1,dt*1.5); P.x+=ex*c; P.z+=ez*c; }
     P.blend=Math.min(1,P.blend+dt*8);   // fade prediction in so it never pops
   }
   const P=V.pred, q=S.p[i].slice();
@@ -4670,6 +4708,14 @@ function renderParty2(){
   for(let i=0;i<2;i++) m.append(p2Slot(mine[i], 'Waiting for your teammate…', !mine[i]));
   for(let i=0;i<2;i++) o.append(p2Slot(opp[i], searching?'Searching…':'Open spot', searching && !opp[i]));
   const mate=mine.filter(p=>!p.bot).length>=2, oppHum=opp.filter(p=>!p.bot).length;
+  // ranked: same rank as the rest of the game. A team's rank = its best player's rank.
+  const R0=SAVE.rank, me=$('#p2Me'); me.innerHTML=''; me.append(el('span','','YOUR RANK'), rankBadge(R0.rr), el('span','', R0.rr+' RR'+(R0.streak>1?' · 🔥'+R0.streak:'')));
+  const best=list=>{ const r=list.filter(p=>p.rr!==undefined).map(p=>+p.rr||0); return r.length?Math.max(...r):null; };
+  const mr=best(mine), or=best(opp); $('#p2MineRank').innerHTML=''; $('#p2OppRank').innerHTML='';
+  if(mr!==null) $('#p2MineRank').append(rankBadge(mr)); if(or!==null) $('#p2OppRank').append(rankBadge(or));
+  { const rated=opp.filter(p=>p.rr!==undefined), oppRR=rated.length ? rated.reduce((a,p)=>a+(+p.rr||0),0)/rated.length : (mr ?? R0.rr);
+    const w=rrDelta(true, R0.rr, oppRR, 4), l=rrDelta(false, R0.rr, oppRR, 4), st=$('#p2Stakes'); st.innerHTML='';
+    st.append(el('span','','ON THE LINE'), el('span','w','WIN +'+w+' RR'), el('span','l','LOSS '+l+' RR'), el('small','', rated.length?'':'(vs players near your team\'s rank)')); }
   $('#p2Btns').classList.toggle('hidden', !isHost);
   $('#p2Stop').classList.toggle('hidden', !(isHost && searching));
   const f=$('#p2Find'), b=$('#p2Bots');
@@ -4689,7 +4735,7 @@ $('#p2Leave').onclick=()=>{ try{ net.peer&&net.peer.destroy(); }catch(e){} locat
 // no other duo: your duo vs whoever solo-queued into your game, Ranked Rivals fill the rest
 function duoVsBots(){
   V.q2Waiting=false;
-  const hum=[...G.players.values()].filter(p=>!p.bot), avg=hum.reduce((s,p)=>s+(p.rr||0),0)/Math.max(1,hum.length);
+  const hum=[...G.players.values()].filter(p=>!p.bot), avg=Math.max(0,...hum.filter(p=>p.team===0).map(p=>+p.rr||0));   // team rank = best player on the team: rivals are picked around it
   const soloOpp=hum.filter(p=>p.team===1).length;
   toast(soloOpp ? 'Match found: '+soloOpp+' real player'+(soloOpp>1?'s':'')+' vs your duo' : 'No duos in queue: two Ranked Rivals took the game');
   const pool=RIVALS.map(R=>({R,rr:rivalRR(R)})).sort((a,b)=>Math.abs(a.rr-avg)-Math.abs(b.rr-avg)).slice(0,5);
