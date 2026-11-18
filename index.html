@@ -11,6 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
 <!-- multiplayer library: served from this site first (school filters often block CDNs), then backups -->
 <script src="peerjs.min.js"></script>
+<script>try{ if(localStorage.getItem('buckets-fbfake')) document.write('<script src="fbfake.js"><\/script>'); }catch(e){}</script>
 <script>if(typeof Peer==='undefined') document.write('<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"><\/script>');</script>
 <script>if(typeof Peer==='undefined') document.write('<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"><\/script>');</script>
 <style>
@@ -1467,7 +1468,9 @@ function connObj(extra){ const c=Object.assign({open:true, _h:{}, lastIn:perform
   c.kill=()=>{ if(!c.open) return; c.open=false; clearInterval(c.hb); c.emit('close'); };
   return c; }
 // host side: one websocket to the server carries every player in the room
-function ServerHub(code, onConn){
+// the "fast server" slot: our Cloudflare server if it's switched on, otherwise Google Firebase
+function ServerHub(code, onConn){ return SERVER_URL ? WsServerHub(code, onConn) : FireHub(code, onConn); }
+function WsServerHub(code, onConn){
   if(!SERVER_URL) return null;
   const S={code, key:Math.random().toString(36).slice(2,12), conns:new Map(), dead:false, ws:null, open:false, last:0, pend:[], taken:false, fails:0};
   const connect=()=>{ if(S.dead) return; S.t0=performance.now(); let ws; try{ ws=new WebSocket(srvRoom(code)+'?role=host&key='+S.key); }catch(e){ return; } S.ws=ws;
@@ -1544,6 +1547,145 @@ function ServerClientConn(ws0, code, rid){
   return c;
 }
 
+// =====================================================================
+//  ⚡ FAST SERVER: Google Firebase (Realtime Database). School filters block our Cloudflare server and
+//  throttle the public relays, but they can't block Google (Classroom, Docs and Drive run on it).
+//  The host's iPad still runs the game; Firebase just carries the messages, over a normal secure
+//  websocket (and plain web requests if even websockets are blocked). Reconnects itself after blips.
+//  Paste your project's config here (Firebase console → Project settings → Your apps → Config).
+// =====================================================================
+const FB_REAL=null;
+const FB_CONFIG=(()=>{ try{ if(localStorage.getItem('buckets-fbfake')) return {fake:1}; }catch(e){} return null; })() || FB_REAL;
+const FB_SNAP_MS=66;                                          // 15 snapshots/s (players' own movement is instant anyway)
+const FB_LATEST={s:1, in:1, ping:1, pong:1, hb:1};             // only the newest of these matters
+let FBdb=null, FBload=null, FBusers=0, FBoffT=0;
+const fbKey=code=>(PREFIX+code).replace(/[.#$\[\]\/]/g,'_');
+function fbLoad(){
+  if(!FB_CONFIG) return Promise.resolve(null);
+  if(FBdb){ try{ FBdb.goOnline(); }catch(e){} return Promise.resolve(FBdb); }
+  if(!FBload) FBload=new Promise(res=>{
+    const one=(srcs,done)=>{ if(!srcs.length) return done(false); const s=document.createElement('script'); s.src=srcs[0];
+      s.onload=()=>done(true); s.onerror=()=>one(srcs.slice(1),done); document.head.appendChild(s); };
+    const g='https://www.gstatic.com/firebasejs/10.14.1/';
+    const go=()=>{ try{ FBdb=(window.FB_FAKE||firebase.initializeApp(FB_CONFIG,'bk').database()); res(FBdb); }catch(e){ console.warn(e); FBload=null; res(null); } };
+    if(window.FB_FAKE) return go();
+    one(['firebase-app-compat.js', g+'firebase-app-compat.js'], ok=>{ if(!ok || !window.firebase){ FBload=null; return res(null); }
+      one(['firebase-database-compat.js', g+'firebase-database-compat.js'], ok2=>{ if(!ok2){ FBload=null; return res(null); } go(); }); });
+  });
+  return FBload;
+}
+// keep the Firebase connection open only while something uses it (free plan: 100 at once)
+function fbUse(){ FBusers++; clearTimeout(FBoffT); if(FBdb) try{ FBdb.goOnline(); }catch(e){} }
+function fbRelease(){ FBusers=Math.max(0,FBusers-1); clearTimeout(FBoffT); if(!FBusers) FBoffT=setTimeout(()=>{ if(!FBusers && FBdb) try{ FBdb.goOffline(); }catch(e){} }, 8000); }
+function fbConnected(db, fn){ const r=db.ref('.info/connected'), h=s=>fn(!!s.val()); r.on('value', h); return ()=>r.off('value', h); }
+// one direction of a link = one database node we overwrite. Messages sent in the same moment go together.
+// Important messages (roster, events, button presses) are repeated for ~1s so none can get lost;
+// snapshots and joystick input only send the newest one.
+function FbOut(ref, to){
+  const o={n:0, i:Math.random().toString(36).slice(2,8), tail:[], lw:new Map(), t:0, dead:false};
+  o.send=d=>{ if(o.dead) return; const e=[++o.n, d];
+    if(FB_LATEST[d.t]) o.lw.set(d.t, e); else o.tail.push({at:performance.now(), e});
+    if(!o.t){ o.t=1; Promise.resolve().then(o.flush); } };
+  o.flush=()=>{ o.t=0; if(o.dead) return; const now=performance.now();
+    while(o.tail.length && (now-o.tail[0].at>1000 || o.tail.length>30)) o.tail.shift();
+    const es=o.tail.map(x=>x.e).concat([...o.lw.values()]).sort((a,b)=>a[0]-b[0]); o.lw.clear();
+    try{ ref.set(JSON.stringify({i:o.i, h:to||'', e:es})); }catch(e){} };
+  o.stop=()=>{ o.dead=true; };
+  return o;
+}
+// reader for one node: skips repeats, handles every new message once, in order
+function FbIn(onMsg, want){
+  let i=null, last=0;
+  return v=>{ if(typeof v!=='string' || v.length>200000) return; let m; try{ m=JSON.parse(v); }catch(e){ return; }
+    if(!m || !Array.isArray(m.e) || (want && m.h!==want)) return;
+    if(m.i!==i){ i=m.i; last=0; }
+    for(const e of m.e){ if(!Array.isArray(e) || !(e[0]>last) || !e[1] || typeof e[1]!=='object') continue; last=e[0]; onMsg(e[1]); } };
+}
+// host side: rooms/<code>/host = who's hosting, up/<player> = player → host, dn/all + dn/<player> = host → players
+function FireHub(code, onConn){
+  if(!FB_CONFIG) return null;
+  const S={code, sid:Math.random().toString(36).slice(2,10), conns:new Map(), rd:new Map(), dead:false, open:false, last:0, isFire:true, offs:[]};
+  fbUse();
+  fbLoad().then(db=>{ if(!db || S.dead) return;
+    const root=db.ref('rooms/'+fbKey(code)), hostRef=root.child('host'), up=root.child('up'); S.root=root; S.all=FbOut(root.child('dn/all'));
+    // claim the room (and claim it again after a Wi-Fi blip). If someone else holds it, it's theirs.
+    const claim=()=>{ hostRef.transaction(v=>(!v || v.sid===S.sid || Date.now()-(+v.t||0)>6*3600e3) ? {sid:S.sid, t:Date.now()} : undefined, (err, ok)=>{
+        if(S.dead) return;
+        if(err || !ok){ if(!err){ S.taken=true; } return; }
+        try{ root.onDisconnect().remove(); }catch(e){}
+        S.open=true; }, false); };
+    S.offs.push(fbConnected(db, on=>{ if(S.dead) return; if(on) claim(); else S.open=false; }));
+    const onUp=snap=>{ if(S.dead) return; const cid=snap.key; if(!/^[a-z0-9]{4,16}$/.test(cid)) return;
+      let R=S.rd.get(cid);
+      if(!R){ R={cid}; S.rd.set(cid,R);
+        R.read=FbIn(d=>{ let c=S.conns.get(cid);
+          if(!c){ if(d.t!=='hello' && d.t!=='duo?') return;
+            c=connObj({peer:'f_'+cid, rid:cid, isRelay:true, isServer:true, isFire:true, relay:'google'});
+            const out=FbOut(root.child('dn/'+cid), cid);
+            c.raw=x=>out.send(x); c.send=x=>{ if(c.open) c.raw(x); };
+            c.close=()=>{ if(!c.open) return; c.raw({t:'bye'}); c.kill(); };
+            c.on('close',()=>{ if(S.conns.get(cid)===c) S.conns.delete(cid); S.rd.delete(cid); setTimeout(()=>{ out.stop(); try{ root.child('dn/'+cid).remove(); root.child('up/'+cid).remove(); }catch(e){} }, 1500); });
+            S.conns.set(cid,c); onConn(c); }
+          c.lastIn=performance.now();
+          if(d.t==='bye'){ c.kill(); return; } if(d.t==='hb') return;
+          c.emit('data', d); }, S.sid); }
+      R.read(snap.val()); };
+    up.on('child_added', onUp); up.on('child_changed', onUp);
+    // a player's connection dropped (Firebase noticed): give them 15s to come back
+    up.on('child_removed', snap=>{ const c=S.conns.get(snap.key); if(c){ const at=performance.now(); c.lastIn=at-1; setTimeout(()=>{ if(c.open && c.lastIn<at) c.kill(); }, 15000); } });
+    S.offs.push(()=>{ up.off(); });
+  });
+  S.tick=setInterval(()=>{ const now=performance.now(); for(const c of [...S.conns.values()]){ if(now-c.lastIn>20000) c.kill(); else c.raw({t:'hb'}); } }, 2000);
+  // one write per snapshot for the whole room. Events go as their own important messages so none get lost.
+  S.snap=s=>{ if(!S.open || !S.all || !S.conns.size) return;
+    if(s.ev && s.ev.length) for(const e of s.ev) S.all.send({t:'ev', e});
+    const now=performance.now(); if(now-S.last<FB_SNAP_MS-4) return; S.last=now;
+    const {ev, ...d}=s; S.all.send(d); };
+  S.close=()=>{ if(S.dead) return; for(const c of S.conns.values()) c.raw({t:'bye'});
+    S.dead=true; S.open=false; clearInterval(S.tick); for(const f of S.offs) try{ f(); }catch(e){}
+    setTimeout(()=>{ try{ S.root && S.root.remove(); S.root && S.root.onDisconnect().cancel(); }catch(e){} fbRelease(); }, 400); };
+  return S;
+}
+// player side: is the room's host on the fast server? resolves {fire, root, sid, rtt, close} or null
+function fireProbe(code){
+  return new Promise(res=>{
+    if(!FB_CONFIG) return res(null);
+    let done=false; const t0=performance.now(); fbUse();
+    const fin=v=>{ if(done) return; done=true; clearTimeout(to); if(!v) fbRelease(); res(v); };
+    const to=setTimeout(()=>fin(null), 7000);
+    fbLoad().then(db=>{ if(!db || done) return fin(null);
+      const root=db.ref('rooms/'+fbKey(code));
+      root.child('host').once('value', s=>{ const v=s.val();
+        if(!v || !v.sid) return fin(null);
+        let closed=false;
+        fin({fire:true, root, sid:String(v.sid), rtt:performance.now()-t0, close:()=>{ if(closed) return; closed=true; fbRelease(); }}); }, ()=>fin(null));
+    });
+  });
+}
+// a player's link to the room through Firebase. Firebase reconnects by itself after a Wi-Fi blip;
+// we just wait (up to 15s) instead of kicking anyone out.
+function FireClientConn(P, code, rid){
+  const c=connObj({peer:'host', isRelay:true, isServer:true, isFire:true, relay:'google'});
+  const root=P.root, upRef=root.child('up/'+rid), out=FbOut(upRef, P.sid), offs=[]; let hostAway=0, offAt=0;
+  c.send=d=>{ if(c.open) out.send(d); }; c.raw=c.send;
+  const onMsg=d=>{ c.lastIn=performance.now(); if(d.t==='bye'){ c.kill(); return; } if(d.t==='hb') return; c.emit('data', d); };
+  const all=root.child('dn/all'), mine=root.child('dn/'+rid), hostRef=root.child('host');
+  const ra=FbIn(onMsg), rm=FbIn(onMsg, rid);
+  const fa=s=>ra(s.val()), fm=s=>rm(s.val()), fh=s=>{ const v=s.val();
+    if(!v || String(v.sid)!==P.sid){ if(!hostAway) hostAway=performance.now(); V.netLost=true; } else if(hostAway){ hostAway=0; V.netLost=!!offAt; } };
+  all.on('value', fa); mine.on('value', fm); hostRef.on('value', fh);
+  offs.push(()=>{ all.off('value', fa); mine.off('value', fm); hostRef.off('value', fh); });
+  fbLoad().then(db=>{ if(db) offs.push(fbConnected(db, on=>{ if(!c.open) return;
+    if(on){ offAt=0; if(!hostAway) V.netLost=false; try{ upRef.onDisconnect().remove(); }catch(e){} } else { if(!offAt) offAt=performance.now(); V.netLost=true; } })); });
+  c.hb=setInterval(()=>{ if(!c.open) return; const now=performance.now();
+    if((hostAway && now-hostAway>15000) || (offAt && now-offAt>15000)){ V.netLost=false; c.kill(); } }, 500);
+  const kill0=c.kill; let cleaned=false;
+  c.kill=()=>{ kill0(); if(cleaned) return; cleaned=true; for(const f of offs) try{ f(); }catch(e){}
+    setTimeout(()=>{ out.stop(); try{ upRef.remove(); upRef.onDisconnect().cancel(); }catch(e){} P.close(); }, 400); };
+  c.close=()=>{ if(!c.open) return; out.send({t:'bye'}); c.kill(); };
+  return c;
+}
+
 // ---- connect to a room. Direct WebRTC and every relay at once: direct wins if it opens quickly,
 //      otherwise the two FASTEST relays the host answered on. Resolves {conn, peer, id, via} or {fail}.
 function dial(code, o={}){
@@ -1553,11 +1695,12 @@ function dial(code, o={}){
     const t0=performance.now(), directWait=o.directWait??2500;
     const useDirect=NET_FORCE!=='relay' && typeof Peer!=='undefined', useRelay=NET_FORCE!=='direct';
     // our own game server: ask it in parallel. If the host is there, it beats every public relay.
-    const srid=Math.random().toString(36).slice(2,10); let srv=null, srvDone=!SERVER_URL || NET_FORCE==='direct' || NET_FORCE==='relays';
-    if(!srvDone) serverProbe(code, srid).then(r=>{ srvDone=true; if(done){ if(r) try{ r.ws.close(); }catch(e){} return; } srv=r; });
-    const cleanup=()=>{ try{ peer&&peer.destroy(); }catch(e){} if(D) D.close(); if(srv) try{ srv.ws.close(); }catch(e){} };
+    const srid=Math.random().toString(36).slice(2,10); let srv=null, srvDone=!(SERVER_URL||FB_CONFIG) || NET_FORCE==='direct' || NET_FORCE==='relays';
+    const srvClose=r=>{ try{ r.fire ? r.close() : r.ws.close(); }catch(e){} };
+    if(!srvDone) (SERVER_URL ? serverProbe(code, srid) : fireProbe(code)).then(r=>{ srvDone=true; if(done){ if(r) srvClose(r); return; } srv=r; });
+    const cleanup=()=>{ try{ peer&&peer.destroy(); }catch(e){} if(D) D.close(); if(srv) srvClose(srv); };
     const fin=r=>{ if(done) return; done=true; clearInterval(iv); clearTimeout(to);
-      if(r.via!=='server' && srv) try{ srv.ws.close(); }catch(e){}
+      if(r.via!=='server' && srv) srvClose(srv);
       res(r); };
     // the PeerJS server also tells us fast if a room code doesn't exist, so ask it even in relay-only mode
     if(typeof Peer!=='undefined'){ try{
@@ -1575,7 +1718,7 @@ function dial(code, o={}){
       // our server answered and the direct link isn't up quickly: use the server
       if(srv && (el>directWait*0.6 || unavailable || peerErr || !useDirect)){
         if(D) D.close(); try{ peer&&peer.destroy(); }catch(e){}
-        fin({conn:ServerClientConn(srv.ws, code, srid), peer:null, id:'s_'+srid, via:'server'}); return; }
+        fin(srv.fire ? {conn:FireClientConn(srv, code, srid), peer:null, id:'f_'+srid, via:'server'} : {conn:ServerClientConn(srv.ws, code, srid), peer:null, id:'s_'+srid, via:'server'}); return; }
       // public relays: only once the server has said no (or had 4s to answer)
       // wait ~0.8s after the first answer so slower relays can report their timing too
       if(acks.size && (srvDone || el>4000) && performance.now()-firstAck>800 && (el>directWait || unavailable || peerErr || !useDirect)){
@@ -3829,7 +3972,7 @@ async function runNetTest(){
   tests.push(new Promise(r=>{ if(typeof Peer==='undefined'){ setS('❌ library blocked'); return r(); }
     let p; try{ p=new Peer({debug:0}); }catch(e){ setS('❌'); return r(); }
     const to=setTimeout(()=>{ setS('❌ blocked'); try{p.destroy()}catch(e){} r(); },8000);
-    p.on('open',()=>{ clearTimeout(to); res.server=true; setS('✅'); setTimeout(()=>{ try{p.destroy()}catch(e){} },300); r(); });
+    p.on('open',()=>{ clearTimeout(to); res.pjs=true; setS('✅'); setTimeout(()=>{ try{p.destroy()}catch(e){} },300); r(); });
     p.on('error',()=>{ clearTimeout(to); setS('❌ blocked'); r(); }); }));
   // 2) direct link: can this network reach the outside over UDP (needed for WebRTC)?
   const setD=netRow('Direct link (fastest)');
@@ -3846,6 +3989,15 @@ async function runNetTest(){
       const to=setTimeout(()=>{ setV('❌ blocked'); try{ws.close()}catch(e){} r(); },7000);
       ws.onmessage=()=>{ clearTimeout(to); const ms=Math.round(performance.now()-t0); res.server=ms; setV('✅ '+ms+'ms'); try{ws.close()}catch(e){} r(); };
       ws.onerror=()=>{ clearTimeout(to); setV('❌ blocked'); r(); }; })); }
+  // 2c) Google Firebase (the fast server when Cloudflare is off)
+  if(!SERVER_URL && FB_CONFIG){ const setF=netRow('⚡ Fast server (Google)');
+    tests.push(new Promise(async r=>{ fbUse(); let done=false;
+      const fin=v=>{ if(done) return; done=true; clearTimeout(to); setF(v); fbRelease(); r(); };
+      const to=setTimeout(()=>fin('❌ blocked'), 9000);
+      const db=await fbLoad(); if(!db) return fin('❌ blocked');
+      const ref=db.ref('rooms/'+fbKey('TEST'+Math.random().toString(36).slice(2,8))), t1=performance.now();
+      ref.set(1, e=>{ if(e) return fin('❌ '+(e.code||'error')); const ms=Math.round(performance.now()-t1); res.fb=ms; try{ ref.remove(); }catch(_){} fin('✅ '+ms+'ms'); });
+    })); }
   // 3) every backup relay: connect, then send a message to ourselves and time the round trip
   for(const R of RELAYS){
     const setR=netRow('Backup relay: '+R.id+(R.url.includes(':8')?' (port '+R.url.split(':')[2].split('/')[0]+')':''));
@@ -3862,6 +4014,7 @@ async function runNetTest(){
   if(run!==netTestRun) return;
   const best=res.relays.sort((a,b)=>a.ms-b.ms)[0];
   $('#netVerdict').textContent = res.direct ? '✅ Multiplayer should work here (direct link).'
+    : res.fb ? '✅ Multiplayer will run through the fast server (Google, '+res.fb+'ms). Smooth, even on school Wi-Fi.'
     : res.server ? '✅ Multiplayer will run through the Buckets server ('+res.server+'ms). This is the smooth backup.'
     : best ? '✅ Multiplayer should work here through the backup relay ('+res.relays.length+' working, best: '+best.id+'). Joining takes a few extra seconds.'
     : '❌ This Wi-Fi blocks every online option. Try a phone hotspot, or play Practice / Ranked vs bots.';
@@ -3877,12 +4030,12 @@ setInterval(()=>{ const n=$('#netInfo'); if(!n || !V.inRoom || V.practice) retur
   let t='';
   if(net.role==='host'){ const H=net.hub, up=H?H.socks.filter(s=>s.open).length:0, srvOk=net.srv&&net.srv.open, dir=net.peer&&net.peer.open;
     // plain-English status: what matters is whether friends can get in
-    t = srvOk ? '🟢 Online · friends join through the Buckets server'+(dir?' (or direct)':'')
+    t = srvOk ? '🟢 Online · friends join through the fast server'+(dir?' (or direct)':'')
       : dir ? '🟢 Online · direct link'+(up?' · '+up+' backup relays':'')
       : up ? '🟡 Online through backup relays ('+up+')' : '🔴 Connecting…';
     const cs=[...net.conns.values()], sc=cs.filter(c=>c.isServer).length, rc=cs.filter(c=>c.isRelay&&!c.isServer).length;
     if(sc) t+=' · '+sc+' on server'; if(rc) t+=' · '+rc+' on relay'; }
-  else if(net.role==='client') t=net.via==='server'?'🟢 Connected through the Buckets server':isRelay()?'🟡 Connected through backup relay ('+net.via+')':'🟢 Connected direct';
+  else if(net.role==='client') t=net.via==='server'?'🟢 Connected through the fast server':isRelay()?'🟡 Connected through backup relay ('+net.via+')':'🟢 Connected direct';
   if(n.textContent!==t) n.textContent=t; },1000);
 $('#rankedClose').onclick=closeRanked;
 $('#rankedPlay').onclick=()=>{ if(!nameBlocked()) findRankedMatch('1v1'); };

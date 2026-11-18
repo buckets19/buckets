@@ -2,3 +2,4 @@
 serve.ps1
 node_modules/
 server/package-lock.json
+fbfake.js
