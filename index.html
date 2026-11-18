@@ -4759,12 +4759,22 @@ function diffForRR(rr){
 function rrDelta(win, myRR, oppRR, margin){
   const exp=1/(1+Math.pow(10,(oppRR-myRR)/400));
   let d=Math.round(70*((win?1:0)-exp));                                // ranked games are worth more (longer 1v1s, longer climb)
-  if(win){ d+=Math.min(6,Math.max(0,margin-2)); d+=Math.min(9,SAVE.rank.streak*3); d=Math.max(d,19); }
-  else d=Math.min(d,-13);
-  // longer climb at the top (like Fortnite / Valorant ranked): wins shrink to about half, losses grow by a third
-  const top=clamp(myRR/4200,0,1);
-  d = win ? Math.max(10, Math.round(d*lerp(1,0.5,top))) : Math.round(d*lerp(1,1.33,top));
-  return d;
+  if(win){ d+=Math.min(6,Math.max(0,margin-2)); d+=Math.min(6,SAVE.rank.streak*2); d=Math.max(d,19); }
+  else { if(margin<=2) d+=4; d=Math.min(d,-15); }                       // a close loss costs a bit less
+  // how YOU played (points, assists, steals, blocks, boards vs everyone else in the game): up to +6 / 4 less lost
+  d += rrPerf(win);
+  d += Math.round(rnd(-2,2));                                           // a little randomness, like real ranked
+  // longer climb at the top: wins AND losses shrink the same way (roughly even, never "lose more than you win")
+  const top=clamp(myRR/4200,0,1), k=lerp(1,0.6,top);
+  return win ? Math.max(10, Math.round(d*k)) : Math.min(-8, Math.round(d*k));
+}
+function rrPerf(win){
+  try{ const mine=BOX.p[net.myId]; if(!mine) return 0;
+    const imp=r=>r.pts+1.5*r.ast+2*r.stl+2*r.blk+0.7*r.reb, all=Object.values(BOX.p).map(imp), avg=all.reduce((a,b)=>a+b,0)/Math.max(1,all.length);
+    if(avg<=0) return 0;
+    const ratio=clamp(imp(mine)/avg, 0.4, 1.8);
+    return win ? Math.round(clamp((ratio-1)*8, -2, 6)) : Math.round(clamp((ratio-1)*6, -2, 4));
+  }catch(e){ return 0; }
 }
 function applyRanked(win, myScore, oppScore, oppRR){
   const R=SAVE.rank, before=rankOf(R.rr), ev=eventNow(); let d=rrDelta(win, R.rr, oppRR, Math.abs(myScore-oppScore));
@@ -5054,14 +5064,14 @@ function fillRanked2Teams(){
   const avg=hum.reduce((s,p)=>s+(p.rr||0),0)/Math.max(1,hum.length);
   const pool=RIVALS.map(R=>({R,rr:rivalRR(R)})).sort((a,b)=>Math.abs(a.rr-avg)-Math.abs(b.rr-avg)).slice(0,6);
   for(const t of [0,1]) while(teamCount(t)<2 && pool.length){ const o=pool.splice(Math.floor(Math.random()*pool.length),1)[0]; addRivalToRoster(o.R, t); }
-  G.ranked2=true; G.toWin=11; G.winBy2=true; G.diff=diffForRR(avg);
+  G.ranked2=true; G.toWin=21; G.winBy2=true; G.diff=diffForRR(avg);
   return {humans:hum.length, avg};
 }
 function startQueueMatch2(){
   closeRanked(); V.queueMatch=true;
   const {humans}=fillRanked2Teams();
   enterRoom(); goFull();
-  RM=newMatch([...G.players.values()], 11, false, G.diff, true); RM.phaseT=Math.max(RM.phaseT,3.6); G.phase='game'; broadcastRoster();
+  RM=newMatch([...G.players.values()], 21, false, G.diff, true); RM.phaseT=Math.max(RM.phaseT,3.6); G.phase='game'; broadcastRoster();
   V.banner={text:'RANKED 2v2', sub:humans+' real players'+(humans<4?' + '+(4-humans)+' Ranked Rival'+(4-humans>1?'s':''):''), c:'#c77dff', t:3};
 }
 // nobody else searching: you + a rival teammate vs two rivals
@@ -5070,7 +5080,7 @@ function startRanked2Solo(){
   net.role='host'; net.myId='host'; net.code='RANKED'; V.practice=true; V.queueMatch=true;
   const me=addRosterPlayer('host', getName(), false, 0); Object.assign(me, myGear()); me.rr=SAVE.rank.rr;
   fillRanked2Teams(); enterRoom();
-  RM=newMatch([...G.players.values()], 11, false, G.diff, true); RM.phaseT=Math.max(RM.phaseT,3.6); G.phase='game'; broadcastRoster();
+  RM=newMatch([...G.players.values()], 21, false, G.diff, true); RM.phaseT=Math.max(RM.phaseT,3.6); G.phase='game'; broadcastRoster();
   const mate=[...G.players.values()].find(p=>p.bot && p.team===0);
   V.banner={text:'RANKED 2v2', sub:'You + '+(mate?mate.name:'a rival')+' vs Ranked Rivals', c:'#c77dff', t:3};
 }
@@ -5187,8 +5197,8 @@ function migrateTo(code, tag){
 function duoMatchReady(){
   const s=V.duoState; V.duoWaiting=false; V.duoState=null; V.q2Waiting=false;
   if(s){ clearInterval(s.tick); for(const p of [s.cp, s.sign]) if(p){ try{p.destroy()}catch(e){} } try{s.signHub&&s.signHub.close()}catch(e){} try{s.signSrv&&s.signSrv.close()}catch(e){} }
-  duoStatus(''); G.ranked2=true; G.toWin=11; G.winBy2=true; G.diff='pro';
-  RM=newMatch([...G.players.values()], 11, false, 'pro', true); G.phase='game'; broadcastRoster();
+  duoStatus(''); G.ranked2=true; G.toWin=21; G.winBy2=true; G.diff='pro';
+  RM=newMatch([...G.players.values()], 21, false, 'pro', true); G.phase='game'; broadcastRoster();
   V.banner={text:'RANKED 2v2', sub:'vs a real duo', c:'#ffd23f', t:2.4};
 }
 // ---------------------------------------------------------------- 🏆 ranked 2v2 team-up menu
@@ -5243,8 +5253,8 @@ function duoVsBots(){
   toast(soloOpp ? 'Match found: '+soloOpp+' real player'+(soloOpp>1?'s':'')+' vs your duo' : 'No duos in queue: two Ranked Rivals took the game');
   const pool=RIVALS.map(R=>({R,rr:rivalRR(R)})).sort((a,b)=>Math.abs(a.rr-avg)-Math.abs(b.rr-avg)).slice(0,5);
   const duo=[]; for(const t of [0,1]) while(teamCount(t)<2 && pool.length){ const o=pool.splice(Math.floor(Math.random()*pool.length),1)[0]; addRivalToRoster(o.R, t); duo.push(o.R.n); }
-  G.ranked2=true; G.toWin=11; G.winBy2=true; G.diff=diffForRR(avg);
-  RM=newMatch([...G.players.values()], 11, false, G.diff, true); G.phase='game'; broadcastRoster();
+  G.ranked2=true; G.toWin=21; G.winBy2=true; G.diff=diffForRR(avg);
+  RM=newMatch([...G.players.values()], 21, false, G.diff, true); G.phase='game'; broadcastRoster();
   V.banner={text:'RANKED 2v2', sub: soloOpp ? 'your duo vs '+hum.filter(p=>p.team===1).map(p=>p.name).join(' & ')+(duo.length?' + '+duo.join(' & '):'') : 'your duo vs '+duo.join(' & ')+' (CPU rivals)', c:'#ffd23f', t:2.6};
 }
 

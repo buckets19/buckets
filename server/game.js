@@ -131,7 +131,7 @@ export class GameRoom {
   }
   startRanked2(near, diff) {
     const G = this.G; this.fillRivals(near);
-    G.ranked2 = true; G.toWin = 11; G.winBy2 = true; G.diff = diff || S.diffForRR(near);
+    G.ranked2 = true; G.toWin = 21; G.winBy2 = true; G.diff = diff || S.diffForRR(near);
     this.startMatch(3.6);
   }
 
