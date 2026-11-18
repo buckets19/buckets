@@ -2,3 +2,13 @@
 # Paste your Firebase web config below this line. The whole "const firebaseConfig = { ... };" snippet is fine.
 # Steps: see FIREBASE_SETUP.md
 
+const firebaseConfig = {
+  apiKey: "AIzaSyAO_dJBKDFmECm4uI1jBPEbi-ufsvHtSdw",
+  authDomain: "buckets-37d04.firebaseapp.com",
+  databaseURL: "https://buckets-37d04-default-rtdb.firebaseio.com",
+  projectId: "buckets-37d04",
+  storageBucket: "buckets-37d04.firebasestorage.app",
+  messagingSenderId: "801541088358",
+  appId: "1:801541088358:web:c4a555d221280ea2ba79a7",
+  measurementId: "G-Q73BP890F0"
+};
