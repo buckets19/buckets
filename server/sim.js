@@ -11,7 +11,7 @@ const PREFIX = 'buckets-v2-';
 const TEAM_COL = ['#ff5a4f','#3d8bff'], TEAM_DARK = ['#a8291f','#1d4fa8'], TEAM_NAME = ['RED','BLUE'];
 const SKINS = ['#f1c27d','#c68642','#8d5524','#e0ac69','#ffdbac','#a0612d','#5c3a1e'];
 const HAIR = ['#1b1530','#3b2314','#6b3e1f','#d9a441','#1b1530','#7a1f1f'];
-const EMOTES = ['👋','😂','😤','🔥','🥶','🧱','🤡','GG'];
+const EMOTES = ['EZ','L','🤫','🧱','🤡','🥱','COOKED','GG'];   // keep 8 (the server checks 0-7)
 const BOT_NAMES = ['Bench Ben','Practice Pat','JV Jay','Walk-On Will','Gym Class Gabe','Sub Sully','Waterboy Wes','Cone Carl','Scrimmage Sam','Rookie Rob'];
 const MAX_PER_TEAM = 3;
 
@@ -49,7 +49,8 @@ const hash = s => { let h=7; for(const c of String(s)) h=(h*31+c.charCodeAt(0))|
 // Catches l33t-speak (5h1t), stretched letters (fuuuck) and symbols in between (f_u.c-k).
 // The word lists are stored scrambled (base64) so nobody reading the code sees them.
 const NAME_BAD = (()=>{ const d=x=>{ try{ return atob(x).split(','); }catch(e){ return []; } };
-  return { inn:d('amFja29mZixqYWNraG9mZixqYWNraW5vZmYsamVya29mZixqZXJraW5nb2Zm').concat(d('ZnVjayxmdWssZmNrLGZ2Y2ssc2hpdCxiaXRjaCxidGNoLGN1bnQsZGljayxjb2NrLHB1c3N5LHBlbmlzLHZhZ2luYSxwb3JuLG5pZ2csbmlnYSxuaWdyLGZhZ2dvdCxmYWdvdCxyZXRhcmQscmFwaXN0LHdob3JlLHNsdXQsaGl0bGVyLG5hemksbW9sZXN0LHBlZG9waGlsZSxkaWxkbyxqaXp6LGJvb2IsdGl0cyx0aXR0eSxob3JueSxudWRlLG5ha2VkLGFzc2hvbGUsYXJzZWhvbGUsYmFzdGFyZCx3YW5rLHR3YXQsa2lsbHlvdXJzZWxmLGNoaW5rLGtpa2UsdHJhbm55LHNleHksc2V4eCxibG93am9iLGhhbmRqb2IsY3Vtc2hvdCxvcmdhc20sc2VtZW4sdGVzdGljbGUsYnV0dGhvbGUsYnV0dHNleCxtaWxmLHN0ZnUsZ3Rmbyx3dGYsc3VpY2lkZSx0ZXJyb3Jpc3Q=')), ex:d('c3BpYyxjb29uLHBlZG8sYXNzLGN1bSxzZXgsZmFnLGt5cyxra2ssaG9lLGhvZXMsdGl0LGFuYWwsbnV0LG51dHMscGVlLHBvb3AsYnVtLHJhcGUscmFwZXMsYW51cyxpc2lzLGttcyxoZWls'), ok:['peacock','hancock','dickens','dickson','cockpit','scunthorpe','cockatoo','cockatiel','therapist'] }; })();
+  return { inn:d('amFja29mZixqYWNraG9mZixqYWNraW5vZmYsamVya29mZixqZXJraW5nb2Zm').concat(d('ZnVjayxmdWssZmNrLGZ2Y2ssc2hpdCxiaXRjaCxidGNoLGN1bnQsZGljayxjb2NrLHB1c3N5LHBlbmlzLHZhZ2luYSxwb3JuLG5pZ2csbmlnYSxuaWdyLGZhZ2dvdCxmYWdvdCxyZXRhcmQscmFwaXN0LHdob3JlLHNsdXQsaGl0bGVyLG5hemksbW9sZXN0LHBlZG9waGlsZSxkaWxkbyxqaXp6LGJvb2IsdGl0cyx0aXR0eSxob3JueSxudWRlLG5ha2VkLGFzc2hvbGUsYXJzZWhvbGUsYmFzdGFyZCx3YW5rLHR3YXQsa2lsbHlvdXJzZWxmLGNoaW5rLGtpa2UsdHJhbm55LHNleHksc2V4eCxibG93am9iLGhhbmRqb2IsY3Vtc2hvdCxvcmdhc20sc2VtZW4sdGVzdGljbGUsYnV0dGhvbGUsYnV0dHNleCxtaWxmLHN0ZnUsZ3Rmbyx3dGYsc3VpY2lkZSx0ZXJyb3Jpc3Q=')), ex:d('c3BpYyxjb29uLHBlZG8sYXNzLGN1bSxzZXgsZmFnLGt5cyxra2ssaG9lLGhvZXMsdGl0LGFuYWwsbnV0LG51dHMscGVlLHBvb3AsYnVtLHJhcGUscmFwZXMsYW51cyxpc2lzLGttcyxoZWls'), part:d('YXNzLHRpdCxzZXgsZmFnLGN1bSxhenosYXJzZQ=='),
+    partOk:['class','pass','grass','glass','brass','bass','mass','sass','lass','compass','assist','assassin','assum','assembl','assert','assess','asset','embass','cass','chass','hassan','jassi','massimo','tassos','vassil','picasso','lasso','molasses','passion','kassi','nassir','assad','assam','title','titan','petition','competit','constitut','institut','attitud','stitch','appetit','partition','repetit','quantit','identit','titus','tito','beatitud','gratitud','superstit','sussex','essex','sextant','sexton','cucumber','document','circum','cumulat','accumul','incumb','cumberland','scumbag','cummings','fagan'], ok:['peacock','hancock','dickens','dickson','cockpit','scunthorpe','cockatoo','cockatiel','therapist'] }; })();
 function nameBad(s){
   let low=String(s||'').toLowerCase();
   const leet=low.replace(/[0@4]/g,m=>m==='0'?'o':'a').replace(/[1!|]/g,'i').replace(/3/g,'e').replace(/[5$]/g,'s').replace(/7/g,'t').replace(/8/g,'b').replace(/9/g,'g');
@@ -57,6 +58,7 @@ function nameBad(s){
   let a2=leet.replace(/l/g,'i').replace(/[^a-z]/g,''); for(const w of NAME_BAD.ok) a2=a2.split(w.replace(/l/g,'i')).join('');
   const b=a.replace(/(.)\1+/g,'$1');
   for(const w of NAME_BAD.inn) if(a.includes(w) || b.includes(w) || a2.includes(w)) return true;
+  { let c2=a; for(const w of NAME_BAD.partOk) c2=c2.split(w).join('-'); for(const w of NAME_BAD.part) if(c2.includes(w)) return true; }
   return NAME_BAD.ex.includes(a) || NAME_BAD.ex.includes(b);
 }
 const cleanName = s => { const n=(String(s||'').replace(/[\u0000-\u001f]/g,'').trim().slice(0,12)) || 'Player'; return nameBad(n) ? '#'.repeat(Math.max(4,n.length)) : n; };   // bad names are masked like Roblox tags
