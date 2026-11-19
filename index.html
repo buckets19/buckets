@@ -72,6 +72,10 @@
   .adItem{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;padding:2px 0}
   .btn.red{background:#ff5a4f;color:#fff}
   /* ---- packs */
+  #shop.wide{left:16px;width:auto;max-width:1100px;margin:0 auto}
+  #shop.wide #shopList.lockGrid{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  .packCard.feat .packArt{padding:24px 6px 18px} .packCard.feat .paIcon{font-size:64px} .packCard.feat .paName{font-size:26px}
+  .packCard.feat{flex-direction:row;flex-wrap:wrap;align-items:center} .packCard.feat .packArt{flex:1 1 260px} .packCard.feat > :not(.packArt):not(.pTag){flex:1 1 220px}
   #shopList.packGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:12px;overflow-y:auto}
   .dailyCard,.shardBar{grid-column:1/-1;display:flex;align-items:center;gap:10px;border:3px solid var(--ink);border-radius:14px;padding:8px 12px;background:#fff}
   .dailyCard.ready{background:linear-gradient(90deg,#fff3c4,#ffe08a);animation:pulse 1.6s ease-in-out infinite}
@@ -241,6 +245,7 @@
   #touch .tb small{display:block;font-size:11px;-webkit-text-stroke:0;opacity:.9;margin-top:3px}
 
   .walletRow{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:8px}
+  .gemPill{color:#8ff3ff!important} .wallet2{display:flex;gap:6px} .btn.gemb{background:#2fd3e8;color:#0b2a33}
   .coinPill{font-weight:700;background:var(--ink);color:var(--yellow);border-radius:999px;padding:6px 12px;font-size:16px}
   .btn.shopBtn{background:#47e27a}
   .grandRow{display:flex;gap:10px;margin-top:14px}
@@ -533,11 +538,11 @@
     <li><b>16-second shot clock.</b> Ball out of bounds = other team's ball.</li>
     <li>Keyboard: J/Space shoot·block, K pass·steal, L cross·slide, 1–8 emotes.</li>
   </ul></details>
-  <div class="walletRow"><span class="coinPill">💰 <span class="coinCount">0</span></span><button class="btn tiny shopBtn openShop">🛒 Shop</button><button class="btn tiny openLocker" style="background:#7b5cff;color:#fff">🎒 Locker</button><button id="leaveBtn" class="btn tiny ghost">Leave room</button></div>
+  <div class="walletRow"><span class="coinPill gemPill">💎 <span class="gemCount">0</span></span><span class="coinPill">💰 <span class="coinCount">0</span></span><button class="btn tiny shopBtn openShop">🛒 Shop</button><button class="btn tiny openLocker" style="background:#7b5cff;color:#fff">🎒 Locker</button><button id="leaveBtn" class="btn tiny ghost">Leave room</button></div>
 </div>
 
 <div id="shop" class="panel hidden">
-  <div class="head"><h2 id="shopTitle">🛒 Shop</h2><span class="coinPill">💰 <span class="coinCount">0</span></span></div>
+  <div class="head"><h2 id="shopTitle">🛒 Shop</h2><span class="wallet2"><span class="coinPill gemPill">💎 <span class="gemCount">0</span></span><span class="coinPill">💰 <span class="coinCount">0</span></span></span></div>
   <div class="tabs" id="mainTabs"><button data-main="crates" class="on">🛒 Shop</button><button data-main="locker">🎒 Locker</button></div>
   <div class="tabs lockTabs" id="lockTabs"></div>
   <div id="shopList"></div>
@@ -2789,10 +2794,10 @@ const KIND_ONE={cel:'Celly', gfx:'Green FX', js:'Jumpshot', dunk:'Dunk', trail:'
 // 📦 PACKS (replaced the old one-crate-per-category-per-theme setup). Every pack can hold ANY kind of item.
 // The better the pack, the more cards and the higher the guaranteed card. Dupes refund 💰; item levels come from playing.
 const PACKS=[
-  {id:'street',  name:'Street Pack',   icon:'🧢', col:'#c98a4b', price:200,  cards:3, odds:{common:58, rare:30, epic:9, legendary:2.4, mythic:.5, exclusive:.08, secret:.02}},
-  {id:'pro',     name:'Pro Pack',      icon:'⭐', col:'#3d8bff', price:600,  cards:4, guar:'epic',      odds:{common:30, rare:40, epic:21, legendary:7, mythic:1.6, exclusive:.3, secret:.1}},
-  {id:'allstar', name:'All-Star Pack', icon:'🌟', col:'#a55eea', price:1500, cards:5, guar:'legendary', odds:{rare:40, epic:38, legendary:17, mythic:4, exclusive:.8, secret:.2}},
-  {id:'legends', name:'Legends Pack',  icon:'👑', col:'#ffb400', price:4000, cards:5, guar:'mythic',    odds:{epic:55, legendary:30, mythic:11, exclusive:3, secret:1}},
+  {id:'street',  name:'Street Pack',   icon:'🧢', col:'#c98a4b', price:300,  cards:3, odds:{common:58, rare:30, epic:9, legendary:2.4, mythic:.5, exclusive:.08, secret:.02}},
+  {id:'pro',     name:'Pro Pack',      icon:'⭐', col:'#3d8bff', gems:150,  cards:4, guar:'epic',      odds:{common:30, rare:40, epic:21, legendary:7, mythic:1.6, exclusive:.3, secret:.1}},
+  {id:'allstar', name:'All-Star Pack', icon:'🌟', col:'#a55eea', gems:400,  cards:5, guar:'legendary', odds:{rare:40, epic:38, legendary:17, mythic:4, exclusive:.8, secret:.2}},
+  {id:'legends', name:'Legends Pack',  icon:'👑', col:'#ffb400', gems:1000, cards:5, guar:'mythic',    odds:{epic:55, legendary:30, mythic:11, exclusive:3, secret:1}},
 ];
 const SPECIAL_PACKS=[
   {id:'season', name:'Season Pack', icon:'🎟️', col:'#7b5cff', price:0, cards:3, guar:'legendary', odds:{epic:45, legendary:34, mythic:15, exclusive:5, secret:1}, freeOnly:true},
@@ -2802,7 +2807,7 @@ const SPECIAL_PACKS=[
 const FEAT_SETS=['brainrot','galaxy','anime','arcade','spooky','street'];
 function featWeek(){ return Math.floor((Date.now()/864e5 + 3) / 7); }       // weeks since 1970, starting Mondays
 function featuredPack(){ const k=FEAT_SETS[featWeek()%FEAT_SETS.length], S=SETS[k];
-  return {id:'feat', set:k, name:S.n+' Pack', icon:S.icon, col:S.col, price:900, cards:4, guar:'epic', odds:{rare:44, epic:33, legendary:15, mythic:6, exclusive:1.6, secret:.4}, featured:true}; }
+  return {id:'feat', set:k, name:S.n+' Pack', icon:S.icon, col:S.col, gems:250, cards:4, guar:'epic', odds:{rare:44, epic:33, legendary:15, mythic:6, exclusive:1.6, secret:.4}, featured:true}; }
 // old crate ids (saved free crates, pass rewards, admin gifts) still work
 function packId(id){ if(!id) return id; if(id==='season'||id==='secret'||PACKS.some(p=>p.id===id)||id==='feat') return id; if(/-elite$/.test(id)) return 'legends'; return 'pro'; }
 function packOf(id){ id=packId(id); return id==='feat' ? featuredPack() : PACKS.find(p=>p.id===id) || SPECIAL_PACKS.find(p=>p.id===id); }
@@ -2841,15 +2846,19 @@ for(const k in KINDS){
 SAVE.stats=SAVE.stats||{games:0,wins:0,pts:0,greens:0};
 { const fc={}; for(const [k,n] of Object.entries(SAVE.freeCrates||{})) if(n>0){ const id=packId(k); fc[id]=(fc[id]||0)+n; } SAVE.freeCrates=fc; }
 SAVE.setClaim=SAVE.setClaim||{}; SAVE.mast=SAVE.mast||{}; SAVE.feat=SAVE.feat||{};
+if(SAVE.gems===undefined){ SAVE.gems=150; SAVE.gemsHello=1; }        // everyone starts with enough for one Pro Pack
+function gemsAdd(n, why){ n=Math.round(n); if(!n) return; SAVE.gems=(SAVE.gems||0)+n; V.gemGame=(V.gemGame||0)+n; persist(); if(why) V.coinPops.push({n, why:why+' 💎', t:1.8, gem:1}); }
 function mastOf(kind,id){ return ((SAVE.mast||{})[kind]||{})[id]||0; }
 function lvOf(kind,id){ if(!SAVE.owned[kind] || !SAVE.owned[kind].includes(id)) return 0; const m=mastOf(kind,id); return m>=MAST_AT[2]?3 : m>=MAST_AT[1]?2 : 1; }
 function addMast(kind,n){ const id=SAVE[kind]; if(!id) return; SAVE.mast[kind]=SAVE.mast[kind]||{}; const l0=lvOf(kind,id); SAVE.mast[kind][id]=(SAVE.mast[kind][id]||0)+(n||1);
   const l1=lvOf(kind,id); if(l1>l0){ const it=itemOf(kind,id); toast('⬆️ '+(it?it.icon+' '+it.name:'Item')+' reached '+(l1>=3?'MAX LEVEL ★★★':'LEVEL 2 ★★')+'!'); confetti(0); syncGear(); } }
 function myGear(){ const g={}; for(const k in KINDS) g[k]=SAVE[k]; g.lv=String(lvOf('cel',SAVE.cel)||1)+String(lvOf('gfx',SAVE.gfx)||1); if(SAVE.ctitle && SETS[SAVE.ctitle] && setPct(SAVE.ctitle)>=100) g.ct=SAVE.ctitle; if(SAVE.look) g.lk=SAVE.look; if(SAVE.badge) g.bdg='S'+SAVE.badge.s+':'+SAVE.badge.ti; if(SAVE.tk && (SAVE.tkUnl||[]).includes(SAVE.tk)) g.tk=SAVE.tk; return g; }
 function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }catch(e){} updateCoinUI(); if(typeof scheduleBackup==='function') try{ scheduleBackup(); }catch(e){} }
+const GEM_FOR={PLAYED:6, WIN:14, GREEN:1, ANKLES:1, FROZE:1, BLOCK:1, STEAL:1, CHARGE:1, DUNK:1, THREE:1};
 function realGame(){ return V.inRoom && V.phase==='game' && (!V.practice || V.ranked || V.queueMatch); }
 function earn(n, why){ if(!V.inRoom || V.phase!=='game') return;
   if(realGame()){ try{
+    gemsAdd(GEM_FOR[why]||0);
     if(why==='GREEN'){ addMast('gfx'); addMast('js'); bumpFeat('greens'); }
     if(why==='BUCKET'||why==='THREE'||why==='DUNK'){ addMast('cel'); addMast('trail'); addMast('ball'); if(why==='DUNK') addMast('dunk'); }
     if(why==='ANKLES'||why==='FROZE') bumpFeat('ankles');
@@ -3562,7 +3571,7 @@ function handleEvent(e, demo){
       if(!demo){
         sfx('buzzer'); confetti(e.w);
         const me=V.rmap.get(net.myId);
-        if(me){ setTimeout(()=>{ try{ passGameXP(me.team===e.w); }catch(x){} }, 900); SAVE.stats.games++; earn(10,'PLAYED'); if(me.team===e.w){ SAVE.stats.wins++; earn(25,'WIN'); const sc=(V.lastSnap||{}).sc||[1,1]; if(realGame() && sc[1-me.team]===0 && sc[me.team]>=7){ SAVE.feat.zero=1; checkFeats(); } } persist(); }
+        if(me){ setTimeout(()=>{ try{ passGameXP(me.team===e.w); }catch(x){} }, 900); SAVE.stats.games++; earn(10,'PLAYED'); setTimeout(()=>{ if(V.gemGame>0){ toast('💎 +'+V.gemGame+' Gems this game'); V.gemGame=0; } }, 2400); if(me.team===e.w){ SAVE.stats.wins++; earn(25,'WIN'); const sc=(V.lastSnap||{}).sc||[1,1]; if(realGame() && sc[1-me.team]===0 && sc[me.team]>=7){ SAVE.feat.zero=1; checkFeats(); } } persist(); }
         V.rankRes=null;
         if(me && (V.ranked || V.queueMatch || V.ranked2 || (V.rankedRoom && rankedRoomOk()))){ V.overSeen=true;
           // rate against the average of the other team (1v1 or 2v2)
@@ -5290,7 +5299,7 @@ function passXP(n, why){
   const P=passNow(), before=passLevel(P.xp); P.xp+=Math.round(n); const after=passLevel(P.xp); const got=[];
   for(let L=before+1; L<=after; L++){ const r=passRew(L);
     if(r.tk){ SAVE.tkUnl=SAVE.tkUnl||[]; if(!SAVE.tkUnl.includes(r.tk)) SAVE.tkUnl.push(r.tk); if(!SAVE.tk) SAVE.tk=r.tk; }
-    if(r.coins) SAVE.coins+=r.coins;
+    if(r.coins) SAVE.coins+=r.coins; SAVE.gems=(SAVE.gems||0)+30;                // every pass level also pays 30 💎
     if(r.crate){ const id=packId(r.crate); SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[id]=(SAVE.freeCrates[id]||0)+1; }
     if(r.item && !SAVE.owned.trail.includes(r.item)) SAVE.owned.trail.push(r.item);
     got.push('Lv '+L+': '+passDesc(r)); }
@@ -5761,7 +5770,7 @@ function duoVsBots(){
 
 // ---------------------------------------------------------------- crates + locker
 let shopMain='crates', lockTab='gfx', lastCrate=null, ubWin=null, shopTab='packs', wsKind='cel';
-function updateCoinUI(){ document.querySelectorAll('.coinCount').forEach(e=>e.textContent=SAVE.coins);
+function updateCoinUI(){ document.querySelectorAll('.coinCount').forEach(e=>e.textContent=SAVE.coins); document.querySelectorAll('.gemCount').forEach(e=>e.textContent=SAVE.gems||0);
   try{ const hr=document.getElementById('homeRank'); if(hr && SAVE.rank){ const k=SAVE.rank.rr+'|'+(SAVE.rank.games||0); if(hr.dataset.k!==k){ hr.dataset.k=k; hr.innerHTML=''; hr.append(rankBadge(SAVE.rank.rr)); } } }catch(e){} }
 function openShop(mode){ if(typeof mode==='string') shopMain=mode; else shopMain='crates'; if(shopMain==='locker') lockTab='look';
   V.shopOpen=true; $('#home').classList.add('hidden'); $('#lobby').classList.add('hidden'); $('#shop').classList.remove('hidden'); renderShop(); }
@@ -5782,6 +5791,7 @@ function renderShop(){
   const cats=shopMain==='locker' ? ['look', ...Object.keys(KINDS)] : [];
   for(const k of cats){ const lab = k==='special' ? '✨ Special' : k==='look' ? '🧍 Look' : KINDS[k].icon+' '+KINDS[k].label+(shopMain==='locker' ? ' '+SAVE.owned[k].length+'/'+KINDS[k].list.length : '');
     const b=el('button', k===lockTab?'on':'', lab); b.onclick=()=>{ lockTab=k; renderShop(); }; tabs.append(b); }
+  $('#shop').classList.toggle('wide', shopMain==='crates');
   const box=$('#shopList'); box.innerHTML=''; box.className = shopMain==='crates' ? (shopTab==='packs'?'packGrid':'lockGrid') : 'lockGrid';
   if(shopMain==='crates'){ if(shopTab==='trophy') renderTrophies(box); else if(shopTab==='book') renderBook(box); else renderCrates(box); } else renderLocker(box);
   const st=SAVE.stats, owned=Object.values(SAVE.owned).reduce((s,a)=>s+a.length,0);
@@ -6012,15 +6022,17 @@ function renderCrates(box){
   inp.placeholder='🎟️ Have a code?'; inp.maxLength=20; inp.setAttribute('autocapitalize','off'); inp.setAttribute('autocomplete','off');
   go.onclick=()=>{ redeemCode(inp.value); inp.value=''; };
   inp.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Enter') go.click(); });
-  cc.append(inp,go); box.append(cc);
+  cc.append(inp,go); cc.style.gridColumn="1/-1";
   // 🎁 free daily pack
   const day=new Date().toDateString(), dailyOk=SAVE.dailyPack!==day;
   { const d=el('div','dailyCard'+(dailyOk?' ready':'')); d.append(el('div','dIcon','🎁'), el('div','dTxt', dailyOk ? 'FREE daily Street Pack is ready!' : 'Free Street Pack again tomorrow'));
     const b=el('button','btn '+(dailyOk?'yellow':''), dailyOk?'Open free':'✓ Claimed'); b.disabled=!dailyOk; b.onclick=()=>{ if(SAVE.dailyPack===day) return; SAVE.dailyPack=day; persist(); openPack('street', true); }; d.append(b); box.append(d); }
+  { const g=el('div','shardBar'); g.append(el('b','','💎 '+(SAVE.gems||0)+' Gems'), el('small','',' · earned only by playing online + ranked: ~25-40 a game, +60 daily quests, +30 per pass level, +250 per trophy. Codes can\'t give Gems.')); box.append(g); }
   // free packs you've been given (Season Pass, admin gifts, codes)
   for(const [id,n] of Object.entries(SAVE.freeCrates||{})) if(n>0 && packOf(id)) box.append(packCard(packOf(id), n));
   const fp=featuredPack(), left=Math.ceil((featWeek()+1)*7 - (Date.now()/864e5+3)); box.append(packCard(fp, 0, '🔥 FEATURED · '+left+(left===1?' day':' days')+' left'));
   for(const pk of PACKS) box.append(packCard(pk, 0));
+  box.append(cc);
 }
 function packCard(pk, free, tag){
   const c=el('div','packCard'+(pk.featured?' feat':'')); c.style.setProperty('--pc', pk.col);
@@ -6031,8 +6043,8 @@ function packCard(pk, free, tag){
   else c.append(el('div','pGuar', 'Anything can drop'));
   const odds=el('div','odds'); for(const r of RORDER){ if(!pk.odds[r]) continue; const ch=el('span','oc', RAR[r].n+' '+pk.odds[r]+'%'); ch.style.background=RAR[r].c; odds.append(ch); } c.append(odds);
   if(pk.set){ const pool=packPool(pk), have=pool.filter(i=>SAVE.owned[i.kind].includes(i.id)).length; c.append(el('small','pHave', SETS[pk.set].icon+' only '+SETS[pk.set].n+' items · '+have+'/'+pool.length+' owned')); }
-  const b=el('button','btn '+(free?'yellow':'orange'), free ? '🎁 Open FREE ('+free+')' : 'Open · 💰 '+pk.price);
-  b.disabled=!free && (pk.freeOnly || SAVE.coins<pk.price); b.onclick=()=>openPack(pk.id); c.append(b);
+  const b=el('button','btn '+(free?'yellow':pk.gems?'gemb':'orange'), free ? '🎁 Open FREE ('+free+')' : pk.gems ? 'Open · 💎 '+pk.gems : 'Open · 💰 '+pk.price);
+  b.disabled=!free && (pk.freeOnly || (pk.gems ? (SAVE.gems||0)<pk.gems : SAVE.coins<pk.price)); b.onclick=()=>openPack(pk.id); c.append(b);
   return c;
 }
 function renderCratesOld(box){
@@ -6152,8 +6164,8 @@ const FEATS=[
 function featProg(f){ if(f.id==='rank') return Math.max(SAVE.rank.rr||0, SAVE.rank.best||0)>=TIERS.find(t=>t.n==='Diamond').min ? 1 : 0; return Math.min(f.goal, SAVE.feat[f.id]||0); }
 function bumpFeat(id){ SAVE.feat[id]=(SAVE.feat[id]||0)+1; checkFeats(); }
 function checkFeats(){ for(const f of FEATS){ if(featProg(f)<f.goal || SAVE.owned[f.kind].includes(f.item)) continue;
-  SAVE.owned[f.kind].push(f.item); persist(); const it=itemOf(f.kind,f.item);
-  V.flash=.6; confetti(0); confetti(1); toast('🏅 TROPHY UNLOCKED: '+f.n+'! '+it.icon+' '+it.name+' is in your Locker'); } }
+  SAVE.owned[f.kind].push(f.item); SAVE.gems=(SAVE.gems||0)+250; persist(); const it=itemOf(f.kind,f.item);
+  V.flash=.6; confetti(0); confetti(1); toast('🏅 TROPHY UNLOCKED: '+f.n+'! '+it.icon+' '+it.name+' + 250 💎'); } }
 setTimeout(()=>{ try{ checkFeats(); }catch(e){} }, 1500);
 function renderTrophies(box){
   box.append(el('p','how','Trophy items can\'t be bought and never drop from packs. Only play gets them, and everyone sees them on you. Online and ranked games count.'));
@@ -6185,6 +6197,7 @@ function openPack(id, dailyFree){
   SAVE.freeCrates=SAVE.freeCrates||{};
   if(!dailyFree){
     if(SAVE.freeCrates[pk.id]>0) SAVE.freeCrates[pk.id]--;
+    else if(pk.gems){ if((SAVE.gems||0)<pk.gems){ toast('Not enough 💎 Gems. Play online or ranked games to earn them'); return; } SAVE.gems-=pk.gems; }
     else { if(pk.freeOnly){ toast('No free '+pk.name+'s left'); return; } if(SAVE.coins<pk.price){ toast('Not enough 💰 — go win some games'); return; } SAVE.coins-=pk.price; }
   }
   const cards=rollPack(pk).map(it=>{
@@ -6236,8 +6249,8 @@ function updatePoBtns(){
   const all=PK.flipped>=PK.cards.length, pk=PK.pk, fr=(SAVE.freeCrates||{})[pk.id]||0;
   $('#poAll').classList.toggle('hidden', all);
   $('#poAgain').classList.toggle('hidden', !all); $('#poDone').classList.toggle('hidden', !all);
-  $('#poAgain').textContent = fr ? 'Open another · FREE ('+fr+')' : pk.freeOnly ? 'None left' : 'Open another · 💰 '+pk.price;
-  $('#poAgain').disabled = !fr && (pk.freeOnly || SAVE.coins<pk.price);
+  $('#poAgain').textContent = fr ? 'Open another · FREE ('+fr+')' : pk.freeOnly ? 'None left' : pk.gems ? 'Open another · 💎 '+pk.gems : 'Open another · 💰 '+pk.price;
+  $('#poAgain').disabled = !fr && (pk.freeOnly || (pk.gems ? (SAVE.gems||0)<pk.gems : SAVE.coins<pk.price));
   $('#poHint').textContent = all ? 'Tap a NEW card to equip it' : 'Tap the cards to flip them';
 }
 $('#poAll').onclick=()=>{ const cards=[...document.querySelectorAll('#poStage .pcard')]; let t=0; cards.forEach((card,i)=>{ if(card.classList.contains('flip')) return; setTimeout(()=>flipCard(card, PK.cards[i]), t); t+=RORDER.indexOf(PK.cards[i].r)>=3?2600:260; }); };
@@ -6372,8 +6385,8 @@ function renderQuests(){
     btn.onclick=()=>{ if(q.c||q.p<D.n) return; q.c=true; SAVE.coins+=D.r; persist(); confetti(0); toast('+'+D.r+' 💰'); renderQuests(); updateQuestBadge(); };
     li.append(el('div','qIcon',D.i), info, btn); box.append(li);
   }
-  const all=Qs.list.every(q=>q.c), bb=el('button','btn '+(all&&!Qs.bonus?'orange':''), Qs.bonus?'✓ Daily bonus claimed':all?'🎁 Claim daily bonus · 💰'+QUEST_BONUS:'Finish all 3 for a 💰'+QUEST_BONUS+' bonus');
-  bb.disabled=!all||Qs.bonus; bb.onclick=()=>{ if(!all||Qs.bonus) return; Qs.bonus=true; SAVE.coins+=QUEST_BONUS; persist(); confetti(1); V.flash=.4; toast('🎁 +'+QUEST_BONUS+' 💰 daily bonus!'); renderQuests(); updateQuestBadge(); };
+  const all=Qs.list.every(q=>q.c), bb=el('button','btn '+(all&&!Qs.bonus?'orange':''), Qs.bonus?'✓ Daily bonus claimed':all?'🎁 Claim daily bonus · 💰'+QUEST_BONUS+' + 60 💎':'Finish all 3 for 💰'+QUEST_BONUS+' + 60 💎');
+  bb.disabled=!all||Qs.bonus; bb.onclick=()=>{ if(!all||Qs.bonus) return; Qs.bonus=true; SAVE.coins+=QUEST_BONUS; SAVE.gems=(SAVE.gems||0)+60; persist(); confetti(1); V.flash=.4; toast('🎁 +'+QUEST_BONUS+' 💰 + 60 💎 daily bonus!'); renderQuests(); updateQuestBadge(); };
   box.append(bb);
   const ms=86400000-((Date.now()-new Date().getTimezoneOffset()*60000)%86400000), h=Math.floor(ms/3600000), m=Math.floor(ms/60000)%60;
   box.append(el('p','how','New quests in '+h+'h '+m+'m'));
