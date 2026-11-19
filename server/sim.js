@@ -68,10 +68,10 @@ const outOfCourt = (x,z) => x<COURT_L || x>COURT_R || Math.abs(z)>HALF_D;
 // =====================================================================
 // how good the bots are: shot accuracy, crossover/dodge/slide/jump/steal frequency, speed
 const BOTDIFF={
-  scrub: {name:'Scrub',  shotSd:0.19,  burst:0.25, dodge:0.03, slide:0.12, jump:0.3,  steal:0.012, speed:0.88, cushion:125},
-  rookie:{name:'Rookie', shotSd:0.105, burst:0.45, dodge:0.08, slide:0.25, jump:0.55, steal:0.025, speed:0.93, cushion:105},
-  pro:   {name:'Pro',    shotSd:0.075, burst:0.8,  dodge:0.2,  slide:0.4,  jump:0.85, steal:0.035, speed:0.98, cushion:85},
-  legend:{name:'Legend', shotSd:0.052, burst:1.15, dodge:0.4,  slide:0.55, jump:1.15, steal:0.05,  speed:1.02, cushion:72},
+  scrub: {name:'Scrub',  shotSd:0.19,  burst:0.25, dodge:0.03, slide:0.12, jump:0.3,  steal:0.012, speed:0.88, cushion:125, moves:0.2, bite:0.45, read:0},
+  rookie:{name:'Rookie', shotSd:0.105, burst:0.45, dodge:0.08, slide:0.25, jump:0.55, steal:0.025, speed:0.93, cushion:105, moves:0.45, bite:0.4, read:0.1},
+  pro:   {name:'Pro',    shotSd:0.075, burst:0.8,  dodge:0.2,  slide:0.4,  jump:0.85, steal:0.035, speed:0.98, cushion:85, moves:1.0, bite:0.24, read:0.35},
+  legend:{name:'Legend', shotSd:0.052, burst:1.15, dodge:0.4,  slide:0.55, jump:1.15, steal:0.05,  speed:1.02, cushion:72, moves:1.45, bite:0.14, read:0.55},
 };
 function newMatch(roster, toWin, demo, diff, winBy2){
   const M = { players:[], ball:{x:COURT_W/2,y:300,z:0,vx:0,vy:0,vz:0,st:'loose',holder:null,t:0,lastTeam:0},
@@ -207,7 +207,7 @@ function shotWindow(M,p){
       if(dr<100 && ahead>-10 && ahead<dist+25){ let f=Math.pow(0.55+0.45*(dr/100),1.1); if(o.y>20) f*=0.8; c=Math.min(c,f); } }
   }
   p.contest=c;
-  if(c<0.12) return 0;                                   // smothered: there is no green
+  if(c<0.12) return dist<220 ? 0.012 : 0;                // smothered: no green on a jumper (a sliver at the rim)
   if(dist>HEAVE_D) return 0.005;                         // past half court: just a sliver on the meter (it can't green; see releaseShot)
   return clamp(w*0.8*c, 0.01, 0.16);                         // scaled by coverage: open = full green, light ~70%, covered 40%, tight 25%
 }
@@ -217,8 +217,8 @@ function shotFormAt(p, v){
   const sp=hyp(p.vx,p.vz), away=sp>1 ? -(p.vx*v.ux+p.vz*v.uz)/sp : 0, k=clamp((sp-60)/(RUN-60),0,1);
   if(p.rhythmT>0) return [1.25,'IN RHYTHM'];
   if(sp<=60) return [1,''];
-  if(away>0.45) return [lerp(1,0.5,k), k>0.35?'FADING':''];
-  return [lerp(1,0.72,k), k>0.5?'ON THE RUN':''];
+  if(away>0.45) return [lerp(1,0.42,k), k>0.35?'FADING':''];
+  return [lerp(1,0.66,k), k>0.5?'ON THE RUN':''];
 }
 
 function handleActions(M,p){
@@ -272,9 +272,9 @@ function dribbleMove(M,p){
     m='hesi'; p.hesiT=HESI_T; p.vx*=0.15; p.vz*=0.15; p.rhythmT=0.9;
     if(def && dd<150 && def.y<5 && def.downT<=0){
       const moving=def.burstT>0 || def.act==='reach' || hyp(def.vx,def.vz)>140;
-      const bites = def.bot && def.act==='' && Math.random()<0.3+0.25*((def.D||M.diff).jump||0.8);
+      const DD=def.D||M.diff, bites = def.bot && def.act==='' && Math.random()<(DD.bite??(0.3+0.25*(DD.jump||0.8)));
       if(bites){ def.act='jump'; def.vy=JUMP_V*0.85; def.vx*=0.2; def.vz*=0.2; pushEv(M,{k:'froze', id:def.id, by:p.id, bit:1}); tkAdd(M,p, p.tk==='handles'?0.25:0.1); botTalk(M,p,1.6); }
-      else if(moving){ def.stumbleT=Math.max(def.stumbleT,0.45); def.vx*=0.25; def.vz*=0.25; pushEv(M,{k:'froze', id:def.id, by:p.id}); tkAdd(M,p, p.tk==='handles'?0.25:0.1); botTalk(M,p,1.6); }
+      else if(moving && !(def.bot && Math.random()<(DD.read||0))){ def.stumbleT=Math.max(def.stumbleT,0.45); def.vx*=0.25; def.vz*=0.25; pushEv(M,{k:'froze', id:def.id, by:p.id}); tkAdd(M,p, p.tk==='handles'?0.25:0.1); botTalk(M,p,1.6); }
     }
   } else if(toward<-0.5){                                // STEPBACK: hop back for space, shoot in rhythm
     m='stepback'; const lat=-(p.inX*v.uz-p.inZ*v.ux)/il*0.35;
@@ -295,7 +295,7 @@ function dribbleMove(M,p){
 function releaseShot(M,p,m){
   const h=attackHoop(p.team), b=M.ball;
   if(p.y>0.01) p.meterWin=Math.min(p.meterWin, shotWindow(M,p));
-  p.contest=Math.min(p.contest===undefined?1:p.contest, p.cMin===undefined?1:p.cMin);   // the tightest coverage during the shot counts
+  if(hyp(h.cx-p.x,p.z)>=220) p.contest=Math.min(p.contest===undefined?1:p.contest, p.cMin===undefined?1:p.cMin);   // the tightest coverage during the shot counts
   // ^ a closeout at the release still counts (not after landing: that's just lag)
   const sx=p.x+p.face*6, sz=p.z, sy=p.y+150;
   const v=hoopVec({x:sx,z:sz},h), dist=hyp(h.cx-p.x, p.z);
@@ -314,7 +314,7 @@ function releaseShot(M,p,m){
   else {
     const ODDS=[[0.82,0.55,0.25],[0.62,0.35,0.1],[0.48,0.2,0.04],[0.25,0.08,0.02],[0.15,0.05,0.01]];   // slightly off · off · way off (open)
     const ae=Math.abs(err); let pr=ODDS[band][ae<0.06?0:ae<0.12?1:2];
-    pr *= c0<0.12 ? 0.03 : Math.pow(c0,1.4);                 // light ~60%, covered ~28%, tight ~14% of the open odds; smothered = no
+    pr *= c0<0.12 ? (band===0?0.2:0.03) : Math.pow(c0, band===0?0.8:1.4);   // jumpers: coverage is brutal; at the rim you can still finish through contact sometimes                 // light ~60%, covered ~28%, tight ~14% of the open odds; smothered = no
     pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
     if(p.fire) pr*=1.15; if(p.cold) pr*=0.85;
     if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2; if(p.pmT>0) pr*=1.15;
@@ -435,7 +435,7 @@ function movePlayer(M,p,dt){
       const l=hyp(p.inX,p.inZ); if(l>0.3 && has && p.act===''){ p.bdx=p.inX/l; p.bdz=p.inZ/l; p.burstT=BURST_T*1.15; p.moveKind='go'; p.ankled={}; if(Math.abs(p.bdx)>0.2) p.face=Math.sign(p.bdx); } } }
   else if(p.burstT>0){ p.burstT-=dt; const bv=BURST_V*(p.moveKind==='step'?0.8:p.moveKind==='spin'?0.9:1)*(tkOn(p,'handles')?1.05:1); p.vx=p.bdx*bv; p.vz=p.bdz*bv*0.85; if(p.burstT<=0) p.moveKind=''; }
   else if(ground && !locked){
-    const k=(p.boostT>0&&has?1.22:1)*(has?0.93:1)*(has&&tkOn(p,'slash')?1.06:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1)*(p.recoverT>0?0.55:1)*(guarding && !p.bot ? 1.06 : 1)*(p.bot?D.speed:1);
+    const k=(p.boostT>0&&has?1.22:1)*(has?0.93:1)*(has&&tkOn(p,'slash')?1.06:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1)*(p.recoverT>0?0.55:1)*(guarding && !p.bot ? 1.09 : 1)*(p.bot?D.speed:1);
     p.vx=approach(p.vx, ix*RUN*k, ACC*dt); p.vz=approach(p.vz, iz*RUN*0.85*k, ACC*dt);
   } else if(!ground && !locked){ p.vx=approach(p.vx,ix*RUN,AIR_ACC*dt); p.vz=approach(p.vz,iz*RUN*0.85,AIR_ACC*dt); }
   else if(ground && locked){ p.vx=approach(p.vx,0,ACC*dt); p.vz=approach(p.vz,0,ACC*dt); }
@@ -674,6 +674,7 @@ function botThink(M,p,dt){
   else go(lerp(b.x, myHoop.cx, 0.5), 0, 20);
   if(myD<55 && b.y>p.y+REACH && b.y<p.y+REACH+150 && b.vy<60 && p.y<=0) p.wantA=true;
 }
+function closing0(no,p,nd){ return (no.vx*(p.x-no.x)+no.vz*(p.z-no.z))/(nd||1); }
 function botOffense(M,p,hoop,opps,mates,tick){
   if(p.act){ p.inX=p.inZ=0; return; }
   const v=hoopVec(p,hoop), dist=v.d;
@@ -698,13 +699,19 @@ function botOffense(M,p,hoop,opps,mates,tick){
   // good shooters gather themselves (plant) before letting it go, unless the clock says hurry
   const shoot=()=>{ if(M.scT>2 && hyp(p.vx,p.vz)>70 && Math.random()<(D.plant??0.6)){ p.pull=0.4; p.inX=p.inZ=0; return; } rel(); };
   if(p.pull>0){ p.pull-=tick; p.inX=p.inZ=0; if(hyp(p.vx,p.vz)<60 || p.pull<=0){ p.pull=0; rel(); } return; }
-  if(dist<170){ p.wantA=true; p.botRel=SWEET+gauss()*Math.max(0.06,D.shotSd*0.5)*rb; return; }
+  if(dist<170){ let nd0=1e9; for(const o of opps) nd0=Math.min(nd0,hyp(o.x-p.x,o.z-p.z));
+    if(mv>=0.9 && nd0<55 && p.burstCd<=0 && !M.demo && Math.random()<0.45){ p.inX=v.ux; p.inZ=v.uz; p.wantC=true; return; }   // smothered at the rim: spin off him first
+    p.wantA=true; p.botRel=SWEET+gauss()*Math.max(0.06,D.shotSd*0.5)*rb; return; }
   // out of a stepback / hesi: let it fly in rhythm
   if(p.wantRhythm && p.rhythmT>0 && p.burstT<=0 && p.hesiT<=0){ p.wantRhythm=false; if(dist<THREE_D+90){ rel(); return; } }
   if(p.rhythmT<=0) p.wantRhythm=false;
   // dribble moves to make space
   let nd=1e9, no=null; for(const o of opps){ const d=hyp(o.x-p.x,o.z-p.z); if(d<nd){ nd=d; no=o; } }
+  if(p.hesiT>0 && p.hesiT<0.14 && !p.wantRhythm && mv>=0.9 && !M.demo){ p.inX=v.ux; p.inZ=v.uz; return; }      // hesi-GO: explode toward the rim
   if(no && p.burstCd<=0 && !M.demo){
+    if(nd<95 && dist>200 && dist<THREE_D+40 && Math.random()<0.05*mv*mv){ p.inX=v.ux; p.inZ=v.uz; p.wantC=true; return; }   // spin / drive past a tight defender
+    if(nd<120 && Math.random()<0.035*mv*mv){ const sd=Math.random()<.5?-1:1; const l=hyp(v.ux*.6-v.uz*sd, v.uz*.6+v.ux*sd); p.inX=(v.ux*.6-v.uz*sd)/l; p.inZ=(v.uz*.6+v.ux*sd)/l; p.wantC=true; p.wantRhythm=dist<THREE_D+40 && Math.random()<.5; return; }   // crossover to shake him
+    if(nd<110 && closing0(no,p,nd)<60 && Math.random()<0.04*mv*mv){ p.inX=p.inZ=0; p.wantC=true; p.wantRhythm=false; return; }   // hesi on a set defender, then go
     if(nd<100 && dist>THREE_D-70 && dist<THREE_D+70 && Math.random()<0.07*mv){ p.inX=-v.ux; p.inZ=-v.uz; p.wantC=true; p.wantRhythm=true; return; }   // stepback three
     const closing=(no.vx*(p.x-no.x)+no.vz*(p.z-no.z))/(nd||1);
     if(nd<150 && closing>220 && Math.random()<0.12*mv){ p.inX=p.inZ=0; p.wantC=true; p.wantRhythm=dist<THREE_D+40; return; }                     // hesi on a closeout
@@ -714,7 +721,8 @@ function botOffense(M,p,hoop,opps,mates,tick){
     for(const q of mates){ let o2=999; for(const o of opps) o2=Math.min(o2,hyp(o.x-q.x,o.z-q.z)); if(o2>140 && hyp(hoop.cx-q.x,q.z)<dist-80){ p.inX=p.inZ=0; p.wantB=true; return; } }
   }
   p.stuckT = lane && laneAlong<75 ? (p.stuckT||0)+tick : Math.max(0,(p.stuckT||0)-tick*0.5);
-  if(dist<=p.shotRange && (open>(dist>THREE_D?75:100) || Math.random()<0.03)){ shoot(); return; }
+  const needOpen=(dist>THREE_D?75:100)+35*clamp(mv-0.5,0,1);           // good bots wait for real space
+  if(dist<=p.shotRange && (open>needOpen || Math.random()<0.03/Math.max(1,mv))){ shoot(); return; }
   // planted defender in the lane: don't bulldoze into a charge — pull up or kick it out
   if(lane && lane.o.setT>0.3 && laneAlong<95){
     if(mates.length && Math.random()<0.15){ p.wantB=true; return; }

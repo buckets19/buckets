@@ -247,7 +247,7 @@ export class Matchmaker {
   send(e, o) { try { e.ws.send(JSON.stringify(o)); } catch (x) {} }
   drop(e) { for (const k of ['q1', 'q2', 'qd']) { const i = this[k].indexOf(e); if (i >= 0) this[k].splice(i, 1); } clearTimeout(e.timer); this.arm2(); this.wait2(); }
   // the 2v2 queue waits up to 20s from the first searcher, then plays with whoever is there
-  arm2() { if (this.q2.length && !this.t2) this.t2 = setTimeout(() => { this.t2 = null; this.timeout2(); }, 20000); if (!this.q2.length && this.t2) { clearTimeout(this.t2); this.t2 = null; } }
+  arm2() { if (this.q2.length && !this.t2) this.t2 = setTimeout(() => { this.t2 = null; this.timeout2(); }, 25000); if (!this.q2.length && this.t2) { clearTimeout(this.t2); this.t2 = null; } }
   wait2() { for (const e of this.q2) this.send(e, { t: 'wait', n: this.q2.length }); }
   join(e, d) {
     this.drop(e); e.mode = d.mode; e.rr = +d.rr || 0; e.t = Date.now();
@@ -255,7 +255,7 @@ export class Matchmaker {
       const other = this.q1.shift();
       if (other) { clearTimeout(other.timer); const code = 'Q' + rid(7); for (const x of [other, e]) this.send(x, { t: 'go', code, mode: '1v1', exp: 2 }); return; }
       this.q1.push(e);
-      e.timer = setTimeout(() => { const i = this.q1.indexOf(e); if (i >= 0) { this.q1.splice(i, 1); this.send(e, { t: 'none' }); } }, 15000);
+      e.timer = setTimeout(() => { const i = this.q1.indexOf(e); if (i >= 0) { this.q1.splice(i, 1); this.send(e, { t: 'none' }); } }, 25000);   // 25s for a real player before a Ranked Rival steps in
     } else if (d.mode === '2v2') {
       // a team-up duo is waiting for opponents: go play them
       const duo = this.qd.find(x => x.sent < 2);
