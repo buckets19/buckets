@@ -680,6 +680,29 @@
   #packOpen.hof #poStage{position:relative}
   #packOpen.hof .poPack{background:linear-gradient(160deg,#fff1b8,#e8b730 40%,#6b4e0a);box-shadow:0 0 90px 20px rgba(232,183,48,.5)}
   .packCard:has(.paName) .packArt{}
+  /* ===== player card ===== */
+  #profPanel.prof{left:50%;top:50%;transform:translate(-50%,-50%);width:min(860px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow-y:auto;padding:18px}
+  .pfWrap{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start;margin-bottom:12px}
+  .pfCard{position:relative;border-radius:10px;overflow:hidden;box-shadow:0 0 0 3px var(--tc),0 18px 40px rgba(0,0,0,.5);transform:rotate(-1.5deg)}
+  .pfCard canvas,#pfCv{display:block;position:static;inset:auto;width:100%;height:auto;aspect-ratio:300/360}
+  .pfNum{position:absolute;top:10px;left:14px;font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:44px;color:rgba(255,255,255,.9);text-shadow:0 2px 0 rgba(0,0,0,.4)}
+  .pfOvr{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;align-items:center;background:rgba(0,0,0,.45);border-radius:6px;padding:6px 10px;color:#fff}
+  .pfOvr b{font-size:30px;line-height:1} .pfOvr span{font-family:"Barlow Condensed",sans-serif;font-weight:800;font-size:13px;letter-spacing:1px}
+  .pfHead h2{margin:0;font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:46px;line-height:1;text-transform:uppercase}
+  .pfTags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px} .pfTags .ptitle,.pfTags .pbadge{margin:0}
+  .pfRank{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0} .pfRank small{color:#9a9ea8;font-weight:600}
+  .pfStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .pfStat{background:#23262e;border-radius:6px;padding:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+  .pfStat b{display:block;font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:30px;line-height:1}
+  .pfStat small{font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:1px;color:#9a9ea8}
+  .pfEq h4,.pfTr h4{margin:12px 0 6px;font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;letter-spacing:1.5px;color:#c9c6bf}
+  .pfEqRow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .pfItem{background:#23262e;border-radius:6px;padding:8px;border-top:4px solid var(--rc);display:flex;flex-direction:column;gap:2px}
+  .pfItem .pfIc{font-size:26px} .pfItem b{font-size:13px} .pfItem small{font-size:11px;color:#9a9ea8}
+  .pfTrRow{display:flex;gap:8px} .pfTrI{font-size:28px;filter:grayscale(1);opacity:.3} .pfTrI.got{filter:none;opacity:1}
+  .hCardBtn{font-family:"Barlow Condensed",sans-serif;font-weight:800;font-style:italic;letter-spacing:.5px;border:0;border-radius:3px;background:#2b2e36;color:#fff;padding:6px 10px;cursor:pointer;transform:skewX(-7deg);box-shadow:inset 0 -3px 0 rgba(0,0,0,.3)}
+  #rankedPanel #ladder li:hover{background:rgba(255,255,255,.06)}
+  @media (max-width:760px){ .pfWrap{grid-template-columns:1fr} .pfCard{max-width:300px;margin:0 auto} }
   /* lobby */
   .team{border:0;border-radius:4px;padding:10px 12px;background:#fff!important;box-shadow:inset 0 0 0 1px var(--line)}
   .team.t0{border-top:6px solid var(--red)} .team.t1{border-top:6px solid var(--blue)}
@@ -697,7 +720,7 @@
   <div class="hTop">
     <h1 class="logo">BUCKETS<i class="lgBall"></i></h1>
     <div class="hTopR">
-      <span id="homeRank" class="hRank"></span>
+      <button id="homeCard" class="hCardBtn">👤 MY CARD</button><span id="homeRank" class="hRank"></span>
       <span class="coinPill gemPill">💎 <span class="gemCount">0</span></span><span class="coinPill">💰 <span class="coinCount">0</span></span>
     </div>
   </div>
@@ -833,6 +856,13 @@
   <button id="rankedClose" class="btn big" style="margin-top:10px">Back</button>
 </div>
 
+<div id="profPanel" class="panel hidden dark prof">
+  <div class="pfWrap">
+    <div class="pfCard" id="pfCard"><canvas id="pfCv" width="300" height="360"></canvas><div class="pfNum" id="pfNum"></div><div class="pfOvr" id="pfOvr"></div></div>
+    <div class="pfInfo" id="pfInfo"></div>
+  </div>
+  <button id="pfClose" class="btn big">Back</button>
+</div>
 <div id="packOpen" class="hidden">
   <div id="poStage"></div>
   <p id="poHint"></p>
@@ -5644,6 +5674,7 @@ function renderLeaderboard(){
     const li=el('li', r.pk===me?'me':'');
     const ln=el('span','lname', cleanName(r.n)+(r.pk===me?' (you)':'')); { const bg=badgeEl(r); if(bg) ln.append(bg); const tt=titleEl(r); if(tt) ln.append(tt); }
     li.append(el('b','',String(i+1)), rankBadge(r.rr), ln, el('span','lrr', r.rr+' RR'));
+    li.style.cursor='pointer'; li.onclick=()=>openProfile(r.pk===me ? null : {...r, place:i+1});
     lb.append(li);
   });
   if(!SAVE.rank.games) lb.append(el('li','gap','Play a ranked game to get on the board.'));
@@ -5814,6 +5845,62 @@ function eventClaim(){ const e=eventNow(), pr=evProg(); if(!e || !pr || pr.claim
   persist(); passXP(150); try{ confetti(0); }catch(x){} toast('🎁 Event reward: '+rewText(rw)); ctlBanner(); }
 setInterval(()=>{ if(eventNow() || $('#ctlBanner').querySelector('.evBox')) ctlBanner(); }, 30000);
 
+// ---------------------------------------------------------------- 👤 PLAYER CARD
+// Your card: look, rank, season, stats, equipped gear with levels, trophies. Tap anyone on the leaderboard for theirs.
+let PF=null;
+function openProfile(other){
+  PF={other, t0:clock}; const P=$('#profPanel'), I=$('#pfInfo'); I.innerHTML='';
+  const me=!other, rr=me?SAVE.rank.rr:(other.rr||0), rk=rankOf(rr), name=me?getName():cleanName(other.n||'Player');
+  $('#pfCard').style.setProperty('--tc', rk.t.c);
+  $('#pfNum').textContent = me ? '#'+((SAVE.num)||23) : (other.place?'#'+other.place:'');
+  $('#pfOvr').innerHTML=''; $('#pfOvr').append(el('b','',rk.t.icon), el('span','',rk.short.toUpperCase()));
+  const head=el('div','pfHead'); head.append(el('h2','',name));
+  const tags=el('div','pfTags'); const who=me?meWho():other; const bg=badgeEl(who), tt=titleEl(who); if(tt) tags.append(tt); if(bg) tags.append(bg); head.append(tags); I.append(head);
+  const rkRow=el('div','pfRank'); rkRow.append(rankBadge(rr,true));
+  if(me) rkRow.append(el('small','', 'Best '+(SAVE.rank.best||rr)+' RR'+(SAVE.season?' · Season '+SAVE.season.n+' peak '+(SAVE.season.peak||rr):'')));
+  else rkRow.append(el('small','', (other.place?'#'+other.place+' on the leaderboard · ':'')+(other.g||0)+' ranked games'));
+  I.append(rkRow);
+  // stats
+  const st=el('div','pfStats'), S=SAVE.stats||{}, R=SAVE.rank||{};
+  const add=(n,l)=>{ const d=el('div','pfStat'); d.append(el('b','',String(n)), el('small','',l)); st.append(d); };
+  if(me){ const g=S.games||0, w=S.wins||0; add(g,'GAMES'); add(w,'WINS'); add(g?Math.round(w/g*100)+'%':'—','WIN %'); add(S.pts||0,'POINTS'); add(S.greens||0,'GREENS'); add((R.wins||0)+'-'+((R.games||0)-(R.wins||0)),'RANKED W-L'); }
+  else { add(other.g||0,'RANKED GAMES'); add(rr,'RR'); add(rk.t.n.toUpperCase(),'RANK'); }
+  I.append(st);
+  if(me){
+    // equipped gear with levels
+    const eq=el('div','pfEq'); eq.append(el('h4','','EQUIPPED'));
+    const row=el('div','pfEqRow');
+    for(const k of ['cel','gfx','js','dunk','trail','ball']){ const it=itemOf(k,SAVE[k]); if(!it) continue; const lv=lvOf(k,it.id);
+      const c=el('div','pfItem r-'+it.r); c.style.setProperty('--rc', RAR[it.r].c); c.append(el('div','pfIc',it.icon), el('b','',it.name), el('small','', KIND_ONE[k]+' · '+'★'.repeat(lv)+'☆'.repeat(3-lv))); row.append(c); }
+    eq.append(row); I.append(eq);
+    // trophies
+    const tr=el('div','pfTr'); tr.append(el('h4','','TROPHIES'));
+    const tw=el('div','pfTrRow'); for(const f of FEATS){ const got=SAVE.owned[f.kind].includes(f.item); const t=el('span','pfTrI'+(got?' got':''), f.icon); t.title=f.n+(got?' ✓':' · '+f.txt); tw.append(t); } tr.append(tw); I.append(tr);
+    const owned=Object.values(SAVE.owned).reduce((a,b)=>a+b.length,0);
+    I.append(el('p','how','Collection '+owned+'/'+ITEMS.length+' · ICONs '+ITEMS.filter(i=>i.r==='icon' && SAVE.owned[i.kind].includes(i.id)).length+' · Packs opened '+(S.crates||0)));
+  }
+  $('#home').classList.add('hidden'); $('#rankedPanel').classList.add('hidden'); P.classList.remove('hidden');
+  if(!V.pfLoop){ V.pfLoop=true; requestAnimationFrame(drawProfile); }
+}
+function closeProfile(){ $('#profPanel').classList.add('hidden'); PF=null; if(V.rankedOpen) $('#rankedPanel').classList.remove('hidden'); else if(!V.inRoom) $('#home').classList.remove('hidden'); }
+$('#pfClose').onclick=closeProfile;
+$('#homeCard').onclick=()=>openProfile(null); $('#homeRank').style.cursor='pointer'; $('#homeRank').onclick=()=>openProfile(null);
+function drawProfile(){
+  const c=$('#pfCv'); if(!c || !PF || $('#profPanel').classList.contains('hidden')){ V.pfLoop=false; return; }
+  requestAnimationFrame(drawProfile);
+  const pc=c.getContext('2d'); pc.setTransform(1,0,0,1,0,0);
+  const tc=getComputedStyle($('#pfCard')).getPropertyValue('--tc').trim()||'#ff5b1f';
+  const g=pc.createLinearGradient(0,0,0,c.height); g.addColorStop(0,tc); g.addColorStop(1,'#15171c'); pc.fillStyle=g; pc.fillRect(0,0,c.width,c.height);
+  pc.globalAlpha=.08; pc.fillStyle='#fff'; for(let i=-c.height;i<c.width;i+=22){ pc.beginPath(); pc.moveTo(i,c.height); pc.lineTo(i+c.height,0); pc.lineTo(i+c.height+10,0); pc.lineTo(i+10,c.height); pc.fill(); } pc.globalAlpha=1;
+  pc.fillStyle='rgba(0,0,0,.35)'; pc.beginPath(); pc.ellipse(c.width/2,c.height*.9,90,16,0,0,TAU); pc.fill();
+  const o=PF.other, id=o ? 'pf_'+String(o.pk||o.n).slice(0,12) : '__prof';
+  DMI.set(id, o ? {id, name:o.n, team:0, num:o.place||7} : {id, name:getName(), team:0, num:23, ...myGear()});
+  const face = Math.sin((clock-PF.t0)*.7)>-.6 ? 1 : -1;
+  const q=[id,0,0,0,0,0,face,0,0,0,0,0,0,face,-1,0,0];
+  const main=ctx; ctx=pc;
+  try{ pc.translate(c.width/2,c.height*.9); pc.scale(1.65,1.65); drawPlayer(q,false,{ph:'lobby',p:[q],b:[0,0,0,4,null,0,null]},null,false); }
+  catch(e){ console.warn(e); } finally{ ctx=main; }
+}
 // ----- ranked panel
 function openRanked(){ V.rankedOpen=true; $('#home').classList.add('hidden'); $('#rankedPanel').classList.remove('hidden'); renderRanked(); }
 function closeRanked(){ V.rankedOpen=false; $('#rankedPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); }
