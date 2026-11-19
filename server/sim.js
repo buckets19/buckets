@@ -207,7 +207,7 @@ function shotWindow(M,p){
   p.contest=c;
   if(c<0.12) return 0;                                   // smothered: there is no green
   if(dist>HEAVE_D) return 0.005;                         // past half court: just a sliver on the meter (it can't green; see releaseShot)
-  return clamp(w*c, 0.01, 0.18);                         // scaled by coverage: open = full green, light ~70%, covered 40%, tight 25%
+  return clamp(w*0.8*c, 0.01, 0.16);                         // scaled by coverage: open = full green, light ~70%, covered 40%, tight 25%
 }
 function previewWin(M,p){ const v=hoopVec(p,attackHoop(p.team)), sf=p.shotForm, c=p.contest; p.shotForm=shotFormAt(p,v)[0]; const w=shotWindow(M,p); p.shotForm=sf; p.contest=c; return w; }
 // judge HOW the shot started: set shot, in rhythm off a move, on the run, or fading away
@@ -232,8 +232,7 @@ function handleActions(M,p){
       } else {
         [p.shotForm, p.formTag]=shotFormAt(p,v); if(v.d<220) p.formTag=""; p.rhythmT=0;
         p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.4; p.vz*=0.4; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.hesiT=0; p.meterWin=shotWindow(M,p);
-        if(!p.bot && p.reqW!=null){ const ws=p.meterWin; p.meterWin = ws>0 ? clamp(p.reqW, ws*0.6, ws*1.5) : Math.min(p.reqW, 0.012); p.c0=p.contest; }
-        p.reqW=null; p.c0=p.contest;
+        p.reqW=null;
       }
     } else if(!has && ground && p.act===''){ p.act='jump'; p.vy=JUMP_V; p.vx*=0.6; p.vz*=0.6; }
   }
@@ -293,7 +292,7 @@ function dribbleMove(M,p){
 
 function releaseShot(M,p,m){
   const h=attackHoop(p.team), b=M.ball;
-  const cStart=p.c0===undefined?1:p.c0; shotWindow(M,p); p.contest=Math.min(cStart, p.contest===undefined?1:p.contest);   // green stays fixed; a late closeout only hurts a non-green
+  if(p.y>0.01) p.meterWin=Math.min(p.meterWin, shotWindow(M,p));   // a closeout at the release still counts (not after landing: that's just lag)
   const sx=p.x+p.face*6, sz=p.z, sy=p.y+150;
   const v=hoopVec({x:sx,z:sz},h), dist=hyp(h.cx-p.x, p.z);
   const w=p.meterWin, e=m-SWEET; let err=0, q='perfect';
@@ -309,7 +308,7 @@ function releaseShot(M,p,m){
   let made;
   if(green) made = true;                                 // (past half court the green is a sliver, so this is rare)
   else {
-    const ODDS=[[0.9,0.65,0.3],[0.8,0.5,0.15],[0.7,0.38,0.08],[0.4,0.15,0.03],[0.15,0.05,0.01]];   // slightly off · off · way off (open)
+    const ODDS=[[0.82,0.55,0.25],[0.62,0.35,0.1],[0.48,0.2,0.04],[0.25,0.08,0.02],[0.15,0.05,0.01]];   // slightly off · off · way off (open)
     const ae=Math.abs(err); let pr=ODDS[band][ae<0.06?0:ae<0.12?1:2];
     pr *= c0<0.12 ? 0.3 : Math.pow(c0,0.85);                 // covered = less likely, smothered = a prayer
     pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
@@ -465,7 +464,7 @@ function movePlayer(M,p,dt){
   p.setT = (p.y<=0.01 && hyp(p.vx,p.vz)<80 && p.act==='' && p.burstT<=0) ? (p.setT||0)+dt : 0;
   if(p.act==='shoot' && p.y<=0.01 && !has) p.act='';           // lost the ball while waiting on a release
   if(p.act==='shoot'){
-    p.shootT+=dt;
+    p.shootT+=dt; if(p.y>0.01) p.meterWin=Math.min(p.meterWin, shotWindow(M,p));   // closeouts shrink the green live
     const m=p.shootT/METER_T;
     if(p.bot && m>=p.botRel) releaseShot(M,p,m);
     else if(m>=(p.bot?1.3:1.3+0.8/METER_T)) releaseShot(M,p,1.3);   // players: their iPad lets go at 1.3; give a laggy release time to arrive
