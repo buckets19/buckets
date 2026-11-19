@@ -15,12 +15,14 @@ const EMOTES = ['👋','😂','😤','🔥','🥶','🧱','🤡','GG'];
 const BOT_NAMES = ['Bench Ben','Practice Pat','JV Jay','Walk-On Will','Gym Class Gabe','Sub Sully','Waterboy Wes','Cone Carl','Scrimmage Sam','Rookie Rob'];
 const MAX_PER_TEAM = 3;
 
-const COURT_L = 40, COURT_R = 1760, COURT_W = 1800, HALF_D = 200;
+const COURT_L = 40, COURT_R = 1760, COURT_W = 1800, HALF_D = 235;   // deeper court: real corners
 const SKEW = 0.16, DEPTH = 0.58;
 const RIM_Y = 260, BALL_R = 13, GRAV = 1500, RIM_R = 26, RIM_PR = 3.5, BB_HALF = 62;
 const HOOPS = [{cx:135, dir:-1, i:0}, {cx:1665, dir:1, i:1}];
 for(const h of HOOPS){ h.bb = h.cx + h.dir*40; h.base = h.i===0 ? COURT_L : COURT_R; h.ft = h.bb - h.dir*275; }
 const THREE_D = 440;
+const CORNER_Z = HALF_D-60;                                          // NBA-style: straight 3-pt line in the corners
+const isThree = (p,h) => Math.abs(p.z)>CORNER_Z || hyp(h.cx-p.x, p.z)>THREE_D;
 const P_R = 20, REACH = 160, BLOCK_R = 28;
 const RUN = 400, ACC = 3200, AIR_ACC = 600, JUMP_V = 560, SHOT_JUMP = 500, DUNK_V = 720;
 const BURST_V = 690, BURST_T = 0.24, BURST_CD = 1.1, STEAL_R = 62, STEAL_CD = 1.0, REACH_T = 0.28;
@@ -87,14 +89,15 @@ function mkPlayer(r, idx){
   // ranked rivals bring their own play style + trash talk
   const R=r.rv && RIVAL_BY[r.rv];
   if(R){ p.D=rivalDiff(R); p.style=R.style; p.talk=STYLES[R.style].talk; p.talkRate=STYLES[R.style].talkRate;
-    if(!p.tk) p.tk = R.style==='shooter'?'shot' : R.style==='lockdown'?'lock' : (R.style==='slasher'||R.style==='bully')?'slash' : ''; }
+    if(!p.tk) p.tk = ({shooter:'shot', lockdown:'lock', slasher:'slash', bully:'slash', iso:'handles', troll:'play'})[R.style]||''; }
   return p;
 }
 // a bot reacts to a big play with an emote (personality)
 function botTalk(M,p,boost=1){ if(!p || !p.bot || !p.talk || M.demo || p.emoteIn>0) return; if(Math.random()<Math.min(0.6,(p.talkRate||0)*0.65*boost)){ p.emoteIn=rnd(0.3,0.9); p.emoteE=pick(p.talk); } }
 // 🔥 TAKEOVERS: pick one (unlocked in the Season Pass). Good plays fill your meter; when it's full you
 // get a 12-second boost. Kept modest on purpose: it helps, it doesn't win the game for you.
-const TK={shot:{n:'Sniper',icon:'🎯'}, lock:{n:'Lockdown',icon:'🔒'}, slash:{n:'Slasher',icon:'⚡'}}, TK_T=12, TK_CODE={'':0, shot:1, lock:2, slash:3};
+const TK={lock:{n:'Lockdown',icon:'🔒'}, handles:{n:'Handles',icon:'🌀'}, play:{n:'Playmaker',icon:'🤝'}, slash:{n:'Slasher',icon:'⚡'}, shot:{n:'Sniper',icon:'🔥'}}, TK_T=12,
+  TK_CODE={'':0, shot:1, lock:2, slash:3, handles:4, play:5}, TK_KINDS=['','shot','lock','slash','handles','play'];
 const tkOn=(p,k)=>p && p.tk===k && p.tkT>0;
 function tkAdd(M,p,v){ if(!p || !p.tk || p.tkT>0 || M.demo) return; p.tkm=Math.max(0,Math.min(1,(p.tkm||0)+v));
   if(p.tkm>=1){ p.tkm=0; p.tkT=TK_T; pushEv(M,{k:'takeover', id:p.id, tk:p.tk}); } }
@@ -173,19 +176,20 @@ const HEAVE_D = COURT_W/2 - HOOPS[0].cx + 40;                       // past half
 function shotWindow(M,p){
   const h=attackHoop(p.team), v=hoopVec(p,h), dist=v.d;
   let w = dist<220 ? 0.13
-        : dist<THREE_D ? lerp(0.092, 0.07, (dist-220)/(THREE_D-220))
+        : !isThree(p,h) ? lerp(0.092, 0.07, clamp((dist-220)/(THREE_D-220),0,1))
         : lerp(0.062, 0.042, clamp((dist-THREE_D)/220,0,1));
   if(dist>THREE_D+260) w*=0.65;
   if(dist>=220) w*=(p.shotForm||1);                                    // how you got into the shot
-  if(tkOn(p,'shot')) w*=1.22;                                          // 🎯 Sniper takeover
+  if(tkOn(p,'shot')) w*=1.22;                                          // 🔥 Sniper takeover
+  if(p.pmT>0) w*=1.2;                                                   // 🤝 fed by a Playmaker
   if(p.fire) w*=1.35;
   if(p.cold) w*=0.75;
   let c=1;
   for(const o of M.players){
     if(o.team===p.team) continue;
     const ox=o.x-p.x, oz=o.z-p.z, d=hyp(ox,oz), ahead=ox*v.ux+oz*v.uz;
-    if(d<135){
-      let f=0.25+0.75*Math.pow(d/135,1.2);
+    if(d<150){                                          // defenders reach further (stronger coverage)
+      let f=0.22+0.78*Math.pow(d/150,1.2);
       if(ahead < -15) f=Math.min(1,f+0.35);            // defender behind you barely matters
       if(o.y>20) f*=0.65;                                // hand in the air
       if(tkOn(o,'lock')) f*=0.85;                        // 🔒 Lockdown takeover: tighter contests
@@ -196,9 +200,9 @@ function shotWindow(M,p){
       if(dr<100 && ahead>-10 && ahead<dist+25){ let f=0.5+0.5*(dr/100); if(o.y>20) f*=0.85; c=Math.min(c,f); } }
   }
   p.contest=c;
-  if(c<0.4) return 0;                                   // smothered: there is no green
+  if(c<0.43) return 0;                                   // smothered: there is no green
   if(dist>HEAVE_D) return 0.005;                         // past half court: a sliver of green (a few ms), super rare
-  return clamp(w*0.8*Math.pow(c,1.5), 0.01, 0.16);       // tighter greens (2K-style); contests bite hard
+  return clamp(w*0.8*Math.pow(c,1.75), 0.01, 0.16);         // tighter greens (2K-style); contests bite hard
 }
 // judge HOW the shot started: set shot, in rhythm off a move, on the run, or fading away
 function shotFormAt(p, v){
@@ -215,7 +219,7 @@ function handleActions(M,p){
   if(p.wantA){
     if(has && ground && (p.act===''||p.act==='fake')){
       const h=attackHoop(p.team), v=hoopVec(p,h), toward=p.vx*v.ux+p.vz*v.uz;
-      if(v.d<145 && toward>170){
+      if(v.d<(tkOn(p,'slash')?175:145) && toward>170){
         p.act='dunk'; p.vy=DUNK_V; const T=0.42;
         p.vx=clamp((h.cx-v.ux*8-p.x)/T,-520,520); p.vz=clamp((0-p.z)/T,-400,400); p.face=Math.sign(v.ux)||p.face; p.burstT=0;
         pushEv(M,{k:'dunkgo', id:p.id});
@@ -249,7 +253,7 @@ function dribbleMove(M,p){
   const toward = il>0.2 ? (p.inX*v.ux+p.inZ*v.uz)/il : 0;
   let def=null, dd=1e9;
   for(const o of M.players){ if(o.team===p.team) continue; const d=hyp(o.x-p.x,o.z-p.z); if(d<dd){ dd=d; def=o; } }
-  p.ankled={}; p.burstCd=BURST_CD*(tkOn(p,'slash')?0.75:1); p.moveKind='';
+  p.ankled={}; p.burstCd=BURST_CD*(tkOn(p,'slash')?0.75:tkOn(p,'handles')?0.75:1); p.moveKind='';
   // a reach timed against ANY move is dead: defender shook
   for(const o of M.players) if(o.team!==p.team && o.act==='reach' && hyp(o.x-p.x,o.z-p.z)<STEAL_R+45) o.reachFoiled=p.id;
   let m;
@@ -260,8 +264,8 @@ function dribbleMove(M,p){
     if(def && dd<150 && def.y<5 && def.downT<=0){
       const moving=def.burstT>0 || def.act==='reach' || hyp(def.vx,def.vz)>140;
       const bites = def.bot && def.act==='' && Math.random()<0.3+0.25*((def.D||M.diff).jump||0.8);
-      if(bites){ def.act='jump'; def.vy=JUMP_V*0.85; def.vx*=0.2; def.vz*=0.2; pushEv(M,{k:'froze', id:def.id, by:p.id, bit:1}); botTalk(M,p,1.6); }
-      else if(moving){ def.stumbleT=Math.max(def.stumbleT,0.45); def.vx*=0.25; def.vz*=0.25; pushEv(M,{k:'froze', id:def.id, by:p.id}); botTalk(M,p,1.6); }
+      if(bites){ def.act='jump'; def.vy=JUMP_V*0.85; def.vx*=0.2; def.vz*=0.2; pushEv(M,{k:'froze', id:def.id, by:p.id, bit:1}); tkAdd(M,p, p.tk==='handles'?0.25:0.1); botTalk(M,p,1.6); }
+      else if(moving){ def.stumbleT=Math.max(def.stumbleT,0.45); def.vx*=0.25; def.vz*=0.25; pushEv(M,{k:'froze', id:def.id, by:p.id}); tkAdd(M,p, p.tk==='handles'?0.25:0.1); botTalk(M,p,1.6); }
     }
   } else if(toward<-0.5){                                // STEPBACK: hop back for space, shoot in rhythm
     m='stepback'; const lat=-(p.inX*v.uz-p.inZ*v.ux)/il*0.35;
@@ -291,16 +295,17 @@ function releaseShot(M,p,m){
   // 2K-style: GREEN = bucket (past half court the green is tiny). Missing the green is a CHANCE, not a sure miss:
   // the closer to green, the more open you are, and the cleaner you got into the shot, the better the odds.
   const c0=(p.contest===undefined?1:p.contest), cm=1-c0, green=q==='perfect';
-  const band = dist<220 ? 0 : dist<THREE_D ? 1 : dist<THREE_D+260 ? 2 : dist<HEAVE_D ? 3 : 4;   // layup · mid · three · deep · heave
+  const three = isThree(p,h);
+  const band = dist<220 ? 0 : !three ? 1 : dist<THREE_D+260 ? 2 : dist<HEAVE_D ? 3 : 4;   // layup · mid · three · deep · heave
   let made;
   if(green) made = true;                                 // (past half court the green is a sliver, so this is rare)
   else {
     const ODDS=[[0.62,0.38,0.15],[0.40,0.18,0.05],[0.28,0.10,0.03],[0.14,0.05,0.01],[0.08,0.03,0.01]];   // slightly off · off · way off
     const ae=Math.abs(err); let pr=ODDS[band][ae<0.05?0:ae<0.12?1:2];
-    pr *= c0<0.4 ? 0.33 : Math.pow(c0,1.3);                 // covered = less likely, smothered = a prayer
+    pr *= c0<0.43 ? 0.28 : Math.pow(c0,1.6);                 // covered = less likely, smothered = a prayer
     pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
     if(p.fire) pr*=1.15; if(p.cold) pr*=0.85;
-    if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2;
+    if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2; if(p.pmT>0) pr*=1.15;
     made = Math.random() < Math.min(0.9, pr);
   }
   // misses: short or long by how far off you were (way off = airball), a little sideways
@@ -312,9 +317,9 @@ function releaseShot(M,p,m){
   // flight time: long shots get a higher arc so they drop in steep instead of clipping the front rim
   const hd=hyp(tx-sx,tz-sz), T=Math.max(0.7+Math.min(hd,1000)/1600*0.7, Math.sqrt((1.5*hd+Math.max(0,ty-sy)+120)/750));
   Object.assign(b,{st:'shot',holder:null,x:sx,y:sy,z:sz,vx:(tx-sx)/T,vz:(tz-sz)/T,vy:(ty-sy+0.5*GRAV*T*T)/T,
-    shooter:p.id,shotTeam:p.team,pts3:dist>THREE_D,t:0,touchedRim:false,dunk:false,reb:true,wasShot:true,lastTeam:p.team,post:null});
+    shooter:p.id,shotTeam:p.team,pts3:three,t:0,touchedRim:false,dunk:false,reb:true,wasShot:true,lastTeam:p.team,post:null});
   p.act='follow'; p.noGrabT=0.35; p.shotRange=0; M.scOn=false;
-  pushEv(M,{k:'shot', id:p.id, q, three:dist>THREE_D, d:Math.round(dist), c:r2(p.contest===undefined?1:p.contest), f:p.formTag||''});
+  pushEv(M,{k:'shot', id:p.id, q, three, d:Math.round(dist), c:r2(p.contest===undefined?1:p.contest), f:p.formTag||''});
 }
 
 function tryDunk(M,p){
@@ -360,6 +365,7 @@ function doPass(M,p){
   Object.assign(M.ball,{st:'pass',holder:null,x:sx,y:sy,z:sz,vx:(tx-sx)/T,vz:(tz-sz)/T,vy:(ty-sy+0.5*GRAV*T*T)/T,
     passTo:pick.id,passTeam:p.team,passTry:{},t:0,touchedRim:false,reb:false,lastTeam:p.team});
   p.noGrabT=0.3; if(Math.abs(tx-sx)>10) p.face=Math.sign(tx-sx);
+  M.lastPass={id:p.id, team:p.team, t:M.time}; if(tkOn(p,'play')) pick.pmT=3;     // 🤝 Playmaker: your pass = a bigger green for them
   pushEv(M,{k:'pass', id:p.id});
   return true;
 }
@@ -368,7 +374,7 @@ function doPass(M,p){
 function resolveSteal(M,p){
   const b=M.ball;
   // crossed during the reach: a wobble (no hitting the floor)
-  if(p.reachFoiled){ const by=p.reachFoiled; p.reachFoiled=false; p.stumbleT=0.45; p.vx*=0.4; p.vz*=0.4; pushEv(M,{k:'shook', id:p.id, by}); return; }
+  if(p.reachFoiled){ const by=p.reachFoiled; p.reachFoiled=false; p.stumbleT=0.45; p.vx*=0.4; p.vz*=0.4; pushEv(M,{k:'shook', id:p.id, by}); { const hb=findP(M,by); if(hb) tkAdd(M,hb, hb.tk==='handles'?0.25:0.1); } return; }
   const h = b.st==='held' ? findP(M,b.holder) : null; if(!h||h.team===p.team) return;
   const handX=p.x+p.face*26, d=hyp(b.x-handX, b.z-p.z);
   if(d>STEAL_R || Math.abs(h.y-p.y)>60){ p.recoverT=0.22; pushEv(M,{k:'whiff', id:p.id}); return; }
@@ -407,11 +413,12 @@ function movePlayer(M,p,dt){
   if(p.rhythmT>0) p.rhythmT-=dt;
   if(p.boostT>0) p.boostT-=dt;
   if(p.tkT>0) p.tkT-=dt;
+  if(p.pmT>0) p.pmT-=dt;
   if(p.hesiT>0){ p.hesiT-=dt; p.vx=approach(p.vx,0,ACC*2*dt); p.vz=approach(p.vz,0,ACC*2*dt);
     if(p.hesiT<=0){ p.boostT=0.6;
       // hesi-GO: stick pushed as the hesi ends = explode out of it (free burst, no cooldown)
       const l=hyp(p.inX,p.inZ); if(l>0.3 && has && p.act===''){ p.bdx=p.inX/l; p.bdz=p.inZ/l; p.burstT=BURST_T*1.15; p.moveKind='go'; p.ankled={}; if(Math.abs(p.bdx)>0.2) p.face=Math.sign(p.bdx); } } }
-  else if(p.burstT>0){ p.burstT-=dt; const bv=BURST_V*(p.moveKind==='step'?0.8:p.moveKind==='spin'?0.9:1); p.vx=p.bdx*bv; p.vz=p.bdz*bv*0.85; if(p.burstT<=0) p.moveKind=''; }
+  else if(p.burstT>0){ p.burstT-=dt; const bv=BURST_V*(p.moveKind==='step'?0.8:p.moveKind==='spin'?0.9:1)*(tkOn(p,'handles')?1.05:1); p.vx=p.bdx*bv; p.vz=p.bdz*bv*0.85; if(p.burstT<=0) p.moveKind=''; }
   else if(ground && !locked){
     const k=(p.boostT>0&&has?1.22:1)*(has?0.93:1)*(has&&tkOn(p,'slash')?1.06:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1)*(p.recoverT>0?0.55:1)*(guarding && !p.bot ? 1.06 : 1)*(p.bot?D.speed:1);
     p.vx=approach(p.vx, ix*RUN*k, ACC*dt); p.vz=approach(p.vz, iz*RUN*0.85*k, ACC*dt);
@@ -451,7 +458,7 @@ function movePlayer(M,p,dt){
   if(has && p.burstT>0){
     for(const o of M.players){
       if(o.team===p.team || p.ankled[o.id] || o.y>5 || o.burstT>0) continue;
-      if(hyp(o.x-p.x,o.z-p.z)<(p.moveKind==='spin'?65:55)){ p.ankled[o.id]=1; if(p.moveKind!=='step' && Math.random()<(p.moveKind==='spin'?0.13:0.06)){ o.stumbleT=0.5; o.vx*=0.3; o.vz*=0.3; pushEv(M,{k:'ankles', id:o.id, by:p.id}); botTalk(M,p,2); } }
+      if(hyp(o.x-p.x,o.z-p.z)<(p.moveKind==='spin'?65:55)){ p.ankled[o.id]=1; if(p.moveKind!=='step' && Math.random()<(p.moveKind==='spin'?0.13:0.06)*(tkOn(p,'handles')?2:1)){ o.stumbleT=0.5; o.vx*=0.3; o.vz*=0.3; pushEv(M,{k:'ankles', id:o.id, by:p.id}); tkAdd(M,p, p.tk==='handles'?0.3:0.12); botTalk(M,p,2); } }
     }
   }
 }
@@ -593,7 +600,6 @@ function missShot(M){
 function coldCheck(M,sh){
   sh.streak=0; sh.miss=(sh.miss||0)+1;
   if(sh.fire){ sh.fire=false; pushEv(M,{k:'cooled', id:sh.id}); }
-  if(sh.miss>=3 && !sh.cold){ sh.cold=true; pushEv(M,{k:'cold', id:sh.id}); }
 }
 function rimTouch(M,kind,v){
   const b=M.ball; if(b.st==='shot') b.touchedRim=true;
@@ -608,11 +614,11 @@ function scored(M,h){
   if(sh && sh.team===team) sh.pts+=pts;
   if(sh && sh.team===team) tkAdd(M,sh, three ? (sh.tk==='shot'?0.34:0.28) : (b.dunk||hyp(h.cx-sh.x,sh.z)<220) ? (sh.tk==='slash'?0.3:0.22) : 0.22);
   for(const o of M.players) if(o.team!==team && o.tkT<=0 && o.tkm>0) o.tkm=Math.max(0,o.tkm-0.08);
+  { const lp=M.lastPass; if(lp && sh && lp.team===sh.team && lp.id!==sh.id && M.time-lp.t<4){ const pa=findP(M,lp.id); tkAdd(M,pa, pa&&pa.tk==='play'?0.4:0.12); } M.lastPass=null; }   // assists
   pushEv(M,{k:'score', team, pts, three:!!three, swish:b.st==='shot'&&!b.touchedRim&&!b.dunk, dunk:!!b.dunk, by:sh&&sh.team===team?sh.id:null, hx:h.cx, post:b.dunk?b.post:null, fire:!!(sh&&sh.fire)});
   if(sh && sh.team===team){
     sh.streak++; sh.miss=0;
     if(sh.cold){ sh.cold=false; pushEv(M,{k:'thaw', id:sh.id}); }
-    if(sh.streak>=3 && !sh.fire){ sh.fire=true; pushEv(M,{k:'fire', id:sh.id}); }
     botTalk(M,sh, b.dunk?1.6:b.pts3?1.3:1);
   }
   if(M.score[team]>=M.toWin-2 && M.score[team]<M.toWin && !M.gp[team]){ M.gp[team]=true; pushEv(M,{k:'gamepoint', team}); }
@@ -621,7 +627,7 @@ function scored(M,h){
 }
 
 // ---------------------------------------------------------------- bots
-const SPOTS=[[150,165],[150,-165],[390,135],[390,-135],[470,0]];   // [distance from hoop, depth]
+const SPOTS=[[150,165],[150,-165],[390,135],[390,-135],[470,0],[250,CORNER_Z+25],[250,-CORNER_Z-25]];   // incl. the corners   // [distance from hoop, depth]
 function botThink(M,p,dt){
   p.think-=dt; if(p.think>0) return; const tick=rnd(0.05,0.11); p.think=tick;
   const b=M.ball, hoop=attackHoop(p.team), myHoop=defendHoop(p.team);
@@ -852,5 +858,5 @@ function diffForRR(rr){
   d.name='Ranked'; return d;
 }
 
-  return { newMatch, stepMatch, makeSnap, findP, looseBall, BOTDIFF, RIVALS, RIVAL_BY, rivalRR, diffForRR, BOT_NAMES, MAX_PER_TEAM, hash, cleanName, Q };
+  return { HALF_D, newMatch, stepMatch, makeSnap, findP, looseBall, BOTDIFF, RIVALS, RIVAL_BY, rivalRR, diffForRR, BOT_NAMES, MAX_PER_TEAM, hash, cleanName, Q };
 }

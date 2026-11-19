@@ -71,6 +71,8 @@
   .adCur h5{margin:6px 0 2px;font-size:13px}
   .adItem{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;padding:2px 0}
   .btn.red{background:#ff5a4f;color:#fff}
+  .vsTags{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:4px} .vsTags .ptitle,.vsTags .pbadge{font-size:12px;margin:0}
+  .vsTeam{display:flex;flex-direction:column;gap:8px} .vsP{display:flex;flex-direction:column;align-items:center;gap:2px}
   .pbadge{display:inline-block;margin-left:6px;font-size:10px;font-weight:900;color:#fff;background:var(--tc,#555);border:2px solid var(--ink);border-radius:7px;padding:0 5px;vertical-align:middle;white-space:nowrap}
   .seasonCard{background:linear-gradient(135deg,#1b1530,#3b2a6b);color:#fff;border:3px solid var(--ink);border-radius:16px;padding:10px 12px;margin:0 0 10px;text-align:left}
   .seasonCard .scTop{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:15px;letter-spacing:1px;flex-wrap:wrap}
@@ -218,7 +220,7 @@
   .psTop{display:flex;justify-content:space-between;align-items:center;font-size:15px;letter-spacing:1px} .psTop span{font-size:12px;opacity:.7}
   .psLvl{background:#1b1530;color:#fff;border-radius:14px;padding:10px 12px;margin:8px 0} .psNum{font-size:24px;font-weight:900;letter-spacing:2px} .psBar{margin:6px 0;height:14px}
   .psTk h4{margin:6px 0 0} .psTkRow{display:flex;gap:8px;margin:6px 0}
-  .psTkBtn{flex:1;border:3px solid var(--ink);border-radius:14px;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;cursor:pointer}
+  .psTkRow{flex-wrap:wrap} .psTkBtn{flex:1 1 30%;min-width:96px;border:3px solid var(--ink);border-radius:14px;background:#fff;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:2px;font:inherit;cursor:pointer}
   .psTkBtn.on{background:#ffd23f;box-shadow:0 0 0 3px #ff8a1f inset} .psTkBtn.locked{opacity:.5} .psTkBtn small{font-size:10px;opacity:.75;text-align:center} .psTkI{font-size:24px}
   .psList{display:flex;flex-direction:column;gap:4px;max-height:280px;overflow-y:auto;border:2px solid var(--ink);border-radius:12px;padding:6px;background:#fff}
   .psRow{display:grid;grid-template-columns:34px 1fr 24px;gap:6px;align-items:center;font-size:13px;padding:4px 6px;border-radius:8px}
@@ -626,12 +628,14 @@ const EMOTES = ['👋','😂','😤','🔥','🥶','🧱','🤡','GG'];
 const BOT_NAMES = ['Bench Ben','Practice Pat','JV Jay','Walk-On Will','Gym Class Gabe','Sub Sully','Waterboy Wes','Cone Carl','Scrimmage Sam','Rookie Rob'];
 const MAX_PER_TEAM = 3;
 
-const COURT_L = 40, COURT_R = 1760, COURT_W = 1800, HALF_D = 200;
+const COURT_L = 40, COURT_R = 1760, COURT_W = 1800, HALF_D = 235;   // deeper court: real corners
 const SKEW = 0.16, DEPTH = 0.58;
 const RIM_Y = 260, BALL_R = 13, GRAV = 1500, RIM_R = 26, RIM_PR = 3.5, BB_HALF = 62;
 const HOOPS = [{cx:135, dir:-1, i:0}, {cx:1665, dir:1, i:1}];
 for(const h of HOOPS){ h.bb = h.cx + h.dir*40; h.base = h.i===0 ? COURT_L : COURT_R; h.ft = h.bb - h.dir*275; }
 const THREE_D = 440;
+const CORNER_Z = HALF_D-60;                                          // NBA-style: straight 3-pt line in the corners
+const isThree = (p,h) => Math.abs(p.z)>CORNER_Z || hyp(h.cx-p.x, p.z)>THREE_D;
 const P_R = 20, REACH = 160, BLOCK_R = 28;
 const RUN = 400, ACC = 3200, AIR_ACC = 600, JUMP_V = 560, SHOT_JUMP = 500, DUNK_V = 720;
 const BURST_V = 690, BURST_T = 0.24, BURST_CD = 1.1, STEAL_R = 62, STEAL_CD = 1.0, REACH_T = 0.28;
@@ -698,14 +702,15 @@ function mkPlayer(r, idx){
   // ranked rivals bring their own play style + trash talk
   const R=r.rv && RIVAL_BY[r.rv];
   if(R){ p.D=rivalDiff(R); p.style=R.style; p.talk=STYLES[R.style].talk; p.talkRate=STYLES[R.style].talkRate;
-    if(!p.tk) p.tk = R.style==='shooter'?'shot' : R.style==='lockdown'?'lock' : (R.style==='slasher'||R.style==='bully')?'slash' : ''; }
+    if(!p.tk) p.tk = ({shooter:'shot', lockdown:'lock', slasher:'slash', bully:'slash', iso:'handles', troll:'play'})[R.style]||''; }
   return p;
 }
 // a bot reacts to a big play with an emote (personality)
 function botTalk(M,p,boost=1){ if(!p || !p.bot || !p.talk || M.demo || p.emoteIn>0) return; if(Math.random()<Math.min(0.6,(p.talkRate||0)*0.65*boost)){ p.emoteIn=rnd(0.3,0.9); p.emoteE=pick(p.talk); } }
 // 🔥 TAKEOVERS: pick one (unlocked in the Season Pass). Good plays fill your meter; when it's full you
 // get a 12-second boost. Kept modest on purpose: it helps, it doesn't win the game for you.
-const TK={shot:{n:'Sniper',icon:'🎯'}, lock:{n:'Lockdown',icon:'🔒'}, slash:{n:'Slasher',icon:'⚡'}}, TK_T=12, TK_CODE={'':0, shot:1, lock:2, slash:3};
+const TK={lock:{n:'Lockdown',icon:'🔒'}, handles:{n:'Handles',icon:'🌀'}, play:{n:'Playmaker',icon:'🤝'}, slash:{n:'Slasher',icon:'⚡'}, shot:{n:'Sniper',icon:'🔥'}}, TK_T=12,
+  TK_CODE={'':0, shot:1, lock:2, slash:3, handles:4, play:5}, TK_KINDS=['','shot','lock','slash','handles','play'];
 const tkOn=(p,k)=>p && p.tk===k && p.tkT>0;
 function tkAdd(M,p,v){ if(!p || !p.tk || p.tkT>0 || M.demo) return; p.tkm=Math.max(0,Math.min(1,(p.tkm||0)+v));
   if(p.tkm>=1){ p.tkm=0; p.tkT=TK_T; pushEv(M,{k:'takeover', id:p.id, tk:p.tk}); } }
@@ -784,19 +789,20 @@ const HEAVE_D = COURT_W/2 - HOOPS[0].cx + 40;                       // past half
 function shotWindow(M,p){
   const h=attackHoop(p.team), v=hoopVec(p,h), dist=v.d;
   let w = dist<220 ? 0.13
-        : dist<THREE_D ? lerp(0.092, 0.07, (dist-220)/(THREE_D-220))
+        : !isThree(p,h) ? lerp(0.092, 0.07, clamp((dist-220)/(THREE_D-220),0,1))
         : lerp(0.062, 0.042, clamp((dist-THREE_D)/220,0,1));
   if(dist>THREE_D+260) w*=0.65;
   if(dist>=220) w*=(p.shotForm||1);                                    // how you got into the shot
-  if(tkOn(p,'shot')) w*=1.22;                                          // 🎯 Sniper takeover
+  if(tkOn(p,'shot')) w*=1.22;                                          // 🔥 Sniper takeover
+  if(p.pmT>0) w*=1.2;                                                   // 🤝 fed by a Playmaker
   if(p.fire) w*=1.35;
   if(p.cold) w*=0.75;
   let c=1;
   for(const o of M.players){
     if(o.team===p.team) continue;
     const ox=o.x-p.x, oz=o.z-p.z, d=hyp(ox,oz), ahead=ox*v.ux+oz*v.uz;
-    if(d<135){
-      let f=0.25+0.75*Math.pow(d/135,1.2);
+    if(d<150){                                          // defenders reach further (stronger coverage)
+      let f=0.22+0.78*Math.pow(d/150,1.2);
       if(ahead < -15) f=Math.min(1,f+0.35);            // defender behind you barely matters
       if(o.y>20) f*=0.65;                                // hand in the air
       if(tkOn(o,'lock')) f*=0.85;                        // 🔒 Lockdown takeover: tighter contests
@@ -807,9 +813,9 @@ function shotWindow(M,p){
       if(dr<100 && ahead>-10 && ahead<dist+25){ let f=0.5+0.5*(dr/100); if(o.y>20) f*=0.85; c=Math.min(c,f); } }
   }
   p.contest=c;
-  if(c<0.4) return 0;                                   // smothered: there is no green
+  if(c<0.43) return 0;                                   // smothered: there is no green
   if(dist>HEAVE_D) return 0.005;                         // past half court: a sliver of green (a few ms), super rare
-  return clamp(w*0.8*Math.pow(c,1.5), 0.01, 0.16);       // tighter greens (2K-style); contests bite hard
+  return clamp(w*0.8*Math.pow(c,1.75), 0.01, 0.16);         // tighter greens (2K-style); contests bite hard
 }
 // judge HOW the shot started: set shot, in rhythm off a move, on the run, or fading away
 function shotFormAt(p, v){
@@ -826,7 +832,7 @@ function handleActions(M,p){
   if(p.wantA){
     if(has && ground && (p.act===''||p.act==='fake')){
       const h=attackHoop(p.team), v=hoopVec(p,h), toward=p.vx*v.ux+p.vz*v.uz;
-      if(v.d<145 && toward>170){
+      if(v.d<(tkOn(p,'slash')?175:145) && toward>170){
         p.act='dunk'; p.vy=DUNK_V; const T=0.42;
         p.vx=clamp((h.cx-v.ux*8-p.x)/T,-520,520); p.vz=clamp((0-p.z)/T,-400,400); p.face=Math.sign(v.ux)||p.face; p.burstT=0;
         pushEv(M,{k:'dunkgo', id:p.id});
@@ -860,7 +866,7 @@ function dribbleMove(M,p){
   const toward = il>0.2 ? (p.inX*v.ux+p.inZ*v.uz)/il : 0;
   let def=null, dd=1e9;
   for(const o of M.players){ if(o.team===p.team) continue; const d=hyp(o.x-p.x,o.z-p.z); if(d<dd){ dd=d; def=o; } }
-  p.ankled={}; p.burstCd=BURST_CD*(tkOn(p,'slash')?0.75:1); p.moveKind='';
+  p.ankled={}; p.burstCd=BURST_CD*(tkOn(p,'slash')?0.75:tkOn(p,'handles')?0.75:1); p.moveKind='';
   // a reach timed against ANY move is dead: defender shook
   for(const o of M.players) if(o.team!==p.team && o.act==='reach' && hyp(o.x-p.x,o.z-p.z)<STEAL_R+45) o.reachFoiled=p.id;
   let m;
@@ -871,8 +877,8 @@ function dribbleMove(M,p){
     if(def && dd<150 && def.y<5 && def.downT<=0){
       const moving=def.burstT>0 || def.act==='reach' || hyp(def.vx,def.vz)>140;
       const bites = def.bot && def.act==='' && Math.random()<0.3+0.25*((def.D||M.diff).jump||0.8);
-      if(bites){ def.act='jump'; def.vy=JUMP_V*0.85; def.vx*=0.2; def.vz*=0.2; pushEv(M,{k:'froze', id:def.id, by:p.id, bit:1}); botTalk(M,p,1.6); }
-      else if(moving){ def.stumbleT=Math.max(def.stumbleT,0.45); def.vx*=0.25; def.vz*=0.25; pushEv(M,{k:'froze', id:def.id, by:p.id}); botTalk(M,p,1.6); }
+      if(bites){ def.act='jump'; def.vy=JUMP_V*0.85; def.vx*=0.2; def.vz*=0.2; pushEv(M,{k:'froze', id:def.id, by:p.id, bit:1}); tkAdd(M,p, p.tk==='handles'?0.25:0.1); botTalk(M,p,1.6); }
+      else if(moving){ def.stumbleT=Math.max(def.stumbleT,0.45); def.vx*=0.25; def.vz*=0.25; pushEv(M,{k:'froze', id:def.id, by:p.id}); tkAdd(M,p, p.tk==='handles'?0.25:0.1); botTalk(M,p,1.6); }
     }
   } else if(toward<-0.5){                                // STEPBACK: hop back for space, shoot in rhythm
     m='stepback'; const lat=-(p.inX*v.uz-p.inZ*v.ux)/il*0.35;
@@ -902,16 +908,17 @@ function releaseShot(M,p,m){
   // 2K-style: GREEN = bucket (past half court the green is tiny). Missing the green is a CHANCE, not a sure miss:
   // the closer to green, the more open you are, and the cleaner you got into the shot, the better the odds.
   const c0=(p.contest===undefined?1:p.contest), cm=1-c0, green=q==='perfect';
-  const band = dist<220 ? 0 : dist<THREE_D ? 1 : dist<THREE_D+260 ? 2 : dist<HEAVE_D ? 3 : 4;   // layup · mid · three · deep · heave
+  const three = isThree(p,h);
+  const band = dist<220 ? 0 : !three ? 1 : dist<THREE_D+260 ? 2 : dist<HEAVE_D ? 3 : 4;   // layup · mid · three · deep · heave
   let made;
   if(green) made = true;                                 // (past half court the green is a sliver, so this is rare)
   else {
     const ODDS=[[0.62,0.38,0.15],[0.40,0.18,0.05],[0.28,0.10,0.03],[0.14,0.05,0.01],[0.08,0.03,0.01]];   // slightly off · off · way off
     const ae=Math.abs(err); let pr=ODDS[band][ae<0.05?0:ae<0.12?1:2];
-    pr *= c0<0.4 ? 0.33 : Math.pow(c0,1.3);                 // covered = less likely, smothered = a prayer
+    pr *= c0<0.43 ? 0.28 : Math.pow(c0,1.6);                 // covered = less likely, smothered = a prayer
     pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
     if(p.fire) pr*=1.15; if(p.cold) pr*=0.85;
-    if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2;
+    if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2; if(p.pmT>0) pr*=1.15;
     made = Math.random() < Math.min(0.9, pr);
   }
   // misses: short or long by how far off you were (way off = airball), a little sideways
@@ -923,9 +930,9 @@ function releaseShot(M,p,m){
   // flight time: long shots get a higher arc so they drop in steep instead of clipping the front rim
   const hd=hyp(tx-sx,tz-sz), T=Math.max(0.7+Math.min(hd,1000)/1600*0.7, Math.sqrt((1.5*hd+Math.max(0,ty-sy)+120)/750));
   Object.assign(b,{st:'shot',holder:null,x:sx,y:sy,z:sz,vx:(tx-sx)/T,vz:(tz-sz)/T,vy:(ty-sy+0.5*GRAV*T*T)/T,
-    shooter:p.id,shotTeam:p.team,pts3:dist>THREE_D,t:0,touchedRim:false,dunk:false,reb:true,wasShot:true,lastTeam:p.team,post:null});
+    shooter:p.id,shotTeam:p.team,pts3:three,t:0,touchedRim:false,dunk:false,reb:true,wasShot:true,lastTeam:p.team,post:null});
   p.act='follow'; p.noGrabT=0.35; p.shotRange=0; M.scOn=false;
-  pushEv(M,{k:'shot', id:p.id, q, three:dist>THREE_D, d:Math.round(dist), c:r2(p.contest===undefined?1:p.contest), f:p.formTag||''});
+  pushEv(M,{k:'shot', id:p.id, q, three, d:Math.round(dist), c:r2(p.contest===undefined?1:p.contest), f:p.formTag||''});
 }
 
 function tryDunk(M,p){
@@ -971,6 +978,7 @@ function doPass(M,p){
   Object.assign(M.ball,{st:'pass',holder:null,x:sx,y:sy,z:sz,vx:(tx-sx)/T,vz:(tz-sz)/T,vy:(ty-sy+0.5*GRAV*T*T)/T,
     passTo:pick.id,passTeam:p.team,passTry:{},t:0,touchedRim:false,reb:false,lastTeam:p.team});
   p.noGrabT=0.3; if(Math.abs(tx-sx)>10) p.face=Math.sign(tx-sx);
+  M.lastPass={id:p.id, team:p.team, t:M.time}; if(tkOn(p,'play')) pick.pmT=3;     // 🤝 Playmaker: your pass = a bigger green for them
   pushEv(M,{k:'pass', id:p.id});
   return true;
 }
@@ -979,7 +987,7 @@ function doPass(M,p){
 function resolveSteal(M,p){
   const b=M.ball;
   // crossed during the reach: a wobble (no hitting the floor)
-  if(p.reachFoiled){ const by=p.reachFoiled; p.reachFoiled=false; p.stumbleT=0.45; p.vx*=0.4; p.vz*=0.4; pushEv(M,{k:'shook', id:p.id, by}); return; }
+  if(p.reachFoiled){ const by=p.reachFoiled; p.reachFoiled=false; p.stumbleT=0.45; p.vx*=0.4; p.vz*=0.4; pushEv(M,{k:'shook', id:p.id, by}); { const hb=findP(M,by); if(hb) tkAdd(M,hb, hb.tk==='handles'?0.25:0.1); } return; }
   const h = b.st==='held' ? findP(M,b.holder) : null; if(!h||h.team===p.team) return;
   const handX=p.x+p.face*26, d=hyp(b.x-handX, b.z-p.z);
   if(d>STEAL_R || Math.abs(h.y-p.y)>60){ p.recoverT=0.22; pushEv(M,{k:'whiff', id:p.id}); return; }
@@ -1018,11 +1026,12 @@ function movePlayer(M,p,dt){
   if(p.rhythmT>0) p.rhythmT-=dt;
   if(p.boostT>0) p.boostT-=dt;
   if(p.tkT>0) p.tkT-=dt;
+  if(p.pmT>0) p.pmT-=dt;
   if(p.hesiT>0){ p.hesiT-=dt; p.vx=approach(p.vx,0,ACC*2*dt); p.vz=approach(p.vz,0,ACC*2*dt);
     if(p.hesiT<=0){ p.boostT=0.6;
       // hesi-GO: stick pushed as the hesi ends = explode out of it (free burst, no cooldown)
       const l=hyp(p.inX,p.inZ); if(l>0.3 && has && p.act===''){ p.bdx=p.inX/l; p.bdz=p.inZ/l; p.burstT=BURST_T*1.15; p.moveKind='go'; p.ankled={}; if(Math.abs(p.bdx)>0.2) p.face=Math.sign(p.bdx); } } }
-  else if(p.burstT>0){ p.burstT-=dt; const bv=BURST_V*(p.moveKind==='step'?0.8:p.moveKind==='spin'?0.9:1); p.vx=p.bdx*bv; p.vz=p.bdz*bv*0.85; if(p.burstT<=0) p.moveKind=''; }
+  else if(p.burstT>0){ p.burstT-=dt; const bv=BURST_V*(p.moveKind==='step'?0.8:p.moveKind==='spin'?0.9:1)*(tkOn(p,'handles')?1.05:1); p.vx=p.bdx*bv; p.vz=p.bdz*bv*0.85; if(p.burstT<=0) p.moveKind=''; }
   else if(ground && !locked){
     const k=(p.boostT>0&&has?1.22:1)*(has?0.93:1)*(has&&tkOn(p,'slash')?1.06:1)*(p.stumbleT>0?0.3:1)*(p.hustle?1.1:1)*(p.act==='reach'?0.3:1)*(p.recoverT>0?0.55:1)*(guarding && !p.bot ? 1.06 : 1)*(p.bot?D.speed:1);
     p.vx=approach(p.vx, ix*RUN*k, ACC*dt); p.vz=approach(p.vz, iz*RUN*0.85*k, ACC*dt);
@@ -1062,7 +1071,7 @@ function movePlayer(M,p,dt){
   if(has && p.burstT>0){
     for(const o of M.players){
       if(o.team===p.team || p.ankled[o.id] || o.y>5 || o.burstT>0) continue;
-      if(hyp(o.x-p.x,o.z-p.z)<(p.moveKind==='spin'?65:55)){ p.ankled[o.id]=1; if(p.moveKind!=='step' && Math.random()<(p.moveKind==='spin'?0.13:0.06)){ o.stumbleT=0.5; o.vx*=0.3; o.vz*=0.3; pushEv(M,{k:'ankles', id:o.id, by:p.id}); botTalk(M,p,2); } }
+      if(hyp(o.x-p.x,o.z-p.z)<(p.moveKind==='spin'?65:55)){ p.ankled[o.id]=1; if(p.moveKind!=='step' && Math.random()<(p.moveKind==='spin'?0.13:0.06)*(tkOn(p,'handles')?2:1)){ o.stumbleT=0.5; o.vx*=0.3; o.vz*=0.3; pushEv(M,{k:'ankles', id:o.id, by:p.id}); tkAdd(M,p, p.tk==='handles'?0.3:0.12); botTalk(M,p,2); } }
     }
   }
 }
@@ -1204,7 +1213,6 @@ function missShot(M){
 function coldCheck(M,sh){
   sh.streak=0; sh.miss=(sh.miss||0)+1;
   if(sh.fire){ sh.fire=false; pushEv(M,{k:'cooled', id:sh.id}); }
-  if(sh.miss>=3 && !sh.cold){ sh.cold=true; pushEv(M,{k:'cold', id:sh.id}); }
 }
 function rimTouch(M,kind,v){
   const b=M.ball; if(b.st==='shot') b.touchedRim=true;
@@ -1219,11 +1227,11 @@ function scored(M,h){
   if(sh && sh.team===team) sh.pts+=pts;
   if(sh && sh.team===team) tkAdd(M,sh, three ? (sh.tk==='shot'?0.34:0.28) : (b.dunk||hyp(h.cx-sh.x,sh.z)<220) ? (sh.tk==='slash'?0.3:0.22) : 0.22);
   for(const o of M.players) if(o.team!==team && o.tkT<=0 && o.tkm>0) o.tkm=Math.max(0,o.tkm-0.08);
+  { const lp=M.lastPass; if(lp && sh && lp.team===sh.team && lp.id!==sh.id && M.time-lp.t<4){ const pa=findP(M,lp.id); tkAdd(M,pa, pa&&pa.tk==='play'?0.4:0.12); } M.lastPass=null; }   // assists
   pushEv(M,{k:'score', team, pts, three:!!three, swish:b.st==='shot'&&!b.touchedRim&&!b.dunk, dunk:!!b.dunk, by:sh&&sh.team===team?sh.id:null, hx:h.cx, post:b.dunk?b.post:null, fire:!!(sh&&sh.fire)});
   if(sh && sh.team===team){
     sh.streak++; sh.miss=0;
     if(sh.cold){ sh.cold=false; pushEv(M,{k:'thaw', id:sh.id}); }
-    if(sh.streak>=3 && !sh.fire){ sh.fire=true; pushEv(M,{k:'fire', id:sh.id}); }
     botTalk(M,sh, b.dunk?1.6:b.pts3?1.3:1);
   }
   if(M.score[team]>=M.toWin-2 && M.score[team]<M.toWin && !M.gp[team]){ M.gp[team]=true; pushEv(M,{k:'gamepoint', team}); }
@@ -1232,7 +1240,7 @@ function scored(M,h){
 }
 
 // ---------------------------------------------------------------- bots
-const SPOTS=[[150,165],[150,-165],[390,135],[390,-135],[470,0]];   // [distance from hoop, depth]
+const SPOTS=[[150,165],[150,-165],[390,135],[390,-135],[470,0],[250,CORNER_Z+25],[250,-CORNER_Z-25]];   // incl. the corners   // [distance from hoop, depth]
 function botThink(M,p,dt){
   p.think-=dt; if(p.think>0) return; const tick=rnd(0.05,0.11); p.think=tick;
   const b=M.ball, hoop=attackHoop(p.team), myHoop=defendHoop(p.team);
@@ -2109,7 +2117,7 @@ function srvQueue(mode, solo){
       qState.matched=true; V.queueMatch=true;
       srvAdopt(r, d.code, {onClose:c=>{ if(c.qnone && !V.overSeen){ V.migrating=true; location.href=location.pathname+(mode==='2v2'?'#rankedq2':'#rankedq'); location.reload(); return true; } }});
       closeRanked(); qStatus('');
-      if(mode==='1v1') setTimeout(()=>{ const opp=(V.roster||[]).find(p=>p.id!==net.myId && !p.bot); if(opp) showVsCard({n:opp.name, rr:opp.rr||0}); }, 900);
+      if(mode==='1v1') setTimeout(()=>{ const opp=(V.roster||[]).find(p=>p.id!==net.myId && !p.bot); if(opp) showVsCard({n:opp.name, rr:opp.rr||0, who:opp}); }, 900);
       else toast('👥 Ranked 2v2 found! Starting…'); } };
   ws.onclose=()=>{ if(done) return; stop(); qEnd(); qStatus(''); SRV.ok=false; findRankedMatch(mode); };   // matchmaker unreachable: the old way
 }
@@ -2654,6 +2662,7 @@ for(const k in KINDS){
   CRATES.push({id:k+'-elite', tab:k, name:'Elite '+KIND_ONE[k]+' Crate', icon:'👑', price:750, col:'#ffb400', pool:[k], odds:{epic:46, legendary:38, mythic:12, exclusive:3, secret:1}});
 }
 // only shows up when a code gave you a free one
+CRATES.push({id:'season', tab:'special', name:'Season Crate', icon:'🎟️', price:0, col:'#7b5cff', pool:['cel','gfx','js','dunk','trail'], odds:{epic:45, legendary:34, mythic:15, exclusive:5, secret:1}, freeOnly:true});   // Season Pass reward
 CRATES.push({id:'secret', tab:'special', name:'Secret Crate', icon:'🤫', price:0, col:'#ff00e5', pool:['cel','gfx','js','dunk','trail'], odds:{secret:100}, freeOnly:true});
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 const itemOf = (kind,id) => KINDS[kind].list.find(i=>i.id===id);
@@ -3129,7 +3138,7 @@ function applyRoster(m){
   fillGear(m.players); V.owner=m.owner||null;
   V.roster=m.players; V.rmap=new Map(m.players.map(p=>[p.id,p])); V.phase=m.phase; V.toWin=m.toWin; V.diff=m.diff||'pro'; V.winBy2=!!m.winBy2; V.rankedRoom=!!m.ranked; V.ranked2=!!m.ranked2; V.party2Room=!!m.party; V.p2Srch=!!m.srch; if(m.code) net.code=m.code;
   if(!V.inRoom) return;
-  if(V.phase==='game' && prev!=='game'){ V.snaps=[]; $('#over').classList.add('hidden'); boxReset(); }
+  if(V.phase==='game' && prev!=='game'){ V.snaps=[]; $('#over').classList.add('hidden'); boxReset(); if(m.ranked2 && (V.roster||[]).filter(p=>!p.bot).length>=2) setTimeout(showVsCard2, 300); }
   if(V.phase==='lobby' && prev==='game') $('#over').classList.add('hidden');
   renderLobby(); updateControlsVisibility();
 }
@@ -3350,7 +3359,7 @@ function handleEvent(e, demo){
     case 'froze': if(p){ floatText(e.bit?'BIT ON THE HESI 🤣':'FROZE 🥶', p.x, p.y+205, p.z, e.bit?'#ffd23f':'#9fe7ff', 28, 1.2); for(let i=0;i<8;i++) emo(p.x+rnd(-40,40),p.y+rnd(40,180),p.z,'❄️',{vy:rnd(-30,30),g:30,life:1,max:1,s:16}); }
       if(!demo && mine(e.by)) earn(4,'FROZE'); V.cheer=1; if(loud) sfx('ankles'); break;
     case 'pass': if(loud) sfx('pass'); break;
-    case 'takeover': if(p && TK[e.tk]){ floatText(TK[e.tk].icon+' '+TK[e.tk].n.toUpperCase()+' TAKEOVER', p.x, p.y+230, p.z, '#ffd23f', 30, 1.8); if(loud){ sfx('cheer',1.2); if(mine(e.id)){ V.flash=.35; } } } break;
+    case 'takeover': if(p && TK[e.tk]){ floatText(TK[e.tk].icon+' '+TK[e.tk].n.toUpperCase()+' TAKEOVER', p.x, p.y+230, p.z, 'rgb('+TK_COL[e.tk]+')', 30, 1.8); spray(p.x,p.y+100,p.z,26,['rgb('+TK_COL[e.tk]+')','#fff'],320); if(loud){ sfx('cheer',1.2); if(mine(e.id)){ V.flash=.35; } } } break;
     case 'rim': if(loud) sfx('rim', Math.min(1.3,e.v/500)); break;
     case 'board': if(loud) sfx('board', Math.min(1.3,e.v/500)); break;
     case 'bounce': if(loud) sfx('dribble', .8); break;
@@ -3621,7 +3630,7 @@ function frame(){
   if(S && net.role==='client' && V.phase==='game'){ S={...S, p:S.p.slice()}; predictMe(S,dt); }
   const real = V.phase==='game' && V.inRoom;
 
-  const sc=Math.min(W/960, H/640), originY=Math.min(H-128*sc, H/2+205*sc);
+  const sc=Math.min(W/960, H/640), originY=Math.min(H-(HALF_D*DEPTH+12)*sc, H/2+(HALF_D*DEPTH+89)*sc);
   if(S) for(const q of S.p){ const st=V.ps[q[0]]||(V.ps[q[0]]={ly:0,sq:0,down:-1}); if(st.act!==q[Q.act]){ st.act=q[Q.act]; st.actStart=clock; actFx(q); } }
   for(let i=V.timers.length-1;i>=0;i--){ const tm=V.timers[i]; tm.t-=dt; if(tm.t<=0){ V.timers.splice(i,1); try{ tm.fn(); }catch(e){} } }
   const B = S ? ballPos(S) : {x:COURT_W/2,y:0,z:0};
@@ -3662,8 +3671,11 @@ function frame(){
     // team ring under every player (bright + pulsing under you) so you never lose yourself in a crowd
     if(real){ const me=q[0]===net.myId; ctx.beginPath(); ctx.ellipse(PX(q[Q.x],q[Q.z]),PY(0,q[Q.z]),me?30+Math.sin(clock*6)*2:26,me?11:9,0,0,TAU);
       ctx.strokeStyle=me?'rgba(255,210,63,.95)':TEAM_COL[q[Q.team]]; ctx.globalAlpha=me?1:.55; ctx.lineWidth=me?4:3; ctx.stroke(); ctx.globalAlpha=1; }
-    if(q[Q.fire]===1){ ctx.beginPath(); ctx.ellipse(PX(q[Q.x],q[Q.z]),PY(0,q[Q.z]),34,12,0,0,TAU); ctx.strokeStyle=`rgba(255,120,0,${.5+.3*Math.sin(clock*12)})`; ctx.lineWidth=4; ctx.stroke(); }
-    if(q[Q.fire]===-1){ ctx.beginPath(); ctx.ellipse(PX(q[Q.x],q[Q.z]),PY(0,q[Q.z]),34,12,0,0,TAU); ctx.fillStyle='rgba(160,230,255,.45)'; ctx.fill(); } }
+    { const t=tkState(q), c=TK_COL[t.kind]; if(c && (t.on || t.m>=0.75)){ const X=PX(q[Q.x],q[Q.z]), Y=PY(0,q[Q.z]);
+        if(t.on){ const pu=.6+.4*Math.sin(clock*10);
+          ctx.beginPath(); ctx.ellipse(X,Y,44,16,0,0,TAU); ctx.fillStyle=`rgba(${c},${.22*pu})`; ctx.fill();
+          for(const [r,a,w] of [[38+Math.sin(clock*8)*3,.95,4],[52+((clock*60)%14),.45*pu,2]]){ ctx.beginPath(); ctx.ellipse(X,Y,r,r*.36,0,0,TAU); ctx.strokeStyle=`rgba(${c},${a})`; ctx.lineWidth=w; ctx.stroke(); } }
+        else { ctx.beginPath(); ctx.ellipse(X,Y,34,12,0,0,TAU); ctx.strokeStyle=`rgba(${c},${.25+.2*Math.sin(clock*6)})`; ctx.lineWidth=2; ctx.stroke(); } } } }
   { const s=1-clamp(B.y/500,0,.7); ctx.beginPath(); ctx.ellipse(PX(B.x,B.z),PY(0,B.z),13*s,5*s,0,0,TAU); ctx.fillStyle='rgba(40,15,0,.32)'; ctx.fill(); }
   for(const h of HOOPS) drawHoopBack(h, dt);
 
@@ -3684,6 +3696,7 @@ function frame(){
   // celly + hot/cold particles
   if(V.celly){ V.celly.t+=dt; const cq=S.p.find(q=>q[0]===V.celly.id); if(!cq || V.celly.t>2.3) V.celly=null; else cellyTick(V.celly,cq,dt); }
   for(const q of S.p){
+    { const t=tkState(q), c=TK_COL[t.kind]; if(t.on && c && Math.random()<dt*30) P(q[Q.x]+rnd(-22,22),q[Q.y]+rnd(10,150),q[Q.z],{vx:rnd(-15,15),vy:rnd(80,180),g:-40,life:.7,max:.7,c:'rgb('+c+')',s:rnd(2.5,5)}); }
     if(q[Q.fire]===1 && Math.random()<dt*40) P(q[Q.x]+rnd(-16,16),q[Q.y]+rnd(80,140),q[Q.z],{vx:rnd(-20,20),vy:rnd(60,140),g:-60,life:.5,max:.5,c:pick(['#ff5a00','#ffb347','#ffe066']),s:rnd(3,6)});
     if(q[Q.fire]===-1 && Math.random()<dt*8) emo(q[Q.x]+rnd(-30,30),q[Q.y]+rnd(120,190),q[Q.z],'❄️',{vy:-30,g:0,life:1,max:1,s:12});
   }
@@ -3806,7 +3819,7 @@ function drawFloor(){
     const a0 = h.dir===1 ? Math.PI/2 : -Math.PI/2;
     circle(h.ft,0,70,a0,a0+Math.PI);
     // 3-point line: corners + arc
-    const zc=HALF_D-22, xc=h.cx-h.dir*Math.sqrt(THREE_D*THREE_D-zc*zc);
+    const zc=CORNER_Z, xc=h.cx-h.dir*Math.sqrt(THREE_D*THREE_D-zc*zc);
     const pts=[[h.base,-zc],[xc,-zc]];
     for(let i=0;i<=40;i++){ const z=lerp(-zc,zc,i/40); pts.push([h.cx-h.dir*Math.sqrt(THREE_D*THREE_D-z*z), z]); }
     pts.push([h.base,zc]); floorPath(pts); ctx.stroke();
@@ -3920,6 +3933,9 @@ function drawBall(B, hot){
   ctx.beginPath(); ctx.arc(-BALL_R*1.1,0,BALL_R*.75,-.9,.9); ctx.stroke(); ctx.beginPath(); ctx.arc(BALL_R*1.1,0,BALL_R*.75,Math.PI-.9,Math.PI+.9); ctx.stroke();
   ctx.restore();
 }
+// takeover look: each one has its own color
+const TK_COL={lock:'61,139,255', handles:'176,107,255', play:'47,227,196', slash:'255,122,26', shot:'255,70,40'};
+function tkState(q){ const v=(q && q[Q.tk])||0, kind=TK_KINDS[Math.floor(v/100)]||'', r=v%100; return {kind, on:!!kind && r>=50, m:r>=50?1:r/40}; }
 function shadeCol(hex,f){ const n=parseInt(hex.slice(1),16); const r=(n>>16)*f|0,g=((n>>8)&255)*f|0,b=(n&255)*f|0; return `rgb(${r},${g},${b})`; }
 function drawPlayer(q, hasBall, S, B, refl){
   const id=q[Q.id], x=q[Q.x], z=q[Q.z], vx=q[Q.vx], vz=q[Q.vz], act=q[Q.act], burst=q[Q.burst], stum=q[Q.stum], team=q[Q.team], zone=q[Q.fire];
@@ -3967,7 +3983,9 @@ function drawPlayer(q, hasBall, S, B, refl){
   if(ck==='clown') ctx.rotate(Math.sin(clock*18)*0.08);
   if(act===6) ctx.rotate(face*0.24);
   if(running && !cel && !stum) ctx.rotate(face*0.08);
-  if(zone===1 && !refl){ const g=ctx.createRadialGradient(0,-80,10,0,-80,90); g.addColorStop(0,'rgba(255,140,0,.45)'); g.addColorStop(1,'rgba(255,80,0,0)'); ctx.fillStyle=g; ctx.fillRect(-90,-170,180,180); }
+  { const t=tkState(q), c=TK_COL[t.kind]; if(t.on && c && !refl){ const pu=.75+.25*Math.sin(clock*9);
+      const g=ctx.createRadialGradient(0,-80,10,0,-80,105); g.addColorStop(0,`rgba(${c},${.5*pu})`); g.addColorStop(1,`rgba(${c},0)`); ctx.fillStyle=g; ctx.fillRect(-105,-190,210,200);
+      const pg=ctx.createLinearGradient(0,-260,0,0); pg.addColorStop(0,`rgba(${c},0)`); pg.addColorStop(1,`rgba(${c},${.3*pu})`); ctx.fillStyle=pg; ctx.fillRect(-26,-260,52,260); } }
   if(burst){ ctx.globalAlpha=A*.22; ctx.fillStyle=col; rrect(-face*30-17,-110,34,56,10); ctx.fill(); ctx.globalAlpha=A; }
 
   // ---------- pose: feet, hands, face
@@ -4196,7 +4214,7 @@ function drawLabel(q){
   const inf=infoOf(q[0]); if(!inf) return;
   const me=q[0]===net.myId, x=PX(q[Q.x],q[Q.z]), y=PY(q[Q.y]+(q[Q.stum]===2?70:162),q[Q.z]);
   const zone=q[Q.fire];
-  txt(inf.name+(zone===1?' 🔥':zone===-1?' 🥶':''), x, y, me?17:14, zone===1?'#ffb347':zone===-1?'#9fe7ff':me?'#ffd23f':'#fff', 'center', 4);
+  const tks=tkState(q); txt((tks.on?TK[tks.kind].icon+' ':'')+inf.name, x, y, me?17:14, tks.on?'rgb('+TK_COL[tks.kind]+')':me?'#ffd23f':'#fff', 'center', 4);
   if(me){ const ty=y-20+Math.sin(clock*5)*2; ctx.beginPath(); ctx.moveTo(x-7,ty-6); ctx.lineTo(x+7,ty-6); ctx.lineTo(x,ty+2); ctx.closePath(); ctx.fillStyle='#ffd23f'; ctx.fill(); ctx.strokeStyle='#1b1530'; ctx.lineWidth=2; ctx.stroke(); }
   const em=V.emotes[q[0]];
   if(em){ ctx.save(); ctx.translate(x,y-(me?48:30)); const pop=Math.min(1,(2.2-em.t)*6); ctx.scale(pop,pop);
@@ -4394,19 +4412,19 @@ function drawHUD(S, dt, real){
   if(net.role==='client' && V.inRoom && V.netLost) txt('📶 Wi-Fi dropped, reconnecting…', W/2, H*.32, 26, '#ffd23f', 'center', 6);
   // 🔥 your takeover meter (bottom-left)
   if(real && S && V.phase==='game'){ const me=S.p.find(q=>q[0]===net.myId), v=me && me[Q.tk];
-    if(v){ const kind=['','shot','lock','slash'][Math.floor(v/100)], r=v%100, on=r>=50, t=TK[kind];
+    if(v){ const kind=TK_KINDS[Math.floor(v/100)], r=v%100, on=r>=50, t=TK[kind];
       if(t){ const x=14, y=H-34, w=150, h=14, f=on?1:r/40;
         ctx.fillStyle='rgba(27,21,48,.75)'; rrect(x-4,y-20,w+8,h+26,10); ctx.fill();
         ctx.fillStyle='rgba(255,255,255,.18)'; rrect(x,y,w,h,7); ctx.fill();
-        ctx.fillStyle= on ? `hsl(${45+Math.sin(clock*10)*10},100%,${55+Math.sin(clock*12)*10}%)` : '#ffd23f'; rrect(x,y,Math.max(h,w*f),h,7); ctx.fill();
-        txt(t.icon+' '+(on?t.n.toUpperCase()+' TAKEOVER!':t.n), x, y-9, 12, on?'#ffd23f':'#fff', 'left', 3); } } }
+        ctx.fillStyle= on ? `rgba(${TK_COL[kind]},${.75+.25*Math.sin(clock*12)})` : `rgb(${TK_COL[kind]})`; rrect(x,y,Math.max(h,w*f),h,7); ctx.fill();
+        txt(t.icon+' '+(on?t.n.toUpperCase()+' TAKEOVER!':t.n), x, y-9, 12, on?`rgb(${TK_COL[kind]})`:'#fff', 'left', 3); } } }
   // your zone: orange heat or blue frost around the screen edges
-  const meZ = real ? (S.p.find(q=>q[0]===net.myId)||[])[Q.fire] : 0;
-  if(meZ===1 || meZ===-1){
-    const pulse=.55+.25*Math.sin(clock*5), c=meZ===1?'255,110,0':'140,220,255';
+  const meT = real ? tkState(S.p.find(q=>q[0]===net.myId)) : null;
+  if(meT && meT.on){
+    const pulse=.55+.25*Math.sin(clock*5), c=TK_COL[meT.kind];
     for(const [x0,y0,x1,y1] of [[0,0,0,H*.0+90],[0,H,0,H-90]]){ const g=ctx.createLinearGradient(x0,y0,x1,y1); g.addColorStop(0,`rgba(${c},${.45*pulse})`); g.addColorStop(1,`rgba(${c},0)`); ctx.fillStyle=g; ctx.fillRect(0,Math.min(y0,y1),W,90); }
     for(const [x0,x1] of [[0,90],[W,W-90]]){ const g=ctx.createLinearGradient(x0,0,x1,0); g.addColorStop(0,`rgba(${c},${.45*pulse})`); g.addColorStop(1,`rgba(${c},0)`); ctx.fillStyle=g; ctx.fillRect(Math.min(x0,x1),0,90,H); }
-    txt(meZ===1?'🔥 IN THE ZONE 🔥':'🥶 ICE COLD 🥶', W/2, 112, 18, meZ===1?'#ffb347':'#bdf0ff', 'center', 5);
+    txt(TK[meT.kind].icon+' '+TK[meT.kind].n.toUpperCase()+' TAKEOVER '+TK[meT.kind].icon, W/2, 112, 20, 'rgb('+c+')', 'center', 5);
   }
   if(V.flash>0){ ctx.fillStyle=`rgba(255,255,255,${Math.min(.7,V.flash)})`; ctx.fillRect(0,0,W,H); }
   if(real){
@@ -4884,8 +4902,10 @@ setInterval(()=>{ const n=seasonNow().n; if(SAVE.season && SAVE.season.n<n && !V
 
 // ---------------------------------------------------------------- 🎟️ SEASON PASS (free)
 // Every game gives XP; levels give rewards. Takeovers unlock here (and stay unlocked). Resets each season.
-const PASS_XP=250, PASS_MAX=40;                 // ~1-2 games a level: maxing it in a 2-week season takes real grinding
-const PASS_REW={2:{tk:'shot'}, 6:{tk:'lock'}, 12:{tk:'slash'}, 10:{crate:'cel-elite', coins:1000}, 20:{crate:'gfx-elite', coins:2000}, 30:{crate:'dunk-elite', coins:3000}, 25:{item:'passprism', coins:2500}, 40:{item:'passmax', coins:10000}};
+const PASS_XP=400, PASS_MAX=50;                 // ~1-2 games a level: maxing it in a 2-week season takes real grinding
+const PASS_REW={8:{tk:'lock'}, 16:{tk:'handles'}, 24:{tk:'play'}, 32:{tk:'slash'}, 40:{tk:'shot'},
+  5:{crate:'season'}, 13:{crate:'season'}, 21:{crate:'season'}, 29:{crate:'season'}, 37:{crate:'season'}, 45:{crate:'season', coins:3000},
+  10:{crate:'cel-elite', coins:1000}, 20:{crate:'gfx-elite', coins:2000}, 30:{crate:'dunk-elite', coins:3000}, 35:{item:'passprism', coins:2500}, 50:{item:'passmax', coins:10000}};
 function passRew(L){ return PASS_REW[L] || {coins: 500+Math.floor(L/5)*250}; }
 function passDesc(r){ const out=[]; if(r.tk) out.push(TK[r.tk].icon+' '+TK[r.tk].n+' takeover'); if(r.crate){ const c=CRATES.find(x=>x.id===r.crate); out.push('🎁 '+(c?c.name:'Crate')); }
   if(r.item){ const it=itemOf('trail',r.item); if(it) out.push(it.icon+' '+it.name+' trail'); } if(r.coins) out.push('💰'+r.coins); return out.join(' + '); }
@@ -4915,7 +4935,7 @@ function renderPass(){
   // takeover pick
   const tkb=el('div','psTk'); tkb.append(el('h4','','🔥 YOUR TAKEOVER'), el('p','how','Good plays fill your meter in games. When it\u2019s full: a 12-second boost.'));
   const row=el('div','psTkRow'); const un=SAVE.tkUnl||[];
-  for(const [k,t,d] of [['shot',TK.shot,'Wider green, jumpers fall more'],['lock',TK.lock,'Tighter contests, more steals'],['slash',TK.slash,'Faster drives, better at the rim']]){
+  for(const [k,t,d] of [['lock',TK.lock,'Tighter contests, more steals'],['handles',TK.handles,'Faster moves, breaks ankles'],['play',TK.play,'Your passes = bigger greens'],['slash',TK.slash,'Faster drives, better at the rim'],['shot',TK.shot,'Wider green, jumpers fall more']]){
     const lockedAt=Object.entries(PASS_REW).find(([l,r])=>r.tk===k)[0], has=un.includes(k);
     const b=el('button','psTkBtn'+(SAVE.tk===k&&has?' on':'')+(has?'':' locked')); b.append(el('span','psTkI', has?t.icon:'🔒'), el('b','',t.n), el('small','', has?d:'Pass level '+lockedAt));
     b.onclick=()=>{ if(!has) return toast('🔒 Unlocks at pass level '+lockedAt); SAVE.tk=k; persist(); renderPass(); if(net.hostConn && net.hostConn.open) try{ sendAct({t:'gear', ...myGear()}); }catch(e){} };
@@ -4926,7 +4946,7 @@ function renderPass(){
   for(let l=2;l<=PASS_MAX;l++){ const r=passRew(l), big=!!(r.tk||r.item||r.crate); const it=el('div','psRow'+(l<=L?' got':'')+(big?' big':''));
     it.append(el('b','', String(l)), el('span','', passDesc(r)), el('i','', l<=L?'✅':'')); list.append(it); }
   B.append(top, lv, tkb, el('h4','','REWARDS'), list, el('p','how','XP: 100 per online game (40 practice), +60 for a win, +40 ranked, +4 per point, +40 MVP.'));
-  setTimeout(()=>{ const cur=list.children[Math.max(0,L-2)]; if(cur) cur.scrollIntoView({block:'center'}); }, 30);
+  setTimeout(()=>{ const cur=list.children[Math.max(0,L-2)]; if(cur) list.scrollTop=Math.max(0, cur.offsetTop-list.offsetTop-90); }, 30);   // scroll the list only, not the panel
 }
 function openPass(){ $('#home').classList.add('hidden'); $('#passPanel').classList.remove('hidden'); renderPass(); }
 function closePass(){ $('#passPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); }
@@ -4986,12 +5006,24 @@ function setupRankedRoster(){
   G.diff=diffForRR(opp.rr); G.toWin=11; G.winBy2=true; V.rankOpp=opp;
 }
 // the "match found" card: who you're about to play
+function meWho(){ return {pk:lbMe()||'', name:getName(), bdg:SAVE.badge?'S'+SAVE.badge.s+':'+SAVE.badge.ti:''}; }
+function vsTags(who){ if(!who) return null; const d=el('div','vsTags'), bg=badgeEl(who), t=titleEl(who); if(bg) d.append(bg); if(t) d.append(t); return d.children.length ? d : null; }
+// ranked 2v2: both teams with ranks, titles and badges
+function showVsCard2(){
+  const c=$('#vsCard'), R=V.roster||[]; if(!R.length) return; c.innerHTML='';
+  c.append(el('div','vsTop','RANKED 2v2'));
+  const row=el('div','vsRow');
+  const col=t=>{ const d=el('div','vsSide vsTeam'); for(const p of R.filter(x=>x.team===t)){ const r=el('div','vsP'); r.append(el('div','vsName', (p.id===net.myId?'⭐ ':'')+p.name), rankBadge(p.rr||0)); const tg=vsTags(p.id===net.myId?{...p, ...meWho()}:p); if(tg) r.append(tg); d.append(r); } return d; };
+  row.append(col(0), el('div','vsVs','VS'), col(1)); c.append(row);
+  c.classList.remove('hidden'); c.classList.remove('out'); void c.offsetWidth; c.classList.add('in');
+  setTimeout(()=>{ c.classList.add('out'); setTimeout(()=>c.classList.add('hidden'),400); }, 3600);
+}
 function showVsCard(opp){
   const R=opp.R, S=R?STYLES[R.style]:null, c=$('#vsCard'); c.innerHTML='';
   c.append(el('div','vsTop','RANKED MATCH FOUND'));
   const row=el('div','vsRow');
-  const side=(name, rr, sub)=>{ const d=el('div','vsSide'); d.append(el('div','vsName',name), rankBadge(rr||0, true)); if(sub) d.append(el('div','vsSub',sub)); return d; };
-  const a=side(getName(), SAVE.rank.rr, SAVE.rank.streak>1?'🔥 '+SAVE.rank.streak+' streak':''), b=side(opp.n, opp.rr, R ? S.icon+' '+S.name : '🟢 LIVE PLAYER');
+  const side=(name, rr, sub, who)=>{ const d=el('div','vsSide'); d.append(el('div','vsName',name), rankBadge(rr||0, true)); const tg=vsTags(who); if(tg) d.append(tg); if(sub) d.append(el('div','vsSub',sub)); return d; };
+  const a=side(getName(), SAVE.rank.rr, SAVE.rank.streak>1?'🔥 '+SAVE.rank.streak+' streak':'', meWho()), b=side(opp.n, opp.rr, R ? S.icon+' '+S.name : '🟢 LIVE PLAYER', opp.who||null);
   row.append(a, el('div','vsVs','VS'), b); c.append(row);
   if(R) c.append(el('div','vsBio','“'+R.bio+'”'), el('div','vsTip', S.tip+'  ·  Your record vs '+R.n+': '+rivalRecord(R)+'  ·  CPU rival'));
   else c.append(el('div','vsTip','A real player from the ranked queue. Good luck.'));
@@ -5082,7 +5114,7 @@ async function qTryJoin(i){
         qState.matched=true; net.role='client'; net.peer=r.peer; net.myId=r.id; net.hostConn=conn; net.code='RANKED'; net.via=r.via; V.queueMatch=true;
         conn.on('close',()=>{ if(V.inRoom && !V.overSeen) fatal(qMode==='2v2'?'The match host left.':'Your opponent left the match.'); });
         closeRanked(); fin('matched');
-        if(qMode==='1v1') setTimeout(()=>{ const opp=V.roster.find(p=>p.id!==net.myId); if(opp) showVsCard({n:opp.name, rr:opp.rr||0}); }, 500);
+        if(qMode==='1v1') setTimeout(()=>{ const opp=V.roster.find(p=>p.id!==net.myId); if(opp) showVsCard({n:opp.name, rr:opp.rr||0, who:opp}); }, 500);
         else toast('👥 Joined a ranked 2v2 lobby. Starting when 4 players are in (or rivals fill in)');
       }
       if(qState===null || qState.matched || done) onClientData(d);
@@ -5147,7 +5179,7 @@ function startQueueMatch(){
   closeRanked(); V.queueMatch=true; G.ranked=true; G.toWin=11; G.winBy2=true; G.diff='pro';
   enterRoom(); goFull();
   RM=newMatch([...G.players.values()], 11, false, 'pro', true); RM.phaseT=Math.max(RM.phaseT,3.6); G.phase='game'; broadcastRoster();
-  const opp=[...G.players.values()].find(p=>p.id!=='host'); if(opp) showVsCard({n:opp.name, rr:opp.rr||0});
+  const opp=[...G.players.values()].find(p=>p.id!=='host'); if(opp) showVsCard({n:opp.name, rr:opp.rr||0, who:opp});
 }
 // ---------------------------------------------------------------- RANKED 2v2 (solo queue)
 // Real players are split into two fair teams (snake draft by rating); empty spots go to Ranked Rivals near the lobby's rating.
