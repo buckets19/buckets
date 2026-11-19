@@ -40,6 +40,7 @@ const lerp = (a,b,t) => a + (b-a)*t;
 const rnd = (a,b) => a + Math.random()*(b-a);
 const r1 = v => Math.round(v*10)/10;
 const r2 = v => Math.round(v*100)/100;
+const r3 = v => Math.round(v*1000)/1000;
 const gauss = () => (Math.random()+Math.random()+Math.random()-1.5)*2;
 const approach = (v,t,d) => v<t ? Math.min(t, v+d) : Math.max(t, v-d);
 const hyp = Math.hypot;
@@ -178,9 +179,9 @@ const CONTEST_PTS=[[34,0],[42,0.16],[45,0.25],[60,0.40],[80,0.55],[100,0.70],[13
 function contestAt(d){ if(d<=CONTEST_PTS[0][0]) return 0; for(let i=1;i<CONTEST_PTS.length;i++){ const [d1,v1]=CONTEST_PTS[i]; if(d<=d1){ const [d0,v0]=CONTEST_PTS[i-1]; return v0+(v1-v0)*(d-d0)/(d1-d0); } } return 1; }
 function shotWindow(M,p){
   const h=attackHoop(p.team), v=hoopVec(p,h), dist=v.d;
-  let w = dist<220 ? 0.13
-        : !isThree(p,h) ? lerp(0.092, 0.07, clamp((dist-220)/(THREE_D-220),0,1))
-        : lerp(0.062, 0.042, clamp((dist-THREE_D)/220,0,1));
+  let w = dist<220 ? 0.15
+        : !isThree(p,h) ? lerp(0.105, 0.085, clamp((dist-220)/(THREE_D-220),0,1))
+        : lerp(0.075, 0.055, clamp((dist-THREE_D)/220,0,1));
   if(dist>THREE_D+260) w*=0.65;
   if(dist>=220) w*=(p.shotForm||1);                                    // how you got into the shot
   if(tkOn(p,'shot')) w*=1.22;                                          // 🔥 Sniper takeover
@@ -206,8 +207,9 @@ function shotWindow(M,p){
   p.contest=c;
   if(c<0.12) return 0;                                   // smothered: there is no green
   if(dist>HEAVE_D) return 0.005;                         // past half court: just a sliver on the meter (it can't green; see releaseShot)
-  return clamp(w*0.8*c, 0.01, 0.16);                     // tighter greens (2K-style), scaled by coverage
+  return clamp(w*c, 0.01, 0.18);                         // scaled by coverage: open = full green, light ~70%, covered 40%, tight 25%
 }
+function previewWin(M,p){ const v=hoopVec(p,attackHoop(p.team)), sf=p.shotForm, c=p.contest; p.shotForm=shotFormAt(p,v)[0]; const w=shotWindow(M,p); p.shotForm=sf; p.contest=c; return w; }
 // judge HOW the shot started: set shot, in rhythm off a move, on the run, or fading away
 function shotFormAt(p, v){
   const sp=hyp(p.vx,p.vz), away=sp>1 ? -(p.vx*v.ux+p.vz*v.uz)/sp : 0, k=clamp((sp-60)/(RUN-60),0,1);
@@ -230,6 +232,8 @@ function handleActions(M,p){
       } else {
         [p.shotForm, p.formTag]=shotFormAt(p,v); if(v.d<220) p.formTag=""; p.rhythmT=0;
         p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.4; p.vz*=0.4; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.hesiT=0; p.meterWin=shotWindow(M,p);
+        if(!p.bot && p.reqW!=null){ const ws=p.meterWin; p.meterWin = ws>0 ? clamp(p.reqW, ws*0.6, ws*1.5) : Math.min(p.reqW, 0.012); p.c0=p.contest; }
+        p.reqW=null; p.c0=p.contest;
       }
     } else if(!has && ground && p.act===''){ p.act='jump'; p.vy=JUMP_V; p.vx*=0.6; p.vz*=0.6; }
   }
@@ -289,7 +293,7 @@ function dribbleMove(M,p){
 
 function releaseShot(M,p,m){
   const h=attackHoop(p.team), b=M.ball;
-  p.meterWin=Math.min(p.meterWin, shotWindow(M,p));
+  const cStart=p.c0===undefined?1:p.c0; shotWindow(M,p); p.contest=Math.min(cStart, p.contest===undefined?1:p.contest);   // green stays fixed; a late closeout only hurts a non-green
   const sx=p.x+p.face*6, sz=p.z, sy=p.y+150;
   const v=hoopVec({x:sx,z:sz},h), dist=hyp(h.cx-p.x, p.z);
   const w=p.meterWin, e=m-SWEET; let err=0, q='perfect';
@@ -305,9 +309,9 @@ function releaseShot(M,p,m){
   let made;
   if(green) made = true;                                 // (past half court the green is a sliver, so this is rare)
   else {
-    const ODDS=[[0.78,0.52,0.25],[0.52,0.26,0.08],[0.28,0.10,0.03],[0.14,0.05,0.01],[0.15,0.05,0.01]];   // slightly off · off · way off
-    const ae=Math.abs(err); let pr=ODDS[band][ae<0.05?0:ae<0.12?1:2];
-    pr *= c0<0.12 ? 0.3 : Math.pow(c0,0.6);                 // covered = less likely, smothered = a prayer
+    const ODDS=[[0.9,0.65,0.3],[0.8,0.5,0.15],[0.7,0.38,0.08],[0.4,0.15,0.03],[0.15,0.05,0.01]];   // slightly off · off · way off (open)
+    const ae=Math.abs(err); let pr=ODDS[band][ae<0.06?0:ae<0.12?1:2];
+    pr *= c0<0.12 ? 0.3 : Math.pow(c0,0.85);                 // covered = less likely, smothered = a prayer
     pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
     if(p.fire) pr*=1.15; if(p.cold) pr*=0.85;
     if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2; if(p.pmT>0) pr*=1.15;
@@ -325,7 +329,8 @@ function releaseShot(M,p,m){
   const hd=hyp(tx-sx,tz-sz), T=Math.max(0.7+Math.min(hd,1000)/1600*0.7, Math.sqrt((1.5*hd+Math.max(0,ty-sy)+120)/750));
   Object.assign(b,{st:'shot',holder:null,x:sx,y:sy,z:sz,vx:(tx-sx)/T,vz:(tz-sz)/T,vy:(ty-sy+0.5*GRAV*T*T)/T,
     shooter:p.id,shotTeam:p.team,pts3:three,t:0,touchedRim:false,dunk:false,reb:true,wasShot:true,lastTeam:p.team,post:null});
-  p.act='follow'; p.noGrabT=0.35; p.shotRange=0; M.scOn=false;
+  p.act=p.y>0.5?'follow':''; p.noGrabT=0.35;   // (a release after landing — lag — just lets go)
+  p.shotRange=0; M.scOn=false;
   pushEv(M,{k:'shot', id:p.id, q, three, d:Math.round(dist), c:r2(p.contest===undefined?1:p.contest), f:p.formTag||''});
 }
 
@@ -440,8 +445,9 @@ function movePlayer(M,p,dt){
   if(p.y>0 || p.vy>0){
     p.vy-=GRAV*dt; p.y+=p.vy*dt;
     if(p.y<=0){ p.y=0; p.vy=0;
-      if(p.act==='shoot' && b.holder===p.id && b.st==='held') releaseShot(M,p,p.shootT/METER_T);
-      if(p.act==='jump'||p.act==='follow'||p.act==='dunk'||p.act==='shoot') p.act='';
+      if(p.act==='shoot' && b.holder===p.id && b.st==='held'){ if(p.bot) releaseShot(M,p,p.shootT/METER_T); else { p.vx=p.vz=0; p.waitRel=true; } }   // players: wait for their release (it's timed on their iPad)
+      if(p.act==='jump'||p.act==='follow'||p.act==='dunk'||(p.act==='shoot' && !p.waitRel)) p.act='';
+      p.waitRel=false;
     }
   }
   p.x=clamp(p.x+p.vx*dt, COURT_L+P_R, COURT_R-P_R);
@@ -457,11 +463,12 @@ function movePlayer(M,p,dt){
   p.z=clamp(p.z+p.vz*dt, -HALF_D+12, HALF_D-12);
   // "set" = planted on the floor; set defenders hold their ground and can take charges
   p.setT = (p.y<=0.01 && hyp(p.vx,p.vz)<80 && p.act==='' && p.burstT<=0) ? (p.setT||0)+dt : 0;
+  if(p.act==='shoot' && p.y<=0.01 && !has) p.act='';           // lost the ball while waiting on a release
   if(p.act==='shoot'){
-    p.shootT+=dt; p.meterWin=Math.min(p.meterWin, shotWindow(M,p));  // closeouts shrink the green live
+    p.shootT+=dt;
     const m=p.shootT/METER_T;
     if(p.bot && m>=p.botRel) releaseShot(M,p,m);
-    else if(m>=1.3) releaseShot(M,p,1.3);
+    else if(m>=(p.bot?1.3:1.3+0.8/METER_T)) releaseShot(M,p,1.3);   // players: their iPad lets go at 1.3; give a laggy release time to arrive
   }
   if(p.act==='dunk' && has) tryDunk(M,p);
   // crossover: a burst right past a close defender can break their ankles
@@ -784,7 +791,7 @@ function botDefense(M,p,holder,myHoop,opps,mates,go,tick){
 function makeSnap(M, withEv){
   const b=M.ball;
   const s={ t:'s', ph:M.phase, pt:r2(M.phaseT), sc:M.score, w:M.winner, poss:M.poss, toWin:M.toWin, wb2:M.winBy2?1:0, sct:r1(M.scT), scOn:M.scOn?1:0,
-    p:M.players.map(p=>[p.id, r1(p.x), r1(p.z), r1(p.y), Math.round(p.vx), Math.round(p.vz), p.face, ACT[p.act]||0, r2(p.meterWin), (p.burstT>0||p.hesiT>0)?1:0, p.downT>0?2:p.stumbleT>0?1:0, p.team, p.pts, p.hand, p.hesiT>0 ? -2 : p.burstT>0 && p.moveKind!=='step' && p.moveKind!=='go' ? r2(clamp(1-p.burstT/(p.moveKind==='spin'?SPIN_T:BURST_T),0,1)) : -1, p.fire?1:p.cold?-1:0, (TK_CODE[p.tk]||0)*100+(p.tkT>0?50:Math.round((p.tkm||0)*40))]),
+    p:M.players.map(p=>[p.id, r1(p.x), r1(p.z), r1(p.y), Math.round(p.vx), Math.round(p.vz), p.face, ACT[p.act]||0, p.act==='shoot' ? r3(p.meterWin) : (b.st==='held' && b.holder===p.id) ? r3(previewWin(M,p)) : 0, (p.burstT>0||p.hesiT>0)?1:0, p.downT>0?2:p.stumbleT>0?1:0, p.team, p.pts, p.hand, p.hesiT>0 ? -2 : p.burstT>0 && p.moveKind!=='step' && p.moveKind!=='go' ? r2(clamp(1-p.burstT/(p.moveKind==='spin'?SPIN_T:BURST_T),0,1)) : -1, p.fire?1:p.cold?-1:0, (TK_CODE[p.tk]||0)*100+(p.tkT>0?50:Math.round((p.tkm||0)*40))]),
     b:[r1(b.x), r1(b.y), r1(b.z), BST[b.st], b.holder, (b.st==='shot' && (findP(M,b.shooter)||{}).fire)?1:0, b.st==='shot'?b.shooter:null] };
   if(withEv) s.ev=M.events;
   return s;

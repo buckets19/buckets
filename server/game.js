@@ -203,7 +203,7 @@ export class GameRoom {
     const cl = (v, a, b) => Math.max(a, Math.min(b, v));
     if (d.t === 'in') { p.inX = cl(+d.x || 0, -1, 1); p.inZ = cl(+d.z || 0, -1, 1);
       if (Number.isFinite(+d.px) && Number.isFinite(+d.pz)) { p.authX = cl(+d.px, 60, 1740); p.authZ = cl(+d.pz, -S.HALF_D + 12, S.HALF_D - 12); p.authAt = performance.now(); } }
-    else if (d.t === 'a') { if (d.d) p.wantA = true; else p.relA = cl(+d.m || 0, 0, 1.5); }
+    else if (d.t === 'a') { if (d.d) { p.wantA = true; p.reqW = d.w != null && Number.isFinite(+d.w) ? cl(+d.w, 0, 0.2) : null; } else p.relA = cl(+d.m || 0, 0, 1.5); }
     else if (d.t === 'b') p.wantB = true;
     else if (d.t === 'c') p.wantC = true;
   }
