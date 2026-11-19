@@ -191,7 +191,9 @@ function shotWindow(M,p){
   let c=1;
   for(const o of M.players){
     if(o.team===p.team) continue;
-    const ox=o.x-p.x, oz=o.z-p.z, d=hyp(ox,oz), ahead=ox*v.ux+oz*v.uz;
+    let ox=o.x-p.x, oz=o.z-p.z;
+    if(!o.bot && o.authAt){ const age=(performance.now()-o.authAt)/1000; if(age<0.3){ const ax=o.authX+o.vx*Math.min(age,0.08)-p.x, az=o.authZ+o.vz*Math.min(age,0.08)-p.z; if(hyp(ax,az)<hyp(ox,oz)){ ox=ax; oz=az; } } }
+    const d=hyp(ox,oz), ahead=ox*v.ux+oz*v.uz;
     if(d<150){
       // how much green you keep vs. this defender (1 = wide open): in your body = none, tight 25%, covered 40%, light ~70%
       let f=contestAt(d);
@@ -231,7 +233,7 @@ function handleActions(M,p){
         pushEv(M,{k:'dunkgo', id:p.id});
       } else {
         [p.shotForm, p.formTag]=shotFormAt(p,v); if(v.d<220) p.formTag=""; p.rhythmT=0;
-        p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.4; p.vz*=0.4; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.hesiT=0; p.meterWin=shotWindow(M,p);
+        p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.4; p.vz*=0.4; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.hesiT=0; p.meterWin=shotWindow(M,p); p.cMin=p.contest;
         p.reqW=null;
       }
     } else if(!has && ground && p.act===''){ p.act='jump'; p.vy=JUMP_V; p.vx*=0.6; p.vz*=0.6; }
@@ -292,7 +294,9 @@ function dribbleMove(M,p){
 
 function releaseShot(M,p,m){
   const h=attackHoop(p.team), b=M.ball;
-  if(p.y>0.01) p.meterWin=Math.min(p.meterWin, shotWindow(M,p));   // a closeout at the release still counts (not after landing: that's just lag)
+  if(p.y>0.01) p.meterWin=Math.min(p.meterWin, shotWindow(M,p));
+  p.contest=Math.min(p.contest===undefined?1:p.contest, p.cMin===undefined?1:p.cMin);   // the tightest coverage during the shot counts
+  // ^ a closeout at the release still counts (not after landing: that's just lag)
   const sx=p.x+p.face*6, sz=p.z, sy=p.y+150;
   const v=hoopVec({x:sx,z:sz},h), dist=hyp(h.cx-p.x, p.z);
   const w=p.meterWin, e=m-SWEET; let err=0, q='perfect';
@@ -310,7 +314,7 @@ function releaseShot(M,p,m){
   else {
     const ODDS=[[0.82,0.55,0.25],[0.62,0.35,0.1],[0.48,0.2,0.04],[0.25,0.08,0.02],[0.15,0.05,0.01]];   // slightly off · off · way off (open)
     const ae=Math.abs(err); let pr=ODDS[band][ae<0.06?0:ae<0.12?1:2];
-    pr *= c0<0.12 ? 0.3 : Math.pow(c0,0.85);                 // covered = less likely, smothered = a prayer
+    pr *= c0<0.12 ? 0.03 : Math.pow(c0,1.4);                 // light ~60%, covered ~28%, tight ~14% of the open odds; smothered = no
     pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
     if(p.fire) pr*=1.15; if(p.cold) pr*=0.85;
     if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2; if(p.pmT>0) pr*=1.15;
@@ -464,7 +468,7 @@ function movePlayer(M,p,dt){
   p.setT = (p.y<=0.01 && hyp(p.vx,p.vz)<80 && p.act==='' && p.burstT<=0) ? (p.setT||0)+dt : 0;
   if(p.act==='shoot' && p.y<=0.01 && !has) p.act='';           // lost the ball while waiting on a release
   if(p.act==='shoot'){
-    p.shootT+=dt; if(p.y>0.01) p.meterWin=Math.min(p.meterWin, shotWindow(M,p));   // closeouts shrink the green live
+    p.shootT+=dt; if(p.y>0.01){ p.meterWin=Math.min(p.meterWin, shotWindow(M,p)); p.cMin=Math.min(p.cMin===undefined?1:p.cMin, p.contest); }   // closeouts shrink the green live
     const m=p.shootT/METER_T;
     if(p.bot && m>=p.botRel) releaseShot(M,p,m);
     else if(m>=(p.bot?1.3:1.3+0.8/METER_T)) releaseShot(M,p,1.3);   // players: their iPad lets go at 1.3; give a laggy release time to arrive
