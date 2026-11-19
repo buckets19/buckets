@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Buckets</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
 <!-- multiplayer library: served from this site first (school filters often block CDNs), then backups -->
 <script src="peerjs.min.js"></script>
 <script>try{ if(localStorage.getItem('buckets-fbfake')) document.write('<script src="fbfake.js"><\/script>'); }catch(e){}</script>
@@ -477,6 +477,85 @@
   #toast.show{opacity:1}
   #rotate{position:fixed;z-index:8;left:50%;bottom:16px;transform:translateX(-50%);background:var(--yellow);border:3px solid var(--ink);
     border-radius:12px;padding:8px 14px;font-weight:700;pointer-events:none}
+
+  /* ================= BUCKETS identity: night-league broadcast =================
+     paper + ink, one hot orange, gold for money. Condensed italic display type, slanted
+     buttons, hairlines instead of fat outlines, soft depth instead of cartoon drop shadows. */
+  :root{ --ink:#15171c; --cream:#f3efe6; --paper:#faf8f3; --hot:#ff5b1f; --gold:#ffc21a; --mute:#6b6f7c; --line:rgba(21,23,28,.13); --night:#0f1218; }
+  html,body{font-family:"Barlow",system-ui,sans-serif;background:#0d0f14;font-weight:500}
+  h1,h2,h3,h4,h5,.btn,.tabs button,.coinPill,.hTile b,.grandBtn b,.grandBtn small,.rtag,.paName,.paSub,.pcName,.pcRar,.setHead,.oc,#toast,.qBadge,.ptitle,.pbadge,.rbadge{font-family:"Barlow Condensed","Arial Narrow",sans-serif}
+  .panel{background:var(--paper);border:0;border-radius:6px;box-shadow:0 28px 70px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.35);padding:20px}
+  .panel::before{content:'';position:absolute;left:0;right:0;top:0;height:5px;border-radius:6px 6px 0 0;background:linear-gradient(90deg,var(--hot) 0 62%,var(--paper) 62% 63%,var(--gold) 63% 82%,var(--paper) 82% 83%,var(--ink) 83%)}
+  .panel h2{font-weight:800;font-style:italic;text-transform:uppercase;letter-spacing:.3px}
+  .logo{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-style:italic;font-weight:800;color:var(--ink);-webkit-text-stroke:0;text-shadow:none;transform:none;letter-spacing:-1.5px;position:relative;display:inline-block}
+  .logo::after{content:'';position:absolute;left:4px;right:28px;bottom:-2px;height:7px;background:var(--hot);transform:skewX(-20deg)}
+  .logo .lgBall{display:inline-block;width:.36em;height:.36em;margin-left:4px;border-radius:50%;vertical-align:.08em;background:radial-gradient(circle at 35% 35%,#ff9a5c,var(--hot) 55%,#c63d0c);box-shadow:inset 0 0 0 2px var(--ink)}
+  #home .hTop .logo{font-size:58px}
+  input{border:2px solid var(--line);border-radius:3px;background:#fff;font-family:"Barlow",sans-serif;font-weight:600}
+  input:focus{border-color:var(--ink);box-shadow:none}
+  label{font-weight:700;text-transform:uppercase;font-size:12px;letter-spacing:1px;color:var(--mute)}
+  label input{color:var(--ink);text-transform:none;letter-spacing:0;font-size:18px}
+  /* buttons: slanted plates */
+  .btn{border:0;border-radius:3px;background:#e9e5db;color:var(--ink);box-shadow:inset 0 -3px 0 rgba(0,0,0,.2);font-weight:800;text-transform:uppercase;letter-spacing:.5px;transform:skewX(-7deg);padding:10px 18px}
+  .btn:active{transform:skewX(-7deg) translateY(2px);box-shadow:inset 0 -1px 0 rgba(0,0,0,.2)}
+  .btn.orange{background:var(--hot);color:#fff}
+  .btn.yellow{background:var(--gold);color:var(--ink)}
+  .btn.red{background:#e2342d;color:#fff}
+  .btn.big{font-size:22px;padding:12px}
+  .btn.tiny{box-shadow:inset 0 -2px 0 rgba(0,0,0,.2);border-radius:3px;font-size:13px}
+  .btn.ghost{transform:none;box-shadow:none;background:none;text-transform:none;font-family:"Barlow",sans-serif;font-weight:600;color:var(--mute)}
+  .btn:disabled{opacity:.4}
+  /* tabs: broadcast lower-third style */
+  .tabs button,#shop .tabs button{border:0;border-radius:0;background:transparent;border-bottom:3px solid var(--line);font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--mute);box-shadow:none}
+  .tabs button.on,#shop .tabs button.on{background:transparent;color:var(--ink);border-bottom-color:var(--hot)}
+  #shop #mainTabs button{font-size:20px;font-style:italic}
+  .coinPill{border-radius:3px;background:var(--ink);color:var(--gold);font-weight:800;letter-spacing:.5px;transform:skewX(-7deg)}
+  .gemPill{color:#7ff0ff!important}
+  /* home */
+  #home .hCard{background:#fff;border:1px solid var(--line);border-radius:4px;box-shadow:none}
+  #home .hRanked{background:#fff}
+  #home .hCard h4{font-weight:800;font-style:italic;font-size:15px;letter-spacing:1.5px;opacity:1;color:var(--ink);border-left:5px solid var(--hot);padding-left:8px;line-height:1}
+  .grandBtn{border:0;border-radius:4px;transform:skewX(-6deg);box-shadow:inset 0 -5px 0 rgba(0,0,0,.28);background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 12px,transparent 12px 24px)!important}
+  .grandBtn.gR1{background-color:var(--ink)!important} .grandBtn.gR2{background-color:var(--hot)!important}
+  .grandBtn .gi{display:none}
+  .grandBtn b,#home .hRankBtns .grandBtn b{font-style:italic;font-weight:800;font-size:52px;line-height:.9;text-shadow:none;letter-spacing:-1px}
+  .grandBtn small{font-size:13px;text-transform:uppercase;letter-spacing:1px;opacity:.85}
+  .grandBtn::after{display:none}
+  #home .hLadder{background:var(--gold)} #home .hPractice{background:#e9e5db}
+  #home .hBottom{gap:8px}
+  #home .hTile{border:0;border-radius:4px;transform:skewX(-6deg);box-shadow:inset 0 -5px 0 rgba(0,0,0,.28);padding:14px 6px 12px;background-image:none}
+  #home .hTile:active{transform:skewX(-6deg) translateY(2px);box-shadow:inset 0 -2px 0 rgba(0,0,0,.28)}
+  #home .hTile::after{display:none}
+  #home .hTile span{display:none}
+  #home .hTile b{font-size:26px;font-style:italic;font-weight:800;letter-spacing:1px;text-shadow:none}
+  .hTile.gShop{background:var(--hot)} .hTile.gLock{background:var(--ink)} .hTile.gPass{background:var(--gold);color:var(--ink)!important} .hTile.gQuest{background:#13866a}
+  .qBadge{border:0;border-radius:3px;background:#e2342d;animation:none;font-weight:800;letter-spacing:.5px}
+  #home .hRank .rbadge{border:0;border-radius:3px}
+  .ctlMsg{border:0;border-radius:3px;box-shadow:none;border-left:5px solid var(--ink)}
+  /* toasts: a lower third */
+  #toast{background:var(--night);color:#fff;border-radius:3px;border-left:6px solid var(--hot);font-weight:700;font-size:17px;letter-spacing:.3px;box-shadow:0 12px 30px rgba(0,0,0,.4)}
+  /* store + locker cards */
+  .packCard,.setCard,.dailyCard,#shop .item,.crate{border:1px solid var(--line)!important;border-radius:5px!important;box-shadow:none!important}
+  .packCard{background:#fff} .packCard.feat{background:#fff}
+  .packArt,.poPack{border:0;border-radius:4px}
+  .paName{font-style:italic;font-weight:800;font-size:22px;-webkit-text-stroke:0;letter-spacing:.5px;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+  .packCard .pTag{border:0;border-radius:2px;background:var(--hot);transform:skewX(-8deg)}
+  .packCard .oc{border:0!important;border-radius:2px!important}
+  .shardBar{border:0;border-radius:4px;background:var(--night)}
+  .dailyCard.ready{background:#fff4d6;animation:none;border-left:6px solid var(--gold)!important}
+  #shop .item{border-top:5px solid var(--rc)!important}
+  .setCard{border-left:8px solid var(--sc)!important}
+  .setBar{border:0;border-radius:2px;background:#ebe7de;height:10px}
+  #shop .lockTabs button{font-size:14px}
+  /* pack opening: keep it dramatic but clean */
+  .pcBack,.pcFront{border:2px solid rgba(0,0,0,.6);border-radius:8px}
+  .pcBack{background:repeating-linear-gradient(135deg,#1a1e28 0 12px,#151922 12px 24px);color:var(--hot)}
+  .pcName{font-style:italic;font-weight:800;font-size:16px;-webkit-text-stroke:0;text-shadow:0 2px 0 rgba(0,0,0,.35)}
+  #poWalk .wkRar{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:64px;-webkit-text-stroke:0;color:#fff;text-shadow:0 0 30px var(--rc)}
+  #poWalk .wkName{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-size:40px;text-transform:uppercase}
+  #loginBox .lgDay{border:1px solid var(--line);border-radius:4px}
+  #loginBox .lgDay.now{background:var(--gold);box-shadow:none;outline:3px solid var(--ink)}
+  .lvStars{font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:.5px}
 </style>
 </head>
 <body>
@@ -484,7 +563,7 @@
 
 <div id="home" class="panel center">
   <div class="hTop">
-    <h1 class="logo">BUCKETS</h1>
+    <h1 class="logo">BUCKETS<i class="lgBall"></i></h1>
     <div class="hTopR">
       <span id="homeRank" class="hRank"></span>
       <span class="coinPill">💰 <span class="coinCount">0</span></span>
@@ -493,18 +572,18 @@
   <div id="ctlBanner" class="ctlBanner hidden"></div>
   <div class="hGrid">
     <section class="hCard hFriends">
-      <h4>🏀 PLAY WITH FRIENDS</h4>
+      <h4>PLAY WITH FRIENDS</h4>
       <label>Your name<input id="name" maxlength="12" placeholder="e.g. Splash" autocomplete="off"><span id="nameStat" class="nameStat"></span></label>
       <button id="hostBtn" class="btn big orange">Host a game</button>
       <div class="or">— or join a friend —</div>
       <div class="row"><input id="code" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters"><button id="joinBtn" class="btn yellow">Join</button></div>
-      <button id="practiceBtn" class="btn hPractice">🎯 Practice vs bots</button>
+      <button id="practiceBtn" class="btn hPractice">Practice vs bots</button>
     </section>
     <section class="hCard hRanked">
-      <h4>🏆 RANKED</h4>
+      <h4>RANKED</h4>
       <div class="grandRow hRankBtns"><button id="rankedHome1" class="grandBtn gR1"><span class="gi">🏆</span><b>1v1</b><small>Climb the ladder</small></button><button id="rankedHome2" class="grandBtn gR2"><span class="gi">👥</span><b>2v2</b><small>Team up with a friend</small></button></div>
       <button id="partyBtn" class="btn hParty hidden">👫 Ranked 2v2 with a friend</button>
-      <button id="rankedBtn" class="btn hLadder">📊 My rank &amp; leaderboard</button>
+      <button id="rankedBtn" class="btn hLadder">My rank &amp; leaderboard</button>
       <p class="how">Hold <b>SHOOT</b>, let go in the <b style="color:#1e9e4a">green</b> = bucket. Smother shooters to take their green away. <b>CROSS</b> + stick = crossover · spin · stepback · hesi.</p>
     </section>
   </div>
@@ -548,8 +627,8 @@
 </div>
 
 <div id="shop" class="panel hidden">
-  <div class="head"><h2 id="shopTitle">🛒 Shop</h2><span class="wallet2"><span class="coinPill gemPill">💎 <span class="gemCount">0</span></span><span class="coinPill">💰 <span class="coinCount">0</span></span></span></div>
-  <div class="tabs" id="mainTabs"><button data-main="crates" class="on">🛒 Shop</button><button data-main="locker">🎒 Locker</button></div>
+  <div class="head"><h2 id="shopTitle">Store</h2><span class="wallet2"><span class="coinPill gemPill">💎 <span class="gemCount">0</span></span><span class="coinPill">💰 <span class="coinCount">0</span></span></span></div>
+  <div class="tabs" id="mainTabs"><button data-main="crates" class="on">Store</button><button data-main="locker">Locker</button></div>
   <div class="tabs lockTabs" id="lockTabs"></div>
   <div id="shopList"></div>
   <p class="stats" id="shopStats"></p>
@@ -3725,7 +3804,7 @@ let W=0,H=0,dpr=1;
 function resize(){ dpr=Math.min(V.lowFx2?0.85:V.lowFx?1:1.6,devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*dpr; cv.height=H*dpr;
   $('#rotate').classList.toggle('hidden', !(touchMode && H>W)); }
 addEventListener('resize', resize); resize();
-const FONT='Fredoka,"Trebuchet MS",system-ui,sans-serif';
+const FONT='"Barlow Condensed","Arial Narrow",system-ui,sans-serif';
 const PX=(x,z)=>x+z*SKEW, PY=(y,z)=>-(y+z*DEPTH);
 const DS=z=>1-z*0.0005;
 const SIGN_TXT=['DEFENSE!','MOM I\'M ON TV','BRICK CITY 🧱','#BUCKETS','FREE PIZZA?','LET HIM COOK','NO HOMEWORK','SPLASH 💦','👀','AIRBALL!','WE WANT DUNKS','GOAT 🐐'];
@@ -3824,8 +3903,8 @@ function interpDelay(){ if(srvRoom() && V.late!==undefined) return clamp(26+1.8*
   const g=V.gapA||(isRelay()?50:25), j=V.gapJ||10; return clamp(g+2.2*j+12, isRelay()?70:srvRoom()?28:45, 260); }   // game server: 50 updates/s, so a smaller buffer
 function rrect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function txt(s,x,y,size,color,align='center',stroke=6){
-  ctx.font=`700 ${size}px ${FONT}`; ctx.textAlign=align; ctx.textBaseline='middle'; ctx.lineJoin='round';
-  ctx.lineWidth=stroke; ctx.strokeStyle='#1b1530'; ctx.strokeText(s,x,y); ctx.fillStyle=color; ctx.fillText(s,x,y);
+  ctx.font=`italic 800 ${size}px ${FONT}`; ctx.textAlign=align; ctx.textBaseline='middle'; ctx.lineJoin='round';
+  ctx.lineWidth=stroke; ctx.strokeStyle='#15171c'; ctx.strokeText(s,x,y); ctx.fillStyle=color; ctx.fillText(s,x,y);
 }
 function floorPath(pts){ ctx.beginPath(); pts.forEach(([x,z],i)=>{ const a=PX(x,z), b=PY(0,z); i?ctx.lineTo(a,b):ctx.moveTo(a,b); }); }
 
@@ -4827,18 +4906,27 @@ function drawHUD(S, dt, real){
   if(real){
     const cx=W/2, bw=Math.min(150,W*0.16);
     V.pop[0]=Math.max(0,V.pop[0]-dt*2.5); V.pop[1]=Math.max(0,V.pop[1]-dt*2.5);
-    ctx.fillStyle='#1b1530'; rrect(cx-bw-60,10,bw*2+120,58,16); ctx.fill();
-    ctx.fillStyle=TEAM_COL[0]; rrect(cx-bw-52,16,bw,46,12); ctx.fill();
-    ctx.fillStyle=TEAM_COL[1]; rrect(cx+52,16,bw,46,12); ctx.fill();
-    txt(String(S.sc[0]), cx-52-bw/2, 40, 34*(1+V.pop[0]*.5), '#fff', 'center', 6);
-    txt(String(S.sc[1]), cx+52+bw/2, 40, 34*(1+V.pop[1]*.5), '#fff', 'center', 6);
-    ctx.font=`700 12px ${FONT}`; ctx.fillStyle='#fff6e5'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('TO '+S.toWin+(S.wb2?' · BY 2':''), cx, 24);
-    // shot clock
-    const sct=S.sct, low=sct<=4 && S.scOn;
-    ctx.fillStyle = low ? '#ff5a4f' : '#2d2550'; rrect(cx-26,32,52,30,8); ctx.fill();
-    txt(S.scOn||S.ph==='inbound' ? String(Math.ceil(sct)) : '—', cx, 48, 22, low?'#fff':'#ffd23f', 'center', 4);
-    ctx.fillStyle=TEAM_COL[S.poss]; ctx.beginPath(); ctx.arc(cx+(S.poss===0?-36:36), 47, 5, 0, TAU); ctx.fill();
+    // TV-style score bug: [stripe NAME | SCORE] [shot clock] [SCORE | NAME stripe], slanted plates
+    const sct=S.sct, low=sct<=4 && S.scOn, y0=12, h0=44, sk=10, nameW=Math.min(118,W*0.12), scW=58, clkW=64;
+    const plate=(x,w,fill)=>{ ctx.fillStyle=fill; ctx.beginPath(); ctx.moveTo(x+sk,y0); ctx.lineTo(x+w+sk,y0); ctx.lineTo(x+w,y0+h0); ctx.lineTo(x,y0+h0); ctx.closePath(); ctx.fill(); };
+    const half=clkW/2+4, L0=cx-half-scW-nameW, R0=cx+half;
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,.45)'; ctx.shadowBlur=14; ctx.shadowOffsetY=4; plate(L0-6, (cx+half+scW+nameW+6)-(L0-6), 'rgba(15,18,24,.94)'); ctx.restore();
+    const tname=t=>{ const r=V.roster||[]; const ps=r.filter(p=>p.team===t); return ps.length===1 ? String(ps[0].name).toUpperCase().slice(0,10) : t===0?'RED':'BLUE'; };
+    // left team
+    plate(L0, 7, TEAM_COL[0]); plate(L0+nameW, scW, '#faf8f3');
+    ctx.font=`italic 800 ${Math.min(20,nameW/5)}px ${FONT}`; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillStyle='#fff'; ctx.fillText(tname(0), L0+18, y0+h0/2+1);
+    ctx.font=`italic 800 ${34*(1+V.pop[0]*.4)}px ${FONT}`; ctx.textAlign='center'; ctx.fillStyle='#15171c'; ctx.fillText(String(S.sc[0]), L0+nameW+scW/2+sk/2, y0+h0/2+2);
+    // right team
+    plate(R0, scW, '#faf8f3'); plate(R0+scW+nameW-7, 7, TEAM_COL[1]);
+    ctx.font=`italic 800 ${34*(1+V.pop[1]*.4)}px ${FONT}`; ctx.fillStyle='#15171c'; ctx.fillText(String(S.sc[1]), R0+scW/2+sk/2, y0+h0/2+2);
+    ctx.font=`italic 800 ${Math.min(20,nameW/5)}px ${FONT}`; ctx.textAlign='right'; ctx.fillStyle='#fff'; ctx.fillText(tname(1), R0+scW+nameW-12, y0+h0/2+1);
+    // shot clock in the middle
+    plate(cx-clkW/2, clkW, low ? '#e2342d' : '#ffc21a');
+    ctx.font=`italic 800 30px ${FONT}`; ctx.textAlign='center'; ctx.fillStyle=low?'#fff':'#15171c'; ctx.fillText(S.scOn||S.ph==='inbound' ? String(Math.ceil(sct)) : '–', cx+sk/2, y0+h0/2+2);
+    // under the bug: game info strip + possession arrow
+    ctx.font=`italic 700 13px ${FONT}`; ctx.fillStyle='rgba(255,255,255,.85)'; ctx.textAlign='center';
+    ctx.fillText('FIRST TO '+S.toWin+(S.wb2?'  ·  WIN BY 2':''), cx, y0+h0+12);
+    { const ax = S.poss===0 ? L0+nameW+scW/2 : R0+scW/2, ay=y0+h0+4; ctx.fillStyle=TEAM_COL[S.poss]; ctx.beginPath(); ctx.moveTo(ax-7,ay+8); ctx.lineTo(ax+7,ay+8); ctx.lineTo(ax,ay); ctx.closePath(); ctx.fill(); }
     // shot clock beeps
     const si=Math.ceil(sct); if(S.scOn && S.ph==='play' && si<=3 && si>0 && si!==V.lastScInt){ sfx('tick'); } V.lastScInt=si;
     const meQ=S.p.find(q=>q[0]===net.myId);
@@ -4861,8 +4949,9 @@ function drawHUD(S, dt, real){
     ctx.globalAlpha=1; } }
   // coins
   if(V.inRoom && real){
-    ctx.fillStyle='rgba(18,14,36,.8)'; rrect(12,12,96,34,17); ctx.fill();
-    ctx.font=`700 17px ${FONT}`; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillStyle='#ffd23f'; ctx.fillText('💰 '+SAVE.coins, 22, 30);
+    { ctx.font=`italic 800 18px ${FONT}`; const t1=String(SAVE.coins), t2=String(SAVE.gems||0), w1=ctx.measureText(t1).width, w2=ctx.measureText(t2).width, w=w1+w2+64;
+      ctx.fillStyle='rgba(15,18,24,.9)'; ctx.beginPath(); ctx.moveTo(18,12); ctx.lineTo(18+w,12); ctx.lineTo(12+w,44); ctx.lineTo(12,44); ctx.closePath(); ctx.fill();
+      ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.fillStyle='#ffc21a'; ctx.fillText('● '+t1, 22, 29); ctx.fillStyle='#7ff0ff'; ctx.fillText('◆ '+t2, 40+w1, 29); }
     let py=62; for(let i=V.coinPops.length-1;i>=0;i--){ const c=V.coinPops[i]; c.t-=dt; if(c.t<=0){ V.coinPops.splice(i,1); continue; }
       ctx.globalAlpha=Math.min(1,c.t*2); txt('+'+c.n+' '+c.why, 16, py-(1.8-c.t)*10, 15, '#ffd23f', 'left', 4); py+=22; }
     ctx.globalAlpha=1;
@@ -5792,17 +5881,17 @@ function el(tag, cls, text){ const e=document.createElement(tag); if(cls) e.clas
 function renderShop(){
   updateCoinUI();
   document.querySelectorAll('#mainTabs button').forEach(b=>b.classList.toggle('on', b.dataset.main===shopMain));
-  $('#shopTitle').textContent = shopMain==='crates' ? '🛒 Shop' : '🎒 Locker';
+  $('#shopTitle').textContent = shopMain==='crates' ? 'Store' : 'Locker';
   if(shopMain==='locker' && lockTab==='special') lockTab='look';
   if(shopMain==='crates' && lockTab==='look') lockTab='gfx';
   V.lookOpen = shopMain==='locker' && lockTab==='look';
   // category tabs (shared by Shop + Locker); the Shop also has a ✨ Special tab
   const tabs=$('#lockTabs'); tabs.innerHTML='';
   if(shopMain==='crates'){
-    for(const [k,lab] of [['packs','📦 Packs'],['trophy','🏅 Trophies'],['book','📖 Collection'+(setsClaimable()?' ❗':'')]]){ const b=el('button', k===shopTab?'on':'', lab); b.onclick=()=>{ shopTab=k; renderShop(); }; tabs.append(b); }
+    for(const [k,lab] of [['packs','Packs'],['trophy','Trophies'],['book','Collection'+(setsClaimable()?' •':'')]]){ const b=el('button', k===shopTab?'on':'', lab); b.onclick=()=>{ shopTab=k; renderShop(); }; tabs.append(b); }
   }
   const cats=shopMain==='locker' ? ['look', ...Object.keys(KINDS)] : [];
-  for(const k of cats){ const lab = k==='special' ? '✨ Special' : k==='look' ? '🧍 Look' : KINDS[k].icon+' '+KINDS[k].label+(shopMain==='locker' ? ' '+SAVE.owned[k].length+'/'+KINDS[k].list.length : '');
+  for(const k of cats){ const lab = k==='special' ? 'Special' : k==='look' ? 'Look' : KINDS[k].label+(shopMain==='locker' ? ' '+SAVE.owned[k].length+'/'+KINDS[k].list.length : '');
     const b=el('button', k===lockTab?'on':'', lab); b.onclick=()=>{ lockTab=k; renderShop(); }; tabs.append(b); }
   $('#shop').classList.toggle('wide', shopMain==='crates');
   const box=$('#shopList'); box.innerHTML=''; box.className = shopMain==='crates' ? (shopTab==='packs'?'packGrid':'lockGrid') : 'lockGrid';
