@@ -611,6 +611,61 @@
   #home .hFoot .btn.ghost{color:#9a9ea8}
   #home .ctlMsg{color:#15171c}
   @media (max-width:760px){ #home .hMain{grid-template-columns:1fr} #home .hubStore{min-height:120px} }
+  /* ===== full-screen dark panels (ranked, pass) ===== */
+  .panel.dark{--ink:#f3f1ec;--line:rgba(255,255,255,.1);--paper:#1b1d22;color:#f3f1ec;background:#1b1d22 repeating-linear-gradient(135deg,rgba(255,255,255,.028) 0 16px,transparent 16px 32px)}
+  .panel.full{left:12px;right:12px;top:12px;bottom:12px;width:auto!important;max-width:1180px;max-height:none;margin:0 auto;transform:none;display:flex;flex-direction:column;overflow:hidden}
+  .panel.dark .coinPill{background:#0d0e11;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+  .panel.dark .btn{background:#2b2e36;color:#fff} .panel.dark .btn.yellow{background:var(--gold);color:#15171c} .panel.dark .btn.orange{background:var(--hot)}
+  .panel.dark .how{color:#9a9ea8;opacity:1}
+  #rankedPanel.full,#passPanel.full{left:12px;right:12px;top:12px;bottom:12px;width:auto;max-width:1180px;margin:0 auto;max-height:none;overflow:hidden}
+  #passPanel.dark{background:#1b1d22 repeating-linear-gradient(135deg,rgba(255,255,255,.028) 0 16px,transparent 16px 32px)}
+  #rankedPanel.full{padding:16px 18px}
+  #rankedPanel .rkGrid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(300px,1fr) 1.15fr;gap:16px}
+  #rankedPanel .rkLeft{overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:10px;min-height:0}
+  #rankedPanel .rkRight{display:flex;flex-direction:column;min-height:0}
+  #rankedPanel .seasonCard{border:0;border-radius:6px;background:linear-gradient(120deg,#6a46e8,#a55eea);margin:0}
+  #rankCard{border:0!important;border-radius:6px;background:#23262e!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08),inset 0 -6px 0 var(--tc);margin:0;padding:16px}
+  #rankCard .rkIcon{font-size:72px}
+  #rankCard .rkName{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:40px;-webkit-text-stroke:0;color:var(--tc);text-transform:uppercase;text-shadow:0 0 24px color-mix(in srgb,var(--tc) 50%,transparent)}
+  #rankCard .rkBar{border:0;background:#0d0e11;border-radius:2px;height:12px} #rankCard .rkFill{background:var(--tc)}
+  #rankCard small,#rankCard .rkStats{color:#c9c6bf}
+  #rankCard .rkRoad{background:rgba(0,0,0,.3)}
+  #rankedPanel .grandRow{margin:0!important}
+  #rankedPanel .grandBtn{min-height:110px}
+  #rankedPanel .grandBtn .gi{display:block;font-size:30px;animation:none;filter:none}
+  #rankedPanel .grandBtn b{font-size:40px}
+  #rankedPanel .grandBtn.gR1{background-color:#2b2e36!important;box-shadow:inset 0 -5px 0 rgba(0,0,0,.35),inset 0 0 0 2px #ffc21a}
+  #rankedPanel .lbHead{margin:0 0 8px;font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:26px;letter-spacing:1px}
+  #rankedPanel .lbHead small{font-size:13px;font-style:normal;color:#9a9ea8;letter-spacing:.5px}
+  #rankedPanel #ladder{flex:1;max-height:none;min-height:0;border:0;border-radius:6px;background:#23262e;color:#f3f1ec}
+  #rankedPanel #ladder li{border-bottom:1px solid rgba(255,255,255,.06);padding:9px 12px;font-size:15px}
+  #rankedPanel #ladder li:nth-child(1){background:linear-gradient(90deg,rgba(255,194,26,.22),transparent)} #rankedPanel #ladder li:nth-child(2){background:linear-gradient(90deg,rgba(220,220,230,.14),transparent)} #rankedPanel #ladder li:nth-child(3){background:linear-gradient(90deg,rgba(205,127,50,.16),transparent)}
+  #rankedPanel #ladder li > b{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:20px;min-width:28px}
+  #rankedPanel #ladder li.me{background:rgba(255,91,31,.22);box-shadow:inset 4px 0 0 var(--hot)}
+  #rankedPanel #ladder .lrr{font-family:"Barlow Condensed",sans-serif;font-weight:800;font-size:17px}
+  #rankedPanel #rankedClose,#passPanel #passClose{flex:none}
+  @media (max-width:760px){ #rankedPanel .rkGrid{grid-template-columns:1fr;overflow-y:auto} #rankedPanel #ladder{min-height:360px} }
+  #passPanel.full{padding:16px 18px}
+  #passPanel #passBody{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+  #passPanel .adHead{background:transparent;position:static;justify-content:flex-start;padding:0;margin-bottom:-4px} #passPanel .adHead h2{display:none}
+  .psTrack::-webkit-scrollbar,#rankedPanel ::-webkit-scrollbar{height:8px;width:8px} .psTrack::-webkit-scrollbar-thumb,#rankedPanel ::-webkit-scrollbar-thumb{background:#3a3e48;border-radius:4px} .psTrack::-webkit-scrollbar-track,#rankedPanel ::-webkit-scrollbar-track{background:transparent}
+  #passPanel .psTop{display:flex;justify-content:space-between;align-items:baseline;font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:30px}
+  #passPanel .psTop span{font-size:15px;font-style:normal;color:#9a9ea8}
+  #passPanel .psLvl{background:linear-gradient(120deg,#6a46e8,#a55eea);border-radius:6px;padding:14px 16px;border:0}
+  #passPanel .psNum{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:44px;line-height:1}
+  #passPanel .psBar{height:14px;border:0;border-radius:2px;background:rgba(0,0,0,.3);margin:8px 0 4px} #passPanel .psBar .evFill{background:#ffc21a}
+  #passPanel .psH,#passPanel .psTk h4{margin:4px 0 0;font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:20px;letter-spacing:1.5px;color:#c9c6bf}
+  .psTrack{display:flex;gap:10px;overflow-x:auto;overflow-y:hidden;padding:6px 2px 12px;scroll-snap-type:x proximity;touch-action:pan-x;flex:none}
+  .psCard{flex:0 0 132px;height:176px;border-radius:6px;background:#23262e;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:10px 8px;text-align:center;scroll-snap-align:start;position:relative}
+  .psCard.big{flex-basis:160px;background:linear-gradient(170deg,#3a2a6e,#23262e);box-shadow:inset 0 0 0 2px #a55eea}
+  .psCard.got{opacity:.55} .psCard.got .psSt{color:#47e27a}
+  .psCard.next{box-shadow:inset 0 0 0 3px #ffc21a;opacity:1;transform:translateY(-3px)}
+  .psLv{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:18px;color:#c9c6bf}
+  .psIc{font-size:44px;line-height:1} .psCard.big .psIc{font-size:56px}
+  .psTx{font-size:12px;font-weight:700;line-height:1.2}
+  .psSt{font-family:"Barlow Condensed",sans-serif;font-weight:800;font-size:13px;letter-spacing:1px;color:#ffc21a;min-height:14px}
+  #passPanel .psTkBtn{border:0;border-radius:6px;background:#23262e;color:#f3f1ec;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+  #passPanel .psTkBtn.on{background:#3a2f12;box-shadow:inset 0 0 0 3px #ffc21a}
   /* lobby */
   .team{border:0;border-radius:4px;padding:10px 12px;background:#fff!important;box-shadow:inset 0 0 0 1px var(--line)}
   .team.t0{border-top:6px solid var(--red)} .team.t1{border-top:6px solid var(--blue)}
@@ -747,17 +802,20 @@
   <div id="p2Net" class="p2Net"></div>
 </div>
 <div id="seasonPop" class="panel center hidden"></div>
-<div id="passPanel" class="panel center hidden"><div class="adHead"><h2>🎟️ SEASON PASS</h2><button id="passClose" class="btn tiny">✕ Close</button></div><div id="passBody"></div></div>
+<div id="passPanel" class="panel hidden dark full"><div class="adHead"><h2>🎟️ SEASON PASS</h2><button id="passClose" class="btn tiny">✕ Close</button></div><div id="passBody"></div></div>
 <div id="adminPanel" class="panel center hidden"><div class="adHead"><h2>🛠️ MASTER CONTROLS</h2><button id="adminClose" class="btn tiny">✕ Close</button></div><div id="adminBody"></div></div>
-<div id="rankedPanel" class="panel hidden">
-  <div class="head"><h2>🏆 Ranked</h2><span class="coinPill">💰 <span class="coinCount">0</span></span></div>
+<div id="rankedPanel" class="panel hidden dark full">
+  <div class="head"><h2>🏆 Ranked</h2><span class="wallet2"><span class="coinPill gemPill">💎 <span class="gemCount">0</span></span><span class="coinPill">💰 <span class="coinCount">0</span></span></span></div>
+  <div class="rkGrid"><div class="rkLeft">
   <div id="seasonCard" class="seasonCard"></div>
   <div id="rankCard"></div>
   <div class="grandRow" style="margin-top:6px"><button id="rankedPlay" class="grandBtn gR1"><span class="gi">🏆</span><b>RANKED 1v1</b><small>Find a match</small></button><button id="rankedPlay2" class="grandBtn gR2"><span class="gi">👥</span><b>RANKED 2v2</b><small>Team up with a friend</small></button></div>
   <div class="row"><p id="rankedStatus" class="hidden" style="flex:1;font-weight:700;margin:6px 0"></p><button id="rankedCancel" class="btn tiny hidden">Cancel</button></div>
   <p class="how" style="margin:6px 0 10px">1v1 to 11, win by 2. Finds a real player searching at the same time. If nobody's in the queue, one of the <b>Ranked Rivals</b> (CPU regulars with their own styles) picks up the game. The leaderboard is real players only.</p>
-  <h3 style="margin:4px 0 6px">Leaderboard <small style="font-weight:600;opacity:.6">real players only</small></h3>
+  </div><div class="rkRight">
+  <h3 class="lbHead">LEADERBOARD <small>real players only · 🐐 GOAT = #1</small></h3>
   <ol id="ladder"></ol>
+  </div></div>
   <button id="rankedClose" class="btn big" style="margin-top:10px">Back</button>
 </div>
 
@@ -5217,8 +5275,14 @@ const TIERS=[
   {n:'Legend',      icon:'👑', c:'#ff3b6b', min:3500},
   {n:'GOAT',        icon:'🐐', c:'#111111', min:4200},
 ];
+// the highest RR on the (visible) leaderboard: only that one player is GOAT
+function goatRR(){ try{ if(!LB.rows || !LB.rows.length) return Infinity; const hide=CTL.lbHide||{}; let m=0;
+  for(const r of LB.rows) if(!hide['p'+String(r.pk).slice(0,16)]) m=Math.max(m, r.rr||0);
+  const me=lbMe(); if(SAVE.rank && SAVE.rank.games && !LB.rows.some(r=>r.pk===me)) m=Math.max(m, SAVE.rank.rr);
+  return m||Infinity; }catch(e){ return Infinity; } }
 function rankOf(rr){
   rr=Math.max(0,Math.round(rr)); let ti=0; for(let i=0;i<TIERS.length;i++) if(rr>=TIERS[i].min) ti=i;
+  if(ti===TIERS.length-1){ const g=goatRR(); if(rr<g){ const t=TIERS[ti-1]; return {ti:ti-1, t, label:t.n+' · '+rr+' RR', short:t.n, div:0, prog:1, toNext:Number.isFinite(g)?g-rr+1:0, top:true, chase:true}; } }
   const t=TIERS[ti];
   if(ti===TIERS.length-1) return {ti, t, label:t.n+' · '+rr+' RR', short:t.n, div:0, prog:1, toNext:0, top:true};
   // the top 3 ranks have no I/II/III: one long climb (like Fortnite's top ranks)
@@ -5496,12 +5560,15 @@ function renderPass(){
     b.onclick=()=>{ if(!has) return toast('🔒 Unlocks at pass level '+lockedAt); SAVE.tk=k; persist(); renderPass(); if(net.hostConn && net.hostConn.open) try{ sendAct({t:'gear', ...myGear()}); }catch(e){} };
     row.append(b); }
   if(SAVE.tk && un.includes(SAVE.tk)){ const off=el('button','btn tiny ghost','Turn off'); off.onclick=()=>{ SAVE.tk=''; persist(); renderPass(); }; tkb.append(row, off); } else tkb.append(row);
-  // levels
-  const list=el('div','psList');
-  for(let l=2;l<=PASS_MAX;l++){ const r=passRew(l), big=!!(r.tk||r.item||r.crate); const it=el('div','psRow'+(l<=L?' got':'')+(big?' big':''));
-    it.append(el('b','', String(l)), el('span','', passDesc(r)), el('i','', l<=L?'✅':'')); list.append(it); }
-  B.append(top, lv, tkb, el('h4','','REWARDS'), list, el('p','how','XP: 100 per online game (40 practice), +60 for a win, +40 ranked, +4 per point, +40 MVP.'));
-  setTimeout(()=>{ const cur=list.children[Math.max(0,L-2)]; if(cur) list.scrollTop=Math.max(0, cur.offsetTop-list.offsetTop-90); }, 30);   // scroll the list only, not the panel
+  // the reward track: one card per level, scrolls sideways, big rewards stand out
+  const icon=r=>r.tk?TK[r.tk].icon : r.item?((ITEMS.find(i=>i.id===r.item)||{}).icon||'🎁') : r.crate?((packOf(r.crate)||{}).icon||'🎁') : '💰';
+  const list=el('div','psTrack');
+  for(let l=2;l<=PASS_MAX;l++){ const r=passRew(l), big=!!(r.tk||r.item||r.crate);
+    const c=el('div','psCard'+(l<=L?' got':'')+(l===L+1?' next':'')+(big?' big':''));
+    c.append(el('div','psLv','LV '+l), el('div','psIc', icon(r)), el('div','psTx', passDesc(r)), el('div','psSt', l<=L?'✓ UNLOCKED':l===L+1?'NEXT':''));
+    list.append(c); }
+  B.append(top, lv, el('h4','psH','REWARD TRACK'), list, tkb, el('p','how','XP: 100 per online game (40 practice), +60 for a win, +40 ranked, +4 per point, +40 MVP. Every level also pays 💎 30.'));
+  setTimeout(()=>{ const cur=list.children[Math.max(0,L-3)]; if(cur) list.scrollLeft=Math.max(0, cur.offsetLeft-list.offsetLeft-20); }, 30);
 }
 function openPass(){ $('#home').classList.add('hidden'); $('#passPanel').classList.remove('hidden'); renderPass(); }
 function closePass(){ $('#passPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); }
@@ -5534,7 +5601,7 @@ function renderRanked(){
   const R=SAVE.rank, rk=rankOf(R.rr), card=$('#rankCard'); card.innerHTML=''; card.style.setProperty('--tc', rk.t.c);
   card.append(el('div','rkIcon', rk.t.icon), el('div','rkName', rk.label));
   const bar=el('div','rkBar'), fill=el('div','rkFill'); fill.style.width=Math.round(rk.prog*100)+'%'; bar.append(fill); card.append(bar);
-  card.append(el('small','', rk.toNext ? rk.toNext+' RR to '+(rk.top ? TIERS[rk.ti+1].n : 'next division') : 'The top. Keep climbing the leaderboard.'));
+  card.append(el('small','', rk.chase ? '🐐 GOAT is ONE player: the #1 RR. Pass them: '+rk.toNext+' RR to go' : rk.ti===TIERS.length-1 ? '🐐 You are THE GOAT. Only one player can be. Hold on to #1.' : rk.toNext ? rk.toNext+' RR to '+(rk.top ? TIERS[rk.ti+1].n : 'next division') : 'The top. Keep climbing the leaderboard.'));
   card.append(el('div','rkStats', `${R.rr} RR · ${R.wins}W ${R.games-R.wins}L · ${R.streak>1?'🔥 '+R.streak+' win streak · ':''}best ${R.best}`));
   { const road=el('div','rkRoad'); TIERS.forEach((t,i)=>{ const s=el('span', i===rk.ti?'on':i<rk.ti?'done':'', t.icon); s.title=t.n; road.append(s); }); card.append(road); }
   renderLeaderboard();
