@@ -556,6 +556,60 @@
   #loginBox .lgDay{border:1px solid var(--line);border-radius:4px}
   #loginBox .lgDay.now{background:var(--gold);box-shadow:none;outline:3px solid var(--ink)}
   .lvStars{font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:.5px}
+  /* ===== home: dark striped, play left, live hub right ===== */
+  #home{--ink:#f3f1ec;--line:rgba(255,255,255,.1);--paper:#1b1d22;color:#f3f1ec;
+    background:#1b1d22 repeating-linear-gradient(135deg,rgba(255,255,255,.028) 0 16px,transparent 16px 32px)}
+  #home.center{width:min(980px,calc(100vw - 24px))}
+  #home .logo{color:#fff} #home .logo .lgBall{box-shadow:inset 0 0 0 2px #000}
+  #home .hMain{display:grid;grid-template-columns:1fr 1.05fr;gap:14px}
+  #home .hSec{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:16px;letter-spacing:1.5px;color:#c9c6bf;margin:4px 0 6px}
+  #home .hPlay{display:flex;flex-direction:column;gap:8px}
+  #home .hRankBtns{display:flex;gap:10px;margin:0}
+  #home .hRankBtns .grandBtn{padding:16px 8px 12px}
+  #home .grandBtn .gi{display:block;font-size:30px;animation:none;filter:none}
+  #home .grandBtn.gR1{background-color:#2b2e36!important;box-shadow:inset 0 -5px 0 rgba(0,0,0,.35),inset 0 0 0 2px #ffc21a}
+  #home input{background:#262930;border-color:rgba(255,255,255,.12);color:#fff}
+  #home input::placeholder{color:#8b8f99}
+  #home .hJoin{gap:8px} #home .hJoin #hostBtn{flex:1.2;white-space:nowrap} #home .hJoin #code{flex:1;margin:0;letter-spacing:4px}
+  #home .hPractice{background:#2b2e36;color:#fff}
+  #home .hLadder{background:var(--gold);color:#15171c}
+  #home .hHow{color:#9a9ea8;opacity:1;margin-top:10px}
+  #home .hHub{display:flex;flex-direction:column;gap:10px}
+  #home .hHub button{position:relative;border:0;cursor:pointer;font:inherit;text-align:left;color:#fff;border-radius:6px;display:flex;align-items:center;gap:14px;padding:14px;overflow:hidden;box-shadow:inset 0 -5px 0 rgba(0,0,0,.3)}
+  #home .hHub button:active{transform:translateY(2px)}
+  #home .hubTxt{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1}
+  #home .hubTxt small{font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:2px;font-size:13px;opacity:.8}
+  #home .hubTxt b{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:28px;line-height:1;text-transform:uppercase}
+  #home .hubTxt span{font-size:13.5px;font-weight:600;opacity:.92}
+  #home .hubStore{background:linear-gradient(120deg,#ff5b1f,#ff8a3d);min-height:150px}
+  #home .hubStore::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.07) 0 14px,transparent 14px 28px);pointer-events:none}
+  #home .hubArt{flex:0 0 96px;height:122px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:52px;transform:rotate(-6deg);
+    background:linear-gradient(160deg,color-mix(in srgb,var(--pc,#7b5cff) 70%,#fff),var(--pc,#7b5cff) 50%,color-mix(in srgb,var(--pc,#7b5cff) 55%,#000));box-shadow:0 10px 20px rgba(0,0,0,.35),0 0 0 3px rgba(255,255,255,.85);animation:hubBob 2.4s ease-in-out infinite}
+  @keyframes hubBob{50%{transform:rotate(-3deg) translateY(-4px)}}
+  #home .hubCta{font-style:normal;font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:1px;background:#15171c;color:#fff;align-self:flex-start;padding:4px 10px;border-radius:3px;margin-top:4px;transform:skewX(-8deg)}
+  #home .hubPass{background:linear-gradient(120deg,#6a46e8,#a55eea);}
+  #home .hubIc{font-size:40px;flex:0 0 52px;text-align:center}
+  #home .hubBar{height:10px;border-radius:2px;background:rgba(0,0,0,.3);overflow:hidden;margin:3px 0} #home .hubBar i{display:block;height:100%;background:#ffc21a;width:0}
+  #home .hubRow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  #home .hubTile{flex-direction:column;align-items:flex-start!important;gap:2px!important}
+  #home .hubTile .hubIc{font-size:30px;flex:none;text-align:left}
+  #home .hubTile b{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:24px;letter-spacing:.5px}
+  #home .hubTile small{font-weight:600;opacity:.85}
+  #home .hubTile.openLocker{background:#2b2e36} #home .hubTile.openQuests{background:#13866a}
+  #home .hHub .qBadge{position:absolute;top:8px;right:8px;font-style:normal;font-size:15px;padding:2px 10px;animation:gbob 1s infinite;z-index:2}
+  #home .hRank .rbadge{border:0}
+  #home .coinPill{background:#0d0e11;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+  #home .hFoot .btn.ghost{color:#9a9ea8}
+  #home .ctlMsg{color:#15171c}
+  @media (max-width:760px){ #home .hMain{grid-template-columns:1fr} #home .hubStore{min-height:120px} }
+  /* lobby */
+  .team{border:0;border-radius:4px;padding:10px 12px;background:#fff!important;box-shadow:inset 0 0 0 1px var(--line)}
+  .team.t0{border-top:6px solid var(--red)} .team.t1{border-top:6px solid var(--blue)}
+  .team h3{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:24px;-webkit-text-stroke:0;letter-spacing:.5px;text-transform:uppercase}
+  .team li .tg{border-radius:2px;font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:.5px}
+  .seg span{font-family:"Barlow Condensed",sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:.5px;font-size:15px}
+  .seg button{font-family:"Barlow Condensed",sans-serif;font-weight:800;border:0;border-radius:3px;background:#e9e5db;box-shadow:inset 0 -3px 0 rgba(0,0,0,.18);transform:skewX(-7deg);text-transform:uppercase}
+  .seg button.on{background:var(--ink);color:var(--gold)}
 </style>
 </head>
 <body>
@@ -566,33 +620,36 @@
     <h1 class="logo">BUCKETS<i class="lgBall"></i></h1>
     <div class="hTopR">
       <span id="homeRank" class="hRank"></span>
-      <span class="coinPill">💰 <span class="coinCount">0</span></span>
+      <span class="coinPill gemPill">💎 <span class="gemCount">0</span></span><span class="coinPill">💰 <span class="coinCount">0</span></span>
     </div>
   </div>
   <div id="ctlBanner" class="ctlBanner hidden"></div>
-  <div class="hGrid">
-    <section class="hCard hFriends">
-      <h4>PLAY WITH FRIENDS</h4>
-      <label>Your name<input id="name" maxlength="12" placeholder="e.g. Splash" autocomplete="off"><span id="nameStat" class="nameStat"></span></label>
-      <button id="hostBtn" class="btn big orange">Host a game</button>
-      <div class="or">— or join a friend —</div>
-      <div class="row"><input id="code" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters"><button id="joinBtn" class="btn yellow">Join</button></div>
-      <button id="practiceBtn" class="btn hPractice">Practice vs bots</button>
-    </section>
-    <section class="hCard hRanked">
-      <h4>RANKED</h4>
+  <div class="hMain">
+    <section class="hPlay">
+      <div class="hSec">🏆 RANKED</div>
       <div class="grandRow hRankBtns"><button id="rankedHome1" class="grandBtn gR1"><span class="gi">🏆</span><b>1v1</b><small>Climb the ladder</small></button><button id="rankedHome2" class="grandBtn gR2"><span class="gi">👥</span><b>2v2</b><small>Team up with a friend</small></button></div>
       <button id="partyBtn" class="btn hParty hidden">👫 Ranked 2v2 with a friend</button>
-      <button id="rankedBtn" class="btn hLadder">My rank &amp; leaderboard</button>
-      <p class="how">Hold <b>SHOOT</b>, let go in the <b style="color:#1e9e4a">green</b> = bucket. Smother shooters to take their green away. <b>CROSS</b> + stick = crossover · spin · stepback · hesi.</p>
+      <button id="rankedBtn" class="btn hLadder">📊 My rank &amp; leaderboard</button>
+      <div class="hSec">🏀 PLAY WITH FRIENDS</div>
+      <div class="hNameRow"><input id="name" maxlength="12" placeholder="Your name" autocomplete="off"><span id="nameStat" class="nameStat"></span></div>
+      <div class="row hJoin"><button id="hostBtn" class="btn orange">Host a game</button><input id="code" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters"><button id="joinBtn" class="btn yellow">Join</button></div>
+      <button id="practiceBtn" class="btn hPractice">🎯 Practice vs bots</button>
+    </section>
+    <section class="hHub">
+      <button class="hubStore openShop"><i class="qBadge sBadge hidden">FREE</i>
+        <div class="hubArt" id="hubArt"><span id="hubArtIc">🎁</span></div>
+        <div class="hubTxt"><small>STORE</small><b id="hubStoreT">Packs</b><span id="hubStoreS">Open packs, find rare items</span><em class="hubCta">OPEN STORE ›</em></div>
+      </button>
+      <button class="hubPass" id="passBtn"><span class="hubIc">🎟️</span>
+        <div class="hubTxt"><small>SEASON PASS</small><b id="hubPassT">Level 1</b><div class="hubBar"><i id="hubPassBar"></i></div><span id="hubPassS">Play games to level up</span></div>
+      </button>
+      <div class="hubRow">
+        <button class="hubTile openLocker"><span class="hubIc">🎒</span><b>LOCKER</b><small id="hubLockS">Your gear</small></button>
+        <button class="hubTile openQuests"><span class="hubIc">📜</span><b>QUESTS</b><small id="hubQuestS">Daily</small><i class="qBadge hidden">0</i></button>
+      </div>
     </section>
   </div>
-  <div class="hBottom">
-    <button class="hTile gShop openShop"><span>🛒</span><b>SHOP</b><i class="qBadge sBadge hidden">FREE</i></button>
-    <button class="hTile gLock openLocker"><span>🎒</span><b>LOCKER</b></button>
-    <button class="hTile gPass" id="passBtn"><span>🎟️</span><b>PASS</b></button>
-    <button class="hTile gQuest openQuests"><span>📜</span><b>QUESTS</b><i class="qBadge hidden">0</i></button>
-  </div>
+  <p class="how hHow">Hold <b>SHOOT</b>, let go in the <b style="color:#47e27a">green</b>. Smother shooters to take their green away. <b>CROSS</b> + stick = crossover · spin · stepback · hesi.</p>
   <p id="homeMsg" class="msg"></p>
   <div class="hFoot"><button id="acctBtn" class="btn tiny ghost">👤 Account &amp; backup</button><button id="netTestBtn" class="btn tiny ghost hidden">📶 Test connection</button><button id="adminBtn" class="btn tiny ghost hidden">🛠️ Admin</button></div>
 </div>
@@ -5872,7 +5929,22 @@ function duoVsBots(){
 
 // ---------------------------------------------------------------- crates + locker
 let shopMain='crates', lockTab='gfx', lastCrate=null, ubWin=null, shopTab='packs', wsKind='cel';
-function updateCoinUI(){ document.querySelectorAll('.coinCount').forEach(e=>e.textContent=SAVE.coins); document.querySelectorAll('.gemCount').forEach(e=>e.textContent=SAVE.gems||0);
+function updateHub(){ try{
+  if(!$('#hubStoreT')) return;
+  const free=Object.values(SAVE.freeCrates||{}).reduce((a,b)=>a+(b>0?b:0),0) + (SAVE.dailyPack!==new Date().toDateString()?1:0), fp=featuredPack();
+  $('#hubArt').style.setProperty('--pc', free?'#ffc21a':fp.col); $('#hubArtIc').textContent = free ? '🎁' : fp.icon;
+  $('#hubStoreT').textContent = free ? free+' FREE PACK'+(free>1?'S':'')+' WAITING' : 'Featured: '+fp.name;
+  $('#hubStoreS').textContent = free ? 'Tap to open them' : '💎 '+(SAVE.gems||0)+' Gems · '+fp.cards+' cards · 1 Epic+ guaranteed';
+  const P=passNow(), L=passLevel(P.xp), into=P.xp-(L-1)*PASS_XP, next=Object.keys(PASS_REW).map(Number).filter(n=>n>L).sort((a,b)=>a-b)[0];
+  $('#hubPassT').textContent = 'Level '+L+(L>=PASS_MAX?' · MAXED':'');
+  $('#hubPassBar').style.width = (L>=PASS_MAX?100:Math.round(into/PASS_XP*100))+'%';
+  $('#hubPassS').textContent = next ? 'Next big reward at Lv '+next+': '+passDesc(PASS_REW[next]) : 'Every level pays 💎 30';
+  const it=k=>{ const x=itemOf(k,SAVE[k]); return x?x.icon:''; };
+  $('#hubLockS').textContent = it('cel')+' '+it('gfx')+' '+it('ball');
+  const Qs=questsToday(), done=Qs.list.filter(q=>q.c).length; $('#hubQuestS').textContent = done+'/'+Qs.list.length+' done today';
+}catch(e){} }
+setInterval(updateHub, 2500); setTimeout(updateHub, 600);
+function updateCoinUI(){ updateHub(); document.querySelectorAll('.coinCount').forEach(e=>e.textContent=SAVE.coins); document.querySelectorAll('.gemCount').forEach(e=>e.textContent=SAVE.gems||0);
   try{ const hr=document.getElementById('homeRank'); if(hr && SAVE.rank){ const k=SAVE.rank.rr+'|'+(SAVE.rank.games||0); if(hr.dataset.k!==k){ hr.dataset.k=k; hr.innerHTML=''; hr.append(rankBadge(SAVE.rank.rr)); } } }catch(e){} }
 function openShop(mode){ if(typeof mode==='string') shopMain=mode; else shopMain='crates'; if(shopMain==='locker') lockTab='look';
   V.shopOpen=true; $('#home').classList.add('hidden'); $('#lobby').classList.add('hidden'); $('#shop').classList.remove('hidden'); renderShop(); }
