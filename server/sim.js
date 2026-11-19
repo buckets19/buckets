@@ -189,7 +189,7 @@ function shotWindow(M,p){
     if(o.team===p.team) continue;
     const ox=o.x-p.x, oz=o.z-p.z, d=hyp(ox,oz), ahead=ox*v.ux+oz*v.uz;
     if(d<150){                                          // defenders reach further (stronger coverage)
-      let f=0.22+0.78*Math.pow(d/150,1.2);
+      let f=0.22+0.78*Math.pow(d/150,0.6);              // light coverage barely shrinks the green; tight coverage does
       if(ahead < -15) f=Math.min(1,f+0.35);            // defender behind you barely matters
       if(o.y>20) f*=0.65;                                // hand in the air
       if(tkOn(o,'lock')) f*=0.85;                        // 🔒 Lockdown takeover: tighter contests
@@ -200,7 +200,7 @@ function shotWindow(M,p){
       if(dr<100 && ahead>-10 && ahead<dist+25){ let f=0.5+0.5*(dr/100); if(o.y>20) f*=0.85; c=Math.min(c,f); } }
   }
   p.contest=c;
-  if(c<0.43) return 0;                                   // smothered: there is no green
+  if(c<0.58) return 0;                                   // smothered: there is no green
   if(dist>HEAVE_D) return 0.005;                         // past half court: a sliver of green (a few ms), super rare
   return clamp(w*0.8*Math.pow(c,1.75), 0.01, 0.16);         // tighter greens (2K-style); contests bite hard
 }
@@ -302,7 +302,7 @@ function releaseShot(M,p,m){
   else {
     const ODDS=[[0.62,0.38,0.15],[0.40,0.18,0.05],[0.28,0.10,0.03],[0.14,0.05,0.01],[0.08,0.03,0.01]];   // slightly off · off · way off
     const ae=Math.abs(err); let pr=ODDS[band][ae<0.05?0:ae<0.12?1:2];
-    pr *= c0<0.43 ? 0.28 : Math.pow(c0,1.6);                 // covered = less likely, smothered = a prayer
+    pr *= c0<0.58 ? 0.28 : Math.pow(c0,1.6);                 // covered = less likely, smothered = a prayer
     pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
     if(p.fire) pr*=1.15; if(p.cold) pr*=0.85;
     if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2; if(p.pmT>0) pr*=1.15;
