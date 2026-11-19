@@ -706,6 +706,13 @@
   .hCardBtn{font-family:"Barlow Condensed",sans-serif;font-weight:800;font-style:italic;letter-spacing:.5px;border:0;border-radius:3px;background:#2b2e36;color:#fff;padding:6px 10px;cursor:pointer;transform:skewX(-7deg);box-shadow:inset 0 -3px 0 rgba(0,0,0,.3)}
   #rankedPanel #ladder li:hover{background:rgba(255,255,255,.06)}
   @media (max-width:760px){ .pfWrap{grid-template-columns:1fr} .pfCard{max-width:300px;margin:0 auto} }
+  .protBar{display:block;width:100%;margin:0 0 10px;border:0;border-radius:4px;background:#e2342d;color:#fff;font:inherit;font-size:14px;padding:9px 12px;text-align:left;cursor:pointer;animation:pulse 1.8s ease-in-out infinite}
+  .protBar b{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:17px;letter-spacing:.5px;text-transform:uppercase}
+  .protBox{border-radius:6px;padding:10px 12px;margin:0 0 10px;background:#fff1ef;box-shadow:inset 4px 0 0 #e2342d;display:flex;flex-direction:column;gap:6px}
+  .protBox.ok{background:#eafff3;box-shadow:inset 4px 0 0 #19c37d} .protBox.login{background:#fff8e2;box-shadow:inset 4px 0 0 #ffc21a}
+  .protBox b{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:19px} .protBox small{opacity:.8}
+  .protBox .row input{margin:0;min-width:0}
+  .c2Box{z-index:80;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,calc(100vw - 32px));text-align:center}
   /* lobby */
   .team{border:0;border-radius:4px;padding:10px 12px;background:#fff!important;box-shadow:inset 0 0 0 1px var(--line)}
   .team.t0{border-top:6px solid var(--red)} .team.t1{border-top:6px solid var(--blue)}
@@ -728,6 +735,7 @@
     </div>
   </div>
   <div id="ctlBanner" class="ctlBanner hidden"></div>
+  <button id="protBar" class="protBar hidden">⚠️ <b>Protect your progress</b> · set a password so you never lose your stuff if the game moves or your iPad gets wiped ›</button>
   <div class="hMain">
     <section class="hPlay">
       <div class="hSec">🏆 RANKED</div>
@@ -6367,6 +6375,7 @@ if('serviceWorker' in navigator && location.protocol==='https:'){
     b.onclick=()=>toast('📲 Tap the Share button (square with an arrow) → "Add to Home Screen". Buckets then opens like an app, even if the site gets slow or blocked.'); } } }
 function updateHub(){ try{
   if(!$('#hubStoreT')) return;
+  { const pb=$('#protBar'); if(pb){ const need=!SAVE.prot && ((SAVE.stats&&SAVE.stats.games>0) || SAVE.coins>500); pb.classList.toggle('hidden', !need); pb.onclick=openAcct; } }
   const free=Object.values(SAVE.freeCrates||{}).reduce((a,b)=>a+(b>0?b:0),0) + (SAVE.dailyPack!==new Date().toDateString()?1:0), fp=featuredPack();
   $('#hubArt').style.setProperty('--pc', free?'#ffc21a':fp.col); $('#hubArtIc').textContent = free ? '🎁' : fp.icon;
   $('#hubStoreT').textContent = free ? free+' FREE PACK'+(free>1?'S':'')+' WAITING' : 'Featured: '+fp.name;
@@ -7099,7 +7108,7 @@ $('#name').addEventListener('blur', ()=>{ clearTimeout(nameTimer); claimName($('
 setTimeout(()=>{ if(store('buckets-name')) claimName(store('buckets-name')); }, 1500);
 // ---- cloud save: back up a few seconds after anything changes, and when the app is closed
 function scheduleBackup(){ bkDirty=true; clearTimeout(bkTimer); bkTimer=setTimeout(doBackup, 6000); }
-function backupBody(){ return {save:{...SAVE, _name:store('buckets-name')||''}}; }
+function backupBody(){ return {save:{...SAVE, _name:store('buckets-name')||'', _lbk:store('buckets-lbkey')||''}}; }
 async function doBackup(){ if(!acctOn()) return false; bkDirty=false; const r=await api('/save/put', backupBody());
   if(r && r.ok){ store('buckets-lastbk', String(Date.now())); return true; } bkDirty=true; return false; }
 addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden' && bkDirty && acctOn()){ bkDirty=false; api('/save/put', backupBody()); } });   // closing the app: save now
@@ -7107,6 +7116,16 @@ addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden
 function ago(t){ if(!t) return 'never'; const s=Math.round((Date.now()-t)/1000); return s<60?'just now':s<3600?Math.round(s/60)+' min ago':s<86400?Math.round(s/3600)+' h ago':Math.round(s/86400)+' days ago'; }
 function renderAcct(){
   const b=$('#acctBody'); b.innerHTML='';
+  { const prot=SAVE.prot, box=el('div','protBox'+(prot?' ok':''));
+    if(prot){ box.append(el('b','','🔐 Your progress is protected'), el('small','','Log in on any iPad or any new Buckets site with your name "'+prot.n+'" + your password.')); }
+    else { box.append(el('b','','⚠️ Protect your progress'), el('small','','Set a password. If Buckets ever moves to a new web address or this iPad gets wiped, log in with your name + password and get everything back.')); }
+    const pw=el('input'); pw.type='password'; pw.placeholder=prot?'New password (6+ characters)':'Password (6+ characters)'; pw.addEventListener('keydown',e=>e.stopPropagation());
+    const sb=el('button','btn '+(prot?'':'orange'), prot?'Change password':'🔐 Protect it'); sb.onclick=async()=>{ sb.disabled=true; if(await setPassword(pw.value)) renderAcct(); sb.disabled=false; };
+    const r=el('div','row'); r.append(pw,sb); box.append(r); b.append(box); }
+  { const box=el('div','protBox login'); box.append(el('b','','🔑 Log in (new iPad or new site)'));
+    const nm=el('input'), pw=el('input'); nm.placeholder='Your name'; pw.type='password'; pw.placeholder='Password'; for(const i of [nm,pw]) i.addEventListener('keydown',e=>e.stopPropagation());
+    const go=el('button','btn yellow','Log in'); go.onclick=async()=>{ go.disabled=true; await loginNamePass(nm.value, pw.value); go.disabled=false; };
+    const r=el('div','row'); r.append(nm,pw,go); box.append(r); b.append(box); }
   const n=store('buckets-name')||'(no name yet)';
   b.append(el('div','acRow', '🏷️ Name: '+n+(NAMEST.name===n&&NAMEST.state==='mine'?'  ✅ yours':'')));
   const codeBox=el('div','acCode','••••-••••-••••'), show=el('button','btn tiny','👁 Show my code');
@@ -7119,7 +7138,8 @@ function renderAcct(){
   const inp=el('input'), go=el('button','btn orange','Restore');
   inp.placeholder='BK-XXXX-XXXX-XXXX'; inp.setAttribute('autocapitalize','characters'); inp.setAttribute('autocomplete','off'); inp.maxLength=20;
   inp.addEventListener('keydown',e=>e.stopPropagation());
-  go.onclick=async()=>{ const code=inp.value.trim().toUpperCase().replace(/\s+/g,'');
+  go.onclick=async()=>{ const code=inp.value.trim().toUpperCase().replace(/\s+/g,''); go.disabled=true; await restoreCode(code); go.disabled=false; };
+  const goOld=async()=>{ const code=inp.value.trim().toUpperCase().replace(/\s+/g,'');
     if(!/^[A-Z0-9-]{12,40}$/.test(code)){ toast('That doesn\'t look like an account code'); return; }
     go.disabled=true; go.textContent='Looking…'; const r=await api('/save/get',{},code); go.disabled=false; go.textContent='Restore';
     if(!r){ toast('Couldn\'t reach the server. Try again'); return; }
@@ -7130,8 +7150,46 @@ function renderAcct(){
     try{ localStorage.setItem(SAVE_KEY, JSON.stringify(s)); }catch(e){}
     store('buckets-acct', code); if(name) store('buckets-name', name); store('buckets-lastbk', String(r.t||Date.now()));
     toast('✅ Restored!'); setTimeout(()=>location.reload(), 600); };
+  void goOld;
   const row=el('div','row'); row.append(inp, go);
   b.append(el('h4','','GET YOUR STUFF BACK'), el('p','how','On a new iPad (or if your data got wiped), type your code here.'), row);
+}
+// ---- restore everything from an account code (used by the code box and by name + password login)
+async function restoreCode(code, who){
+  if(!/^[A-Z0-9-]{12,40}$/.test(code)){ toast('That doesn\'t look like an account code'); return false; }
+  toast('Looking…'); const r=await api('/save/get',{},code);
+  if(!r){ toast('Couldn\'t reach the server. Try again'); return false; }
+  if(!r.save){ toast('No backup found for that account'); return false; }
+  const sv=r.save, rk=rankOf((sv.rank&&sv.rank.rr)||0);
+  if(!(await confirm2('Load '+(sv._name||r.name||who||'Player')+'?  💰'+(sv.coins||0)+' · 💎'+(sv.gems||0)+' · '+rk.short+' · saved '+ago(r.t)+'. This replaces everything on this iPad.'))) return false;
+  const name=sv._name||'', lbk=sv._lbk||''; delete sv._name; delete sv._lbk;
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(sv)); }catch(e){}
+  store('buckets-acct', code); if(name) store('buckets-name', name); if(/^[0-9a-f]{64}$/.test(lbk)) store('buckets-lbkey', lbk); store('buckets-lastbk', String(r.t||Date.now()));
+  toast('✅ Welcome back! Everything is loaded.'); setTimeout(()=>location.reload(), 900); return true;
+}
+// a two-tap confirm (Safari blocks confirm() popups in some modes)
+function confirm2(msg){ return new Promise(res=>{ const box=el('div','panel c2Box'); box.append(el('p','',msg)); const row=el('div','row'), y=el('button','btn orange','Yes, load it'), n=el('button','btn','Cancel');
+  y.onclick=()=>{ box.remove(); res(true); }; n.onclick=()=>{ box.remove(); res(false); }; row.append(y,n); box.append(row); document.body.append(box); }); }
+// ---- 🔐 name + password: a login people can actually remember. If the game ever has to move to a new
+// web address (school filter), log in there with your name + password and everything comes back.
+// Stored on Google (Firebase): rooms/_r_<scrambled name+password> = {k: your account code}. Without the exact
+// name AND password nobody can find it.
+const normN=n=>String(n||'').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,16);
+async function recPath(name, pass){ return '_r_'+(await sha256hex('bk19rec|'+normN(name)+'|'+String(pass))).slice(0,40); }
+async function setPassword(pass){
+  const name=store('buckets-name'); if(!name || name==='Player'){ toast('Pick your name on the home screen first'); return false; }
+  if(String(pass).length<6){ toast('Password needs at least 6 characters'); return false; }
+  await doBackup();
+  const w=await fbReq(await recPath(name,pass),'PUT',{k:acctCode(), t:{'.sv':'timestamp'}});
+  if(!w.ok){ toast('Couldn\'t reach the server. Try again'); return false; }
+  SAVE.prot={n:name, at:Date.now()}; persist(); toast('🔐 Protected! Log in anywhere with "'+name+'" + your password'); return true;
+}
+async function loginNamePass(name, pass){
+  if(!normN(name) || !pass){ toast('Type your name and password'); return; }
+  const r=await fbReq(await recPath(name,pass));
+  if(!r.ok){ toast('Couldn\'t reach the server. Try again'); return; }
+  if(!r.v || !r.v.k){ toast('Wrong name or password'); return; }
+  await restoreCode(String(r.v.k), name);
 }
 function renderAcctStatus(st){ st.textContent='☁️ Cloud backup: '+ago(+store('buckets-lastbk')||0); }
 function openAcct(){ $('#home').classList.add('hidden'); $('#acctPanel').classList.remove('hidden'); renderAcct(); }
