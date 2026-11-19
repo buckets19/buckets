@@ -173,6 +173,9 @@ function hoopVec(p, h){ const dx=h.cx-p.x, dz=-p.z, d=hyp(dx,dz)||1; return {dx,
 //    fading away, or pulling up on the run. Get SMOTHERED and there is no green at all.
 //  • Create space the right way (stepback / hesi) and you shoot "in rhythm" = a bigger green.
 const HEAVE_D = COURT_W/2 - HOOPS[0].cx + 40;                       // past half court
+// coverage -> share of the open green you keep, by defender distance
+const CONTEST_PTS=[[34,0],[42,0.16],[45,0.25],[60,0.40],[80,0.55],[100,0.70],[130,0.87],[150,1]];
+function contestAt(d){ if(d<=CONTEST_PTS[0][0]) return 0; for(let i=1;i<CONTEST_PTS.length;i++){ const [d1,v1]=CONTEST_PTS[i]; if(d<=d1){ const [d0,v0]=CONTEST_PTS[i-1]; return v0+(v1-v0)*(d-d0)/(d1-d0); } } return 1; }
 function shotWindow(M,p){
   const h=attackHoop(p.team), v=hoopVec(p,h), dist=v.d;
   let w = dist<220 ? 0.13
@@ -188,21 +191,22 @@ function shotWindow(M,p){
   for(const o of M.players){
     if(o.team===p.team) continue;
     const ox=o.x-p.x, oz=o.z-p.z, d=hyp(ox,oz), ahead=ox*v.ux+oz*v.uz;
-    if(d<150){                                          // defenders reach further (stronger coverage)
-      let f=0.22+0.78*Math.pow(d/150,0.6);              // light coverage barely shrinks the green; tight coverage does
-      if(ahead < -15) f=Math.min(1,f+0.35);            // defender behind you barely matters
-      if(o.y>20) f*=0.65;                                // hand in the air
-      if(tkOn(o,'lock')) f*=0.85;                        // 🔒 Lockdown takeover: tighter contests
+    if(d<150){
+      // how much green you keep vs. this defender (1 = wide open): in your body = none, tight 25%, covered 40%, light ~70%
+      let f=contestAt(d);
+      if(ahead < -15) f=Math.min(1,f+0.5);             // defender behind you barely matters
+      if(o.y>20) f*=0.5;                                 // hand in the air
+      if(tkOn(o,'lock')) f*=0.75;                        // 🔒 Lockdown takeover: tighter contests
       c=Math.min(c,f);
     }
     // rim protection: a defender camped between you and the rim makes drives a lot tougher
     if(dist<300){ const dr=hyp(o.x-h.cx,o.z);
-      if(dr<100 && ahead>-10 && ahead<dist+25){ let f=0.5+0.5*(dr/100); if(o.y>20) f*=0.85; c=Math.min(c,f); } }
+      if(dr<100 && ahead>-10 && ahead<dist+25){ let f=Math.pow(0.55+0.45*(dr/100),1.1); if(o.y>20) f*=0.8; c=Math.min(c,f); } }
   }
   p.contest=c;
-  if(c<0.58) return 0;                                   // smothered: there is no green
-  if(dist>HEAVE_D) return 0.005;                         // past half court: a sliver of green (a few ms), super rare
-  return clamp(w*0.8*Math.pow(c,1.75), 0.01, 0.16);         // tighter greens (2K-style); contests bite hard
+  if(c<0.12) return 0;                                   // smothered: there is no green
+  if(dist>HEAVE_D) return 0.005;                         // past half court: just a sliver on the meter (it can't green; see releaseShot)
+  return clamp(w*0.8*c, 0.01, 0.16);                     // tighter greens (2K-style), scaled by coverage
 }
 // judge HOW the shot started: set shot, in rhythm off a move, on the run, or fading away
 function shotFormAt(p, v){
@@ -292,6 +296,7 @@ function releaseShot(M,p,m){
   if(w<=0 || Math.abs(e)>w){                                   // smothered (no green) or outside the green
     err = w<=0 ? e : e-Math.sign(e)*w; if(Math.abs(err)<0.004) err=0.004*(Math.sign(e)||pick([-1,1]));
     q = Math.abs(err)<0.06 ? (err<0?'Slightly early':'Slightly late') : (err<0?'Early':'Late'); }
+  if(q==='perfect' && dist>HEAVE_D){ err=-0.03; q='Slightly early'; }   // past half court: never a green, just a prayer
   // 2K-style: GREEN = bucket (past half court the green is tiny). Missing the green is a CHANCE, not a sure miss:
   // the closer to green, the more open you are, and the cleaner you got into the shot, the better the odds.
   const c0=(p.contest===undefined?1:p.contest), cm=1-c0, green=q==='perfect';
@@ -300,17 +305,19 @@ function releaseShot(M,p,m){
   let made;
   if(green) made = true;                                 // (past half court the green is a sliver, so this is rare)
   else {
-    const ODDS=[[0.62,0.38,0.15],[0.40,0.18,0.05],[0.28,0.10,0.03],[0.14,0.05,0.01],[0.08,0.03,0.01]];   // slightly off · off · way off
+    const ODDS=[[0.78,0.52,0.25],[0.52,0.26,0.08],[0.28,0.10,0.03],[0.14,0.05,0.01],[0.15,0.05,0.01]];   // slightly off · off · way off
     const ae=Math.abs(err); let pr=ODDS[band][ae<0.05?0:ae<0.12?1:2];
-    pr *= c0<0.58 ? 0.28 : Math.pow(c0,1.6);                 // covered = less likely, smothered = a prayer
+    pr *= c0<0.12 ? 0.3 : Math.pow(c0,0.6);                 // covered = less likely, smothered = a prayer
     pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
     if(p.fire) pr*=1.15; if(p.cold) pr*=0.85;
     if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2; if(p.pmT>0) pr*=1.15;
     made = Math.random() < Math.min(0.9, pr);
   }
   // misses: short or long by how far off you were (way off = airball), a little sideways
-  const miss = made ? 0 : Math.sign(err||e||pick([-1,1]))*(14 + Math.min(60, Math.abs(err)*260) + rnd(0,10)) + cm*rnd(-1,1)*10;
-  const lat = made ? 0 : rnd(-1,1)*(4 + Math.min(14, Math.abs(err)*90)) + cm*rnd(-1,1)*8;
+  // misses that really miss: early = short (front rim / airball); late = off the SIDE of the rim (long misses used to bank in off the glass)
+  const ae=Math.abs(err), late=(err||e)>0; let miss=0, lat=0;
+  if(!made && !late){ miss=-(14 + Math.min(60, ae*260) + rnd(0,10)) + cm*rnd(-1,1)*8; lat=rnd(-1,1)*(4 + Math.min(14, ae*90)); }
+  else if(!made){ miss=rnd(2,12); lat=pick([-1,1])*(30 + Math.min(40, ae*200) + rnd(0,8)); }
   const along=Math.min(miss,30);
   const tx=h.cx+v.ux*along-v.uz*lat, tz=0+v.uz*along+v.ux*lat;
   const ty=RIM_Y+(miss>30 ? 45+(miss-30)*2.5 : 0);
