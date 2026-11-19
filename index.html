@@ -2848,6 +2848,10 @@ const JS=[
   {id:'npcjs',    r:'rare',  s:'brainrot', name:'NPC Form',        icon:'🤖', desc:'Stiff robot arms. Somehow it goes in.'},
   {id:'ninjajs',  r:'epic',  s:'anime',    name:'Ninja Release',   icon:'🥷', desc:'Vanish in a smoke puff on the release.'},
   {id:'starjs',   r:'legendary',s:'galaxy',name:'Starlight',       icon:'⭐', desc:'Stars orbit your shot pocket.'},
+  {id:'legendfade',r:'icon', s:'icon', name:'Legend Fade',  icon:'🐍', desc:'ICON · Turnaround, lean WAY back, knee up. Cinema bars drop as you rise.'},
+  {id:'logojs',    r:'icon', s:'icon', name:'Logo Range',   icon:'🎯', desc:'ICON · A spotlight finds you and a gold ring locks onto your feet.'},
+  {id:'icejs',     r:'icon', s:'icon', name:'Ice Release',  icon:'❄️', desc:'ICON · The screen frosts over, ice crystals spiral up your arms.'},
+  {id:'cinejs',    r:'icon', s:'icon', name:'Cinema Shot',  icon:'🎥', desc:'ICON · The arena goes dark, every camera flashes, you rise in slow motion.'},
 ];
 CELLYS.push(
   {id:'signball', r:'icon', s:'icon', name:'Sign the Ball', icon:'✍️', desc:'ICON · Spotlight. You sign the game ball and throw it to the fans. The arena loses it.'},
@@ -2880,6 +2884,10 @@ const DUNKS=[
   {id:'toiletd',  r:'epic',  s:'brainrot', name:'Skibidi Slam',    icon:'🚽', desc:'Flush. A toilet slams down with you.'},
   {id:'spiral',   r:'legendary',s:'anime', name:'Spiral Slam',     icon:'🌀', desc:'A spinning energy orb drilled into the rim.'},
   {id:'starslam', r:'mythic',s:'galaxy',   name:'Supernova Slam',  icon:'🌟', desc:'The rim turns into an exploding star.'},
+  {id:'glassdunk', r:'icon', s:'icon', name:'Glass Breaker', icon:'🪟', desc:'ICON · The backboard SHATTERS. Glass rains on the court.'},
+  {id:'eclipsed',  r:'icon', s:'icon', name:'Eclipse Slam',  icon:'🌑', desc:'ICON · The sky goes black and a burning ring hangs over the rim.'},
+  {id:'ftline',    r:'icon', s:'icon', name:'From the Line', icon:'🦅', desc:'ICON · Legs split mid-air like you took off from the free throw line. Gold flash.'},
+  {id:'thundergod',r:'icon', s:'icon', name:'Thunder God',   icon:'⚡', desc:'ICON · Lightning strikes the rim from every side as you hammer it down.'},
 ];
 const TRAILS=[
   {id:'none',     r:'common',    name:'Clean',           icon:'⚪', desc:'A simple white streak.'},
@@ -3167,7 +3175,7 @@ function greenFx(kind,x,y,z,hx,who){
     case 'pyrogreen': V.flash=Math.max(V.flash||0,.4);
       for(let i=0;i<16;i++) later(i*.05,()=>{ V.shake=Math.max(V.shake,4); for(const cx of [COURT_L+60, COURT_W/2, COURT_R-60]) for(const zz of [HALF_D-14, -HALF_D+14]) for(let k=0;k<2;k++) P(cx+rnd(-10,10),0,zz,{vx:rnd(-30,30),vy:rnd(620,940),g:320,life:.7,max:.7,c:pick(['#ff3b00','#ff8a1f','#ffd23f']),s:rnd(7,12)}); });
       floatText('ON FIRE',x,hy+110,z,'#ff8a1f',44,1.1); break;
-    case 'shatter': { V.flash=Math.max(V.flash||0,.9); V.shake=Math.max(V.shake,20); const pt=V.camT?V.camT(x,hy,z):null; screenFx('crack',1.5,pt?{cx:pt[0],cy:pt[1]}:{});
+    case 'shatter': { V.flash=Math.max(V.flash||0,.9); V.shake=Math.max(V.shake,20); screenFx('crack',1.5,{wx:x,wy:hy,wz:z});
       for(let i=0;i<40;i++) P(x,hy,z,{vx:rnd(-520,520),vy:rnd(-100,620),vz:rnd(-120,120),g:900,life:rnd(.7,1.2),max:1.2,c:pick(['#e8fbff','#bfe9ff','#fff']),s:rnd(4,9),sq:1});
       floatText('SHATTERED',x,hy+120,z,'#e8fbff',54,1.2); break; }
     case 'concert': screenFx('aurora',1.6); camFlashes(30); V.cheer=2;
@@ -3394,7 +3402,7 @@ function cellyTick(c, q, dt){
     if(t<1 && every(.03)) P(x+f*48,cy+128,z,{e:'🎤',s:34,vx:0,vy:0,g:0,life:.04,max:.04,rot:0,vr:0});
     if(t>=1 && !c.drop){ c.drop=1; emo(x+f*48,cy+128,z,'🎤',{vx:0,vy:0,g:1800,life:.36,max:.36,s:34,vr:4}); }
     if(t>1.35 && !c.boom){ c.boom=1; V.flash=.8; V.shake=Math.max(V.shake,22); ring(x+f*48,0,z,'#fff',260,.6,10); spray(x+f*48,10,z,40,['#fff','#c9c6bf','#ffd23f'],420,{g:700});
-      const pt=V.camT?V.camT(x+f*48,0,z):null; screenFx('crack',1.2,pt?{cx:pt[0],cy:pt[1]}:{}); floatText('MIC DROP',x,cy+300,z,'#fff',56,1.2); camFlashes(26); } }
+      screenFx('crack',1.2,{wx:x+f*48,wy:0,wz:z}); floatText('MIC DROP',x,cy+300,z,'#fff',56,1.2); camFlashes(26); } }
   if(c.kind==='crowned'){
     if(first){ screenFx('darken',1.9); screenFx('spot',1.9,{id:c.id}); }
     const k2=Math.min(1,t/1.1), cyy=cy+200+(1-k2)*520;
@@ -3595,6 +3603,10 @@ function shotPose(inf, act, k, face){
     case 'npcjs':   return {fH:[face*2,-182],  bH:[face*2,-178],  ball:[face*2,-190]};
     case 'ninjajs': return {fH:[face*12,-132], bH:[face*4,-128],  ball:[face*10,-138], kick:[face*18,-30]};
     case 'starjs':  return {fH:[face*6,-170],  bH:[-face*2,-166], ball:[face*4,-178], aura:'255,220,120'};
+    case 'legendfade': return {fH:[face*4,-156], bH:[-face*6,-150], ball:[face*2,-162], rot:-face*0.42, kick:[face*30,-44], aura:'150,80,255'};
+    case 'logojs':  return {fH:[face*6,-176], bH:[-face*2,-172], ball:[face*4,-184], aura:'255,210,80'};
+    case 'icejs':   return {fH:[face*8,-158], bH:[-face*3,-152], ball:[face*6,-164], aura:'160,230,255'};
+    case 'cinejs':  return {fH:[face*6,-166], bH:[-face*2,-162], ball:[face*4,-172], kick:[face*14,-30], aura:'255,255,255'};
     default:        return {fH:[face*9,-146],  bH:[-face*2,-141], ball:[face*6,-150]};
   }
   if(act===3) switch(js){
@@ -3604,6 +3616,8 @@ function shotPose(inf, act, k, face){
     case 'high':    return {fH:[face*14,-178], bH:[-face*4,-132]};
     case 'kick':    return {fH:[face*24,-158], bH:[-face*7,-126], kick:[face*30,-34]};
     case 'westwave':return {fH:[face*24,-162], bH:[-face*26,-150], aura:'0,229,255'};
+    case 'legendfade': return {fH:[face*22,-166], bH:[-face*8,-124], rot:-face*0.3, kick:[face*28,-40]};
+    case 'icejs':   return {fH:[face*20,-170], bH:[-face*6,-130], aura:'160,230,255'};
     default: return null;
   }
   if(act===4){ const kk=clamp(k/0.42,0,1); switch(dk){
@@ -3622,6 +3636,10 @@ function shotPose(inf, act, k, face){
     case 'spiral':   return {fH:[face*14,-160], bH:[face*4,-150], ball:[face*12,-168], aura:'80,170,255'};
     case 'starslam': return {fH:[face*9,-166], bH:[-face*30,-150], ball:[face*6,-174], aura:'255,220,120', flip:Math.cos(kk*Math.PI*2)<0};
     case 'toiletd':  return {fH:[face*9,-156], bH:[-face*1,-150], ball:[face*6,-162]};
+    case 'glassdunk': return {fH:[-face*16,-168], bH:[face*2,-150], ball:[-face*14,-176], aura:'200,240,255'};
+    case 'eclipsed':  return {fH:[face*9,-166], bH:[-face*30,-150], ball:[face*6,-174], aura:'255,120,40'};
+    case 'ftline':    return {fH:[face*16,-168], bH:[-face*20,-150], ball:[face*14,-176], kick:[face*40,-36], aura:'255,210,80'};
+    case 'thundergod':return {fH:[-face*12,-172], bH:[face*4,-156], ball:[-face*10,-180], aura:'140,200,255'};
     default:         return {fH:[face*9,-152], bH:[-face*1,-150], ball:[face*6,-158]};
   } }
   return null;
@@ -3807,6 +3825,12 @@ function handleEvent(e, demo){
       if(loud){ V.shake=16; sfx('slam'); }
       // dunk-style flourish on the slam
       const ds=((infoOf(e.id)||{}).dunk)||'basic', dx=e.x||(p?p.x:0);
+      if(ds==='glassdunk'){ const hb=HOOPS.find(h=>Math.abs(h.cx-dx)<300)||HOOPS[0], bx=hb.bb||dx; later(.12,()=>{ V.flash=1; V.shake=Math.max(V.shake,30); screenFx('crack',1.8,{wx:bx,wy:RIM_Y+60,wz:0});
+          for(let i=0;i<70;i++) P(bx+rnd(-20,20),RIM_Y+rnd(10,120),rnd(-60,60),{vx:rnd(-420,420),vy:rnd(-80,420),vz:rnd(-160,160),g:1000,life:rnd(.9,1.5),max:1.5,c:pick(['#e8fbff','#bfe9ff','#fff','#9fd8f0']),s:rnd(4,10),sq:1});
+          floatText('GLASS!',dx,RIM_Y+180,0,'#e8fbff',60,1.3); camFlashes(36); V.cheer=2.5; }); }
+      if(ds==='eclipsed'){ screenFx('eclipse',2,{wx:dx,wy:RIM_Y+170,wz:0}); V.shake=Math.max(V.shake,18); floatText('ECLIPSE',dx,RIM_Y+200,0,'#ffb347',54,1.3); }
+      if(ds==='ftline'){ V.flash=Math.max(V.flash,.6); spray(dx,RIM_Y,0,50,['#ffd23f','#fff','#e8b730'],440,{s:6}); camFlashes(36); ring(dx,RIM_Y,0,'#ffd23f',220,.7,12); V.cheer=2.5; }
+      if(ds==='thundergod'){ for(let i=0;i<7;i++) later(i*.06,()=>bolt(dx+rnd(-280,280),rnd(-140,140),0)); V.shake=Math.max(V.shake,24); screenFx('tint',.6,{c:'160,210,255'}); floatText('THUNDER',dx,RIM_Y+200,0,'#bfe9ff',54,1.2); }
       if(ds==='windmill') ring(dx,RIM_Y,0,'#a55eea',140,.5,8);
       else if(ds==='three60'){ ring(dx,RIM_Y,0,'#ffb400',170,.6,10); spray(dx,RIM_Y,0,24,['#ffd23f','#fff'],300); }
       else if(ds==='legs'){ ring(dx,RIM_Y,0,'#ff3b6b',190,.6,10); camFlashes(30); }
@@ -4958,6 +4982,12 @@ function actFx(q){
   }
   if(act===2 && inf.js==='ninjajs'){ spray(x,y+120,z,22,['rgba(190,190,200,.8)','rgba(120,120,130,.8)'],200,{g:-40,life:.8,max:.8,s:12}); emo(x,y+150,z,'💨',{s:36,g:-20,life:.7,max:.7,vr:0}); }
   if(act===2 && inf.js==='starjs'){ ring3d(x,y+160,z,46,'#ffd23f',{ax:Math.PI/2-.3,ay:0,sx:0,sy:6,t:.9,w:3}); for(let i=0;i<6;i++) emo(x,y,z,'⭐',{g:0,life:.9,max:.9,s:14,vr:0,orb:{cx:x,cy:y+150,cz:z,r:44,a:i*TAU/6,w:6,rise:20,dr:0}}); }
+  if(act===2 && inf.js==='legendfade'){ screenFx('letterbox',1.1); for(let i=0;i<14;i++) P(x+rnd(-30,30),y+rnd(40,160),z,{vx:-Math.sign(q[Q.face]||1)*rnd(80,200),vy:rnd(-20,40),g:0,life:.6,max:.6,c:pick(['#9b5cff','#c9b6ff','#fff']),s:4}); }
+  if(act===2 && inf.js==='logojs'){ screenFx('spot',1.1,{id:q[0]}); ring3d(x,4,z,46,'#ffd23f',{ax:Math.PI/2,ay:0,sx:0,sy:0,t:1,w:5}); later(.1,()=>ring3d(x,4,z,70,'#e8b730',{ax:Math.PI/2,ay:0,sx:0,sy:0,t:.9,w:3})); }
+  if(act===2 && inf.js==='icejs'){ screenFx('tint',.9,{c:'160,230,255'}); for(let i=0;i<16;i++){ const a=i/16*TAU; P(x+Math.cos(a)*30,y+20+i*8,z+Math.sin(a)*10,{vx:Math.cos(a)*40,vy:rnd(120,220),g:0,life:.8,max:.8,c:pick(['#e8fbff','#9fe7ff','#fff']),s:4}); } emo(x,y+200,z,'❄️',{s:26,g:-40,life:.9,max:.9,vr:2}); }
+  if(act===2 && inf.js==='cinejs'){ screenFx('darken',1); screenFx('letterbox',1.1); camFlashes(36); V.zoom=Math.max(V.zoom||0,.08); }
+  if(act===4 && inf.dunk==='thundergod') for(let i=0;i<3;i++) later(i*.08,()=>bolt(x+rnd(-80,80),z,0));
+  if(act===4 && inf.dunk==='ftline'){ screenFx('letterbox',.9); later(.05,()=>floatText('FROM THE LINE',x,y+260,z,'#ffd23f',34,1)); }
   if(act===2 && inf.js==='npcjs') floatText('beep boop',x,y+220,z,'#aab3c2',16,.8);
   if(act===4 && inf.dunk==='spiral') orbitBurst(x,y+100,z,30,['#9fe7ff','#fff','#3d8bff'],{rise:80,r:22,w:20,life:.5,dr:0});
   if(act===4 && inf.dunk==='starslam') orbitBurst(x,y,z,24,['#ffd23f','#fff'],{rise:380,r:30,w:12,life:.6});
@@ -5014,7 +5044,8 @@ function drawScreenFx(dt){
         ctx.closePath(); ctx.fill(); }
       ctx.globalCompositeOperation='source-over'; }
     else if(e.k==='crack'){ // glass shatter lines out from the hit point
-      if(!e.lines){ e.lines=[]; const cx=e.cx??W/2, cy=e.cy??H*.35; for(let j=0;j<14;j++){ let a=rnd(0,TAU), x0=cx, y0=cy; const pts=[[x0,y0]]; for(let s2=0;s2<6;s2++){ a+=rnd(-.4,.4); x0+=Math.cos(a)*rnd(40,110); y0+=Math.sin(a)*rnd(40,110); pts.push([x0,y0]); } e.lines.push(pts); } }
+      if(e.wx!==undefined && V.camT && e.lines){ const wp=V.camT(e.wx,e.wy,e.wz), dx2=wp[0]-e.lx, dy2=wp[1]-e.ly; if(dx2||dy2){ for(const pts of e.lines) for(const p2 of pts){ p2[0]+=dx2; p2[1]+=dy2; } e.lx=wp[0]; e.ly=wp[1]; } }
+      if(!e.lines){ e.lines=[]; const wp0=(e.wx!==undefined && V.camT) ? V.camT(e.wx,e.wy,e.wz) : null; if(wp0){ e.lx=wp0[0]; e.ly=wp0[1]; } const cx=wp0?wp0[0]:(e.cx??W/2), cy=wp0?wp0[1]:(e.cy??H*.35); for(let j=0;j<14;j++){ let a=rnd(0,TAU), x0=cx, y0=cy; const pts=[[x0,y0]]; for(let s2=0;s2<6;s2++){ a+=rnd(-.4,.4); x0+=Math.cos(a)*rnd(40,110); y0+=Math.sin(a)*rnd(40,110); pts.push([x0,y0]); } e.lines.push(pts); } }
       ctx.strokeStyle=`rgba(255,255,255,${.85*fade})`; ctx.lineWidth=2.5; for(const pts of e.lines){ ctx.beginPath(); pts.forEach((p,j)=>j?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1])); ctx.stroke(); }
       ctx.fillStyle=`rgba(200,230,255,${.08*fade})`; ctx.fillRect(0,0,W,H); }
     else if(e.k==='gray'){ ctx.globalCompositeOperation='saturation'; ctx.globalAlpha=fade; ctx.fillStyle='#808080'; ctx.fillRect(0,0,W,H);
@@ -5099,7 +5130,7 @@ function drawScreenFx(dt){
       ctx.shadowBlur=0; ctx.lineCap='butt'; }
     else if(e.k==='eclipse'){ // sky goes black, a burning ring hangs above
       ctx.fillStyle=`rgba(4,0,12,${.62*fade})`; ctx.fillRect(0,0,W,H);
-      const cx=e.cx??W/2, cy=e.cy??H*.2, r=Math.min(W,H)*.09;
+      const wp=(e.wx!==undefined && V.camT) ? V.camT(e.wx,e.wy,e.wz) : null, cx=wp?wp[0]:(e.cx??W/2), cy=wp?wp[1]:(e.cy??H*.2), r=Math.min(W,H)*.09;
       ctx.globalCompositeOperation='lighter';
       const g=ctx.createRadialGradient(cx,cy,r*.9,cx,cy,r*3); g.addColorStop(0,`rgba(255,210,110,${.95*fade})`); g.addColorStop(.2,`rgba(255,110,30,${.55*fade})`); g.addColorStop(1,'rgba(255,60,0,0)');
       ctx.fillStyle=g; ctx.beginPath(); ctx.arc(cx,cy,r*3,0,TAU); ctx.fill();
