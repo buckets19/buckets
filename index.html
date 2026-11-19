@@ -7,6 +7,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Buckets</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="theme-color" content="#1b1d22">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,700;1,800&display=swap" rel="stylesheet">
 <!-- multiplayer library: served from this site first (school filters often block CDNs), then backups -->
@@ -681,7 +684,7 @@
   #packOpen.hof .poPack{background:linear-gradient(160deg,#fff1b8,#e8b730 40%,#6b4e0a);box-shadow:0 0 90px 20px rgba(232,183,48,.5)}
   .packCard:has(.paName) .packArt{}
   /* ===== player card ===== */
-  #profPanel.prof{left:50%;top:50%;transform:translate(-50%,-50%);width:min(860px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow-y:auto;padding:18px}
+  #profPanel.prof{z-index:30;left:50%;top:50%;transform:translate(-50%,-50%);width:min(860px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow-y:auto;padding:18px}
   .pfWrap{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start;margin-bottom:12px}
   .pfCard{position:relative;border-radius:10px;overflow:hidden;box-shadow:0 0 0 3px var(--tc),0 18px 40px rgba(0,0,0,.5);transform:rotate(-1.5deg)}
   .pfCard canvas,#pfCv{display:block;position:static;inset:auto;width:100%;height:auto;aspect-ratio:300/360}
@@ -755,7 +758,7 @@
   </div>
   <p class="how hHow">Hold <b>SHOOT</b>, let go in the <b style="color:#47e27a">green</b>. Smother shooters to take their green away. <b>CROSS</b> + stick = crossover · spin · stepback · hesi.</p>
   <p id="homeMsg" class="msg"></p>
-  <div class="hFoot"><button id="acctBtn" class="btn tiny ghost">👤 Account &amp; backup</button><button id="netTestBtn" class="btn tiny ghost hidden">📶 Test connection</button><button id="adminBtn" class="btn tiny ghost hidden">🛠️ Admin</button></div>
+  <div class="hFoot"><button id="installBtn" class="btn tiny ghost hidden">📲 Install the app</button><button id="acctBtn" class="btn tiny ghost">👤 Account &amp; backup</button><button id="netTestBtn" class="btn tiny ghost hidden">📶 Test connection</button><button id="adminBtn" class="btn tiny ghost hidden">🛠️ Admin</button></div>
 </div>
 
 <div id="lobby" class="panel center hidden">
@@ -3730,6 +3733,7 @@ function renderLobby(){
       const li=document.createElement('li');
       const nmS=document.createElement('span'); nmS.textContent='#'+p.num+' '+p.name; li.append(nmS); { const bg=badgeEl(p); if(bg) li.append(bg); const tt=titleEl(p); if(tt) li.append(tt); }
       if(!p.bot && p.rr!==undefined) li.append(rankBadge(p.rr));
+      li.style.cursor='pointer'; li.title='View player card'; { const pid=p.id; li.addEventListener('click', ev=>{ if(ev.target.closest('button')) return; openCardFor(pid); }); }
       const gear=document.createElement('span'); gear.title='Celly / Green FX'; gear.textContent=((CELLYS.find(c=>c.id===p.cel)||{}).icon||'')+((GFX.find(c=>c.id===p.gfx)||{}).icon||''); li.append(gear);
       const tg = p.id===net.myId ? 'YOU' : p.id==='host' ? 'HOST' : p.bot ? 'BOT' : '';
       if(tg){ const s=document.createElement('span'); s.className='tg'; s.textContent=tg; li.append(s); }
@@ -3773,7 +3777,7 @@ function showGameOver(S){
   const hd=el('li','bxRow bxHead'); for(const h of ['','PTS','FG','3PT','AST','STL','BLK','REB']) hd.append(el('span','',h)); ul.append(hd);
   [...S.p].sort((a,b)=>a[Q.team]-b[Q.team] || b[Q.pts]-a[Q.pts]).forEach(q=>{
     const id=q[Q.id], inf=infoOf(id); if(!inf) return; const r=bx(id);
-    const li=el('li','bxRow'+(id===net.myId?' me':'')); const nm=el('span','bxName', inf.name); nm.style.color=TEAM_DARK[q[Q.team]];
+    const li=el('li','bxRow'+(id===net.myId?' me':'')); const nm=el('span','bxName', inf.name); nm.style.color=TEAM_DARK[q[Q.team]]; li.style.cursor='pointer'; li.title='View player card'; li.onclick=()=>openCardFor(id);
     li.append(nm, el('b','', String(q[Q.pts])), el('span','', r.fgm+'/'+r.fga), el('span','', r.tpm+'/'+r.tpa), el('span','', String(r.ast)), el('span','', String(r.stl)), el('span','', String(r.blk)), el('span','', String(r.reb)));
     ul.append(li);
   });
@@ -5632,10 +5636,10 @@ async function lbPublish(){
   const nt=await loadNostr(); if(!nt) return;
   const sk=lbKey(), R=SAVE.rank;
   const ev=nt.finalizeEvent({kind:LB_KIND, created_at:Math.floor(Date.now()/1000), tags:[['d',LB_TAG],['t',LB_TAG]],
-    content:JSON.stringify({n:getName(), rr:R.rr|0, g:R.games|0, w:R.wins|0, b:R.best|0, bdg:SAVE.badge?'S'+SAVE.badge.s+':'+SAVE.badge.ti:''})}, sk);
+    content:JSON.stringify({n:getName(), rr:R.rr|0, g:R.games|0, w:R.wins|0, b:R.best|0, bdg:SAVE.badge?'S'+SAVE.badge.s+':'+SAVE.badge.ti:'', cd:myCardData()})}, sk);
   for(const u of LB_RELAYS){ try{ const ws=new WebSocket(u); ws.onopen=()=>{ ws.send(JSON.stringify(['EVENT',ev])); setTimeout(()=>{ try{ws.close()}catch(e){} },3000); }; ws.onerror=()=>{}; }catch(e){} }
   LB.posted=true;
-  if(LB.rows){ LB.rows=LB.rows.filter(r=>r.pk!==ev.pubkey); LB.rows.push({pk:ev.pubkey, n:getName(), rr:R.rr, g:R.games, t:ev.created_at}); }
+  if(LB.rows){ LB.rows=LB.rows.filter(r=>r.pk!==ev.pubkey); LB.rows.push({pk:ev.pubkey, n:getName(), rr:R.rr, g:R.games, w:R.wins|0, b:R.best|0, t:ev.created_at, card:cardClean(myCardData())}); }
 }
 function lbFetch(){
   if(LB.loading) return LB.loading;
@@ -5653,7 +5657,7 @@ function lbFetch(){
         if(m[0]==='EVENT' && m[2]){ const ev=m[2];
           try{ if(!nt.verifyEvent(ev)) return; const c=JSON.parse(ev.content), rr=Math.round(+c.rr);
             if(!(rr>=0 && rr<=4000) || !((c.g|0)>=1)) return;
-            const prev=best.get(ev.pubkey); if(!prev || ev.created_at>prev.t) best.set(ev.pubkey,{pk:ev.pubkey, n:cleanName(c.n), rr, g:c.g|0, t:ev.created_at}); }catch(_){} }
+            const prev=best.get(ev.pubkey); if(!prev || ev.created_at>prev.t) best.set(ev.pubkey,{pk:ev.pubkey, n:cleanName(c.n), rr, g:c.g|0, w:Math.max(0,c.w|0), b:Math.max(0,c.b|0), bdg:typeof c.bdg==='string'&&/^S\d{1,3}:\d{1,2}$/.test(c.bdg)?c.bdg:'', t:ev.created_at, card:cardClean(c.cd)}); }catch(_){} }
         else if(m[0]==='EOSE'){ try{ws.close()}catch(_){} once(); } };
       ws.onerror=once; ws.onclose=once;
     }
@@ -5846,6 +5850,27 @@ function eventClaim(){ const e=eventNow(), pr=evProg(); if(!e || !pr || pr.claim
 setInterval(()=>{ if(eventNow() || $('#ctlBanner').querySelector('.evBox')) ctlBanner(); }, 30000);
 
 // ---------------------------------------------------------------- 👤 PLAYER CARD
+// what other players can see on your card (sent with your leaderboard entry)
+function myCardData(){ const S=SAVE.stats||{}, gr={}; for(const k of ['cel','gfx','js','dunk','trail','ball']) gr[k]=SAVE[k];
+  return {lk:SAVE.look||'', gr, lv:myGear().lv, gm:S.games|0, wn:S.wins|0, pt:S.pts|0, gn:S.greens|0, tr:FEATS.filter(f=>SAVE.owned[f.kind].includes(f.item)).map(f=>f.id),
+    ic:ITEMS.filter(i=>i.r==='icon' && SAVE.owned[i.kind].includes(i.id)).length, co:Object.values(SAVE.owned).reduce((a,b)=>a+b.length,0), ct:SAVE.ctitle||''}; }
+function cardClean(c){ if(!c || typeof c!=='object') return null; const o={}, n=(v,m)=>Math.max(0,Math.min(m,Math.round(+v)||0));
+  o.lk = typeof c.lk==='string' && parseLook(c.lk) ? c.lk : '';
+  o.gr={}; if(c.gr && typeof c.gr==='object') for(const k of ['cel','gfx','js','dunk','trail','ball']) if(typeof c.gr[k]==='string' && itemOf(k,c.gr[k])) o.gr[k]=c.gr[k];
+  o.lv = typeof c.lv==='string' && /^[1-3]{2}$/.test(c.lv) ? c.lv : '11';
+  o.gm=n(c.gm,1e6); o.wn=Math.min(o.gm,n(c.wn,1e6)); o.pt=n(c.pt,1e7); o.gn=n(c.gn,1e7); o.ic=n(c.ic,500); o.co=n(c.co,5000);
+  o.tr=Array.isArray(c.tr) ? c.tr.filter(id=>FEATS.some(f=>f.id===id)).slice(0,20) : [];
+  o.ct = typeof c.ct==='string' && SETS[c.ct] ? c.ct : '';
+  return o; }
+// open a card for someone you see in a lobby / box score (their live gear + their leaderboard stats if we have them)
+function openCardFor(id){
+  if(id===net.myId) return openProfile(null);
+  const inf=infoOf(id); if(!inf) return;
+  const row=(LB.rows||[]).find(r=>inf.pk && r.pk===inf.pk);
+  const gr={}; for(const k of ['cel','gfx','js','dunk','trail','ball']) if(inf[k]) gr[k]=inf[k];
+  const live={lk:inf.lk||'', gr, lv:inf.lv||'11', ct:inf.ct||''};
+  openProfile({n:inf.name, rr:inf.rr||(row?row.rr:0), pk:inf.pk, bdg:inf.bdg, g:row?row.g:0, w:row?row.w:0, b:row?row.b:0, bot:!!inf.bot, place:row?((LB.rows||[]).slice().sort((a,b)=>b.rr-a.rr).indexOf(row)+1):0, card:{...(row&&row.card||{}), ...live}});
+}
 // Your card: look, rank, season, stats, equipped gear with levels, trophies. Tap anyone on the leaderboard for theirs.
 let PF=null;
 function openProfile(other){
@@ -5855,7 +5880,7 @@ function openProfile(other){
   $('#pfNum').textContent = me ? '#'+((SAVE.num)||23) : (other.place?'#'+other.place:'');
   $('#pfOvr').innerHTML=''; $('#pfOvr').append(el('b','',rk.t.icon), el('span','',rk.short.toUpperCase()));
   const head=el('div','pfHead'); head.append(el('h2','',name));
-  const tags=el('div','pfTags'); const who=me?meWho():other; const bg=badgeEl(who), tt=titleEl(who); if(tt) tags.append(tt); if(bg) tags.append(bg); head.append(tags); I.append(head);
+  const tags=el('div','pfTags'); const who=me?meWho():{...other, ct:(other.card&&other.card.ct)||other.ct}; const bg=badgeEl(who), tt=titleEl(who); if(tt) tags.append(tt); if(bg) tags.append(bg); head.append(tags); I.append(head);
   const rkRow=el('div','pfRank'); rkRow.append(rankBadge(rr,true));
   if(me) rkRow.append(el('small','', 'Best '+(SAVE.rank.best||rr)+' RR'+(SAVE.season?' · Season '+SAVE.season.n+' peak '+(SAVE.season.peak||rr):'')));
   else rkRow.append(el('small','', (other.place?'#'+other.place+' on the leaderboard · ':'')+(other.g||0)+' ranked games'));
@@ -5864,8 +5889,21 @@ function openProfile(other){
   const st=el('div','pfStats'), S=SAVE.stats||{}, R=SAVE.rank||{};
   const add=(n,l)=>{ const d=el('div','pfStat'); d.append(el('b','',String(n)), el('small','',l)); st.append(d); };
   if(me){ const g=S.games||0, w=S.wins||0; add(g,'GAMES'); add(w,'WINS'); add(g?Math.round(w/g*100)+'%':'—','WIN %'); add(S.pts||0,'POINTS'); add(S.greens||0,'GREENS'); add((R.wins||0)+'-'+((R.games||0)-(R.wins||0)),'RANKED W-L'); }
-  else { add(other.g||0,'RANKED GAMES'); add(rr,'RR'); add(rk.t.n.toUpperCase(),'RANK'); }
+  else { const c=other.card||{};
+    if(c.gm){ add(c.gm,'GAMES'); add(c.wn,'WINS'); add(Math.round(c.wn/Math.max(1,c.gm)*100)+'%','WIN %'); add(c.pt,'POINTS'); add(c.gn,'GREENS'); }
+    else if(other.bot) add('CPU','RANKED RIVAL');
+    add((other.w||0)+'-'+Math.max(0,(other.g||0)-(other.w||0)),'RANKED W-L'); if(!c.gm){ add(rr,'RR'); add(rk.t.n.toUpperCase(),'RANK'); } }
   I.append(st);
+  const cardOf = me ? {gr:Object.fromEntries(['cel','gfx','js','dunk','trail','ball'].map(k=>[k,SAVE[k]])), lv:myGear().lv} : (other.card||{});
+  if(!me && cardOf.gr && Object.keys(cardOf.gr).length){
+    const eq=el('div','pfEq'); eq.append(el('h4','','EQUIPPED')); const row=el('div','pfEqRow');
+    for(const k of ['cel','gfx','js','dunk','trail','ball']){ const it=cardOf.gr[k] && itemOf(k,cardOf.gr[k]); if(!it) continue; const lv=k==='cel'?+cardOf.lv[0]:k==='gfx'?+cardOf.lv[1]:0;
+      const c=el('div','pfItem r-'+it.r); c.style.setProperty('--rc', RAR[it.r].c); c.append(el('div','pfIc',it.icon), el('b','',it.name), el('small','', KIND_ONE[k]+(lv?' · '+'★'.repeat(lv)+'☆'.repeat(3-lv):''))); row.append(c); }
+    eq.append(row); I.append(eq);
+    if(other.card && other.card.tr){ const tr=el('div','pfTr'); tr.append(el('h4','','TROPHIES')); const tw=el('div','pfTrRow');
+      for(const f of FEATS){ const got=other.card.tr.includes(f.id); const t=el('span','pfTrI'+(got?' got':''), f.icon); t.title=f.n; tw.append(t); } tr.append(tw); I.append(tr); }
+    if(other.card && other.card.co) I.append(el('p','how','Collection '+other.card.co+' items · ICONs '+(other.card.ic||0)));
+  }
   if(me){
     // equipped gear with levels
     const eq=el('div','pfEq'); eq.append(el('h4','','EQUIPPED'));
@@ -5879,7 +5917,7 @@ function openProfile(other){
     const owned=Object.values(SAVE.owned).reduce((a,b)=>a+b.length,0);
     I.append(el('p','how','Collection '+owned+'/'+ITEMS.length+' · ICONs '+ITEMS.filter(i=>i.r==='icon' && SAVE.owned[i.kind].includes(i.id)).length+' · Packs opened '+(S.crates||0)));
   }
-  $('#home').classList.add('hidden'); $('#rankedPanel').classList.add('hidden'); P.classList.remove('hidden');
+  if(!V.inRoom) $('#home').classList.add('hidden'); $('#rankedPanel').classList.add('hidden'); P.classList.remove('hidden');
   if(!V.pfLoop){ V.pfLoop=true; requestAnimationFrame(drawProfile); }
 }
 function closeProfile(){ $('#profPanel').classList.add('hidden'); PF=null; if(V.rankedOpen) $('#rankedPanel').classList.remove('hidden'); else if(!V.inRoom) $('#home').classList.remove('hidden'); }
@@ -5894,7 +5932,7 @@ function drawProfile(){
   pc.globalAlpha=.08; pc.fillStyle='#fff'; for(let i=-c.height;i<c.width;i+=22){ pc.beginPath(); pc.moveTo(i,c.height); pc.lineTo(i+c.height,0); pc.lineTo(i+c.height+10,0); pc.lineTo(i+10,c.height); pc.fill(); } pc.globalAlpha=1;
   pc.fillStyle='rgba(0,0,0,.35)'; pc.beginPath(); pc.ellipse(c.width/2,c.height*.9,90,16,0,0,TAU); pc.fill();
   const o=PF.other, id=o ? 'pf_'+String(o.pk||o.n).slice(0,12) : '__prof';
-  DMI.set(id, o ? {id, name:o.n, team:0, num:o.place||7} : {id, name:getName(), team:0, num:23, ...myGear()});
+  DMI.set(id, o ? {id, name:o.n, team:0, num:o.place||7, ...(o.card&&o.card.gr||{}), lk:(o.card&&o.card.lk)||undefined, lv:(o.card&&o.card.lv)||'11'} : {id, name:getName(), team:0, num:23, ...myGear()});
   const face = Math.sin((clock-PF.t0)*.7)>-.6 ? 1 : -1;
   const q=[id,0,0,0,0,0,face,0,0,0,0,0,0,face,-1,0,0];
   const main=ctx; ctx=pc;
@@ -6318,6 +6356,15 @@ function duoVsBots(){
 
 // ---------------------------------------------------------------- crates + locker
 let shopMain='crates', lockTab='gfx', lastCrate=null, ubWin=null, shopTab='packs', wsKind='cel';
+// 📲 offline copy + install: the game keeps a saved copy on the iPad (sw.js), so it opens even when the site is slow,
+// offline or blocked. Installed to the home screen it launches full screen like a real app.
+if('serviceWorker' in navigator && location.protocol==='https:'){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+  navigator.serviceWorker.addEventListener('message', e=>{ if(e.data && e.data.t==='bk-updated') toast('⬆️ Buckets updated in the background. It loads next time you open the game.'); });
+}
+{ const standalone = (window.navigator.standalone===true) || (window.matchMedia && matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches);
+  if(!standalone){ const b=document.getElementById('installBtn'); if(b){ b.classList.remove('hidden');
+    b.onclick=()=>toast('📲 Tap the Share button (square with an arrow) → "Add to Home Screen". Buckets then opens like an app, even if the site gets slow or blocked.'); } } }
 function updateHub(){ try{
   if(!$('#hubStoreT')) return;
   const free=Object.values(SAVE.freeCrates||{}).reduce((a,b)=>a+(b>0?b:0),0) + (SAVE.dailyPack!==new Date().toDateString()?1:0), fp=featuredPack();
@@ -6730,6 +6777,7 @@ function checkFeats(){ for(const f of FEATS){ if(featProg(f)<f.goal || SAVE.owne
   SAVE.owned[f.kind].push(f.item); SAVE.gems=(SAVE.gems||0)+250; persist(); const it=itemOf(f.kind,f.item);
   V.flash=.6; confetti(0); confetti(1); toast('🏅 TROPHY UNLOCKED: '+f.n+'! '+it.icon+' '+it.name+' + 250 💎'); } }
 setTimeout(()=>{ try{ checkFeats(); }catch(e){} }, 1500);
+setTimeout(()=>{ try{ if(SAVE.rank && SAVE.rank.games && !LB.posted) lbPublish(); }catch(e){} }, 9000);
 function renderTrophies(box){
   box.append(el('p','how','Trophy items can\'t be bought and never drop from packs. Only play gets them, and everyone sees them on you. Online and ranked games count.'));
   for(const f of FEATS){ const it=itemOf(f.kind,f.item), pr=featProg(f), done=SAVE.owned[f.kind].includes(f.item);
