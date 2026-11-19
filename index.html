@@ -6420,7 +6420,6 @@ function renderShop(){
 // so nobody can read them out of the page source. Each one works once per device.
 const CODE_HASHES={
   '8469e29d6fc9436af0b39fa184be37339b83a9dcc809c1cf9c0470163cdddede':{id:'c8', coins:10000},
-  'a88ed7ed607de4d5570004dc60aed5853489687a9d93193ede1b717c076857e2':{id:'c9', coins:50000},
 };
 async function codeHash(s){ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode('bk19|'+s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 // older saves stored redeemed codes as plain text: swap them for ids
