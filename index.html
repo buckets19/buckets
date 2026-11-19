@@ -245,6 +245,12 @@
   #touch .tb small{display:block;font-size:11px;-webkit-text-stroke:0;opacity:.9;margin-top:3px}
 
   .walletRow{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:8px}
+  #loginBox{z-index:40;left:50%;top:50%;transform:translate(-50%,-50%);width:min(720px,calc(100vw - 32px));text-align:center}
+  #loginBox h2{margin:0 0 4px} .lgRow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:10px 0 14px}
+  .lgDay{border:3px solid var(--ink);border-radius:12px;padding:6px 3px;background:#fff;font-size:12px;min-height:74px;display:flex;flex-direction:column;gap:4px;justify-content:center}
+  .lgDay.got{background:#d9f7e4;opacity:.75} .lgDay.now{background:var(--yellow);transform:scale(1.08);box-shadow:0 0 0 3px #ff8a1f}
+  .lgRw{font-weight:800;font-size:11.5px}
+  @media (max-width:560px){ .lgRow{grid-template-columns:repeat(4,1fr)} }
   .gemPill{color:#8ff3ff!important} .wallet2{display:flex;gap:6px} .btn.gemb{background:#2fd3e8;color:#0b2a33}
   .coinPill{font-weight:700;background:var(--ink);color:var(--yellow);border-radius:999px;padding:6px 12px;font-size:16px}
   .btn.shopBtn{background:#47e27a}
@@ -503,7 +509,7 @@
     </section>
   </div>
   <div class="hBottom">
-    <button class="hTile gShop openShop"><span>🛒</span><b>SHOP</b></button>
+    <button class="hTile gShop openShop"><span>🛒</span><b>SHOP</b><i class="qBadge sBadge hidden">FREE</i></button>
     <button class="hTile gLock openLocker"><span>🎒</span><b>LOCKER</b></button>
     <button class="hTile gPass" id="passBtn"><span>🎟️</span><b>PASS</b></button>
     <button class="hTile gQuest openQuests"><span>📜</span><b>QUESTS</b><i class="qBadge hidden">0</i></button>
@@ -2859,11 +2865,18 @@ function realGame(){ return V.inRoom && V.phase==='game' && (!V.practice || V.ra
 function earn(n, why){ if(!V.inRoom || V.phase!=='game') return;
   if(realGame()){ try{
     gemsAdd(GEM_FOR[why]||0);
+    if(why==='PLAYED'){ if(SAVE.wsPend) SAVE.wstreak=0; }
+    if(why==='WIN') SAVE.wsPend=0;
     if(why==='GREEN'){ addMast('gfx'); addMast('js'); bumpFeat('greens'); }
     if(why==='BUCKET'||why==='THREE'||why==='DUNK'){ addMast('cel'); addMast('trail'); addMast('ball'); if(why==='DUNK') addMast('dunk'); }
     if(why==='ANKLES'||why==='FROZE') bumpFeat('ankles');
     if(why==='BLOCK'||why==='STEAL'||why==='CHARGE') bumpFeat('lock');
-    if(why==='WIN') bumpFeat('wins');
+    if(why==='WIN'){ bumpFeat('wins');
+      const day=new Date().toDateString();
+      if(SAVE.fwDay!==day){ SAVE.fwDay=day; SAVE.gems=(SAVE.gems||0)+50; SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates.street=(SAVE.freeCrates.street||0)+1; setTimeout(()=>toast('🌅 First win of the day: +50 💎 + a free Street Pack!'), 3600); }
+      SAVE.wstreak=(SAVE.wstreak||0)+1;
+      if(SAVE.wstreak%3===0){ SAVE.freeCrates=SAVE.freeCrates||{}; const id=SAVE.wstreak>=9?'allstar':SAVE.wstreak>=6?'pro':'street'; SAVE.freeCrates[id]=(SAVE.freeCrates[id]||0)+1; setTimeout(()=>toast('🔥 '+SAVE.wstreak+' wins in a row: free '+packOf(id).name+'!'), 4800); } }
+    if(why==='PLAYED') SAVE.wsPend=1;
   }catch(e){} } const evc=eventNow(), cm=clamp(Math.round(Math.max(+CTL.mult||1, evc&&evc.kind==='coins2'?2:1)),1,5); SAVE.coins+=n*cm; persist(); V.coinPops.push({n:n*cm, why, t:1.8});   // 🎉 admin coin events
   if(typeof questProgress==='function'){ questProgress(why==='TIP'?'BLOCK_TIP':why); if(why==='DUNK'||why==='THREE'||why==='BUCKET') questProgress('PTS', n/2); if(why==='THREE'||why==='DUNK') questProgress('BUCKET_ANY'); } }
 V.coinPops=[]; V.rings=[]; V.bolts=[]; V.celly=null; V.beams=[]; V.arcs=[]; V.timers=[]; V.scr=[]; V.vortex=null;
@@ -6177,6 +6190,26 @@ function renderTrophies(box){
     box.append(d); }
   box.append(el('p','how','⬆️ Item levels: every item you use levels up by using it in real games. Green FX and jumpshots level from greens, cellys, trails and balls from buckets, dunks from dunks. ★★ at '+MAST_AT[1]+', ★★★ MAX at '+MAST_AT[2]+'. Levelled cellys and green FX hit harder, and everyone sees it.'));
 }
+const LOGIN_REW=[{gems:40},{pack:'street'},{gems:60},{pack:'street'},{gems:100},{pack:'pro'},{pack:'allstar', gems:100}];
+function loginText(r){ const a=[]; if(r.gems) a.push('💎 '+r.gems); if(r.pack) a.push(packOf(r.pack).icon+' '+packOf(r.pack).name); return a.join(' + '); }
+function loginCheck(){
+  if(V.inRoom || document.getElementById('loginBox')) return;
+  const L=SAVE.login||{}, today=new Date().toDateString(), yest=new Date(Date.now()-864e5).toDateString();
+  if(L.last===today) return;
+  const streak = L.last===yest ? (L.streak||0)%7+1 : 1, rw=LOGIN_REW[streak-1];
+  const box=el('div','panel'); box.id='loginBox';
+  box.append(el('h2','','📅 Daily Login · Day '+streak), el('p','how', L.last===yest || streak===1 ? 'Come back every day. Day 7 is an All-Star Pack. Miss a day and it starts over.' : ''));
+  const row=el('div','lgRow'); LOGIN_REW.forEach((r,i)=>{ const t=el('div','lgDay'+(i+1<streak?' got':i+1===streak?' now':'')); t.append(el('b','','Day '+(i+1)), el('div','lgRw', loginText(r))); row.append(t); }); box.append(row);
+  const b=el('button','btn big orange','🎁 Claim '+loginText(rw));
+  b.onclick=()=>{ SAVE.login={last:today, streak}; if(rw.gems) SAVE.gems=(SAVE.gems||0)+rw.gems; if(rw.pack){ SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[rw.pack]=(SAVE.freeCrates[rw.pack]||0)+1; }
+    persist(); confetti(0); box.remove(); toast('📅 Day '+streak+': '+loginText(rw)+(rw.pack?' (open it in the Shop)':'')); shopBadge(); };
+  box.append(b); document.body.append(box);
+}
+setTimeout(()=>{ try{ loginCheck(); }catch(e){} }, 2500);
+// red FREE badge on the Shop when something's waiting
+function shopBadge(){ try{ const n=Object.values(SAVE.freeCrates||{}).reduce((a,b)=>a+(b>0?b:0),0) + (SAVE.dailyPack!==new Date().toDateString()?1:0);
+  document.querySelectorAll('.sBadge').forEach(b=>{ b.textContent=n>1?n+' FREE':'FREE'; b.classList.toggle('hidden', !n && !setsClaimable()); if(!n) b.textContent='!'; }); }catch(e){} }
+setInterval(shopBadge, 3000); setTimeout(shopBadge, 800);
 function packPool(pk){ return ITEMS.filter(i=>!i.noCrate && i.id!==KINDS[i.kind].def && (!pk.set || i.s===pk.set)); }
 function rollRarity(odds, items, minR){
   const lo=minR?RORDER.indexOf(minR):0, avail=RORDER.filter((r,i)=>i>=lo && odds[r] && items.some(x=>x.r===r));
