@@ -71,6 +71,62 @@
   .adCur h5{margin:6px 0 2px;font-size:13px}
   .adItem{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:13px;padding:2px 0}
   .btn.red{background:#ff5a4f;color:#fff}
+  /* ---- packs */
+  #shopList.packGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:12px;overflow-y:auto}
+  .dailyCard,.shardBar{grid-column:1/-1;display:flex;align-items:center;gap:10px;border:3px solid var(--ink);border-radius:14px;padding:8px 12px;background:#fff}
+  .dailyCard.ready{background:linear-gradient(90deg,#fff3c4,#ffe08a);animation:pulse 1.6s ease-in-out infinite}
+  .dailyCard .dIcon{font-size:28px} .dailyCard .dTxt{flex:1;font-weight:800}
+  .shardBar{background:#1b1530;color:#bfe9ff} .shardBar small{color:#a99fd0}
+  @keyframes pulse{50%{transform:scale(1.015)}}
+  .packCard{position:relative;border:3px solid var(--ink);border-radius:16px;background:#fff;padding:10px;display:flex;flex-direction:column;gap:6px;box-shadow:0 4px 0 var(--ink)}
+  .packCard.feat{grid-column:1/-1;background:linear-gradient(135deg,#fff,#fff6e0)}
+  .packCard .pTag{position:absolute;top:-10px;left:12px;background:#ff5a4f;color:#fff;font-weight:900;font-size:11px;border:2px solid var(--ink);border-radius:8px;padding:1px 8px}
+  .packArt,.poPack{position:relative;border-radius:12px;border:3px solid var(--ink);color:#fff;text-align:center;padding:12px 6px 10px;overflow:hidden;
+    background:linear-gradient(160deg,color-mix(in srgb,var(--pc) 70%,#fff) 0%,var(--pc) 45%,color-mix(in srgb,var(--pc) 55%,#000) 100%)}
+  .packArt::after,.poPack::after{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.45) 45%,transparent 60%);transform:translateX(-120%);animation:shine 3.2s ease-in-out infinite}
+  @keyframes shine{60%,100%{transform:translateX(120%)}}
+  .paIcon{font-size:40px;line-height:1.1;filter:drop-shadow(0 3px 0 rgba(0,0,0,.3))} .paName{font-weight:900;font-size:17px;letter-spacing:1px;-webkit-text-stroke:1px var(--ink)} .paSub{font-size:11px;font-weight:800;opacity:.9}
+  .packCard .odds{display:flex;flex-wrap:wrap;gap:3px;justify-content:center} .packCard .oc{color:#fff;font-size:10.5px;font-weight:800;border-radius:6px;padding:1px 6px;border:1.5px solid var(--ink)}
+  .pGuar{font-size:12px;font-weight:800;text-align:center} .pHave{text-align:center;font-weight:700;color:#6b6290}
+  .lvStars{font-size:12px;font-weight:800;color:#c99700;text-align:center} .lvStars.max{color:#ff3b6b}
+  .wsKinds{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
+  .setCard{grid-column:1/-1;border:3px solid var(--ink);border-left:10px solid var(--sc);border-radius:14px;background:#fff;padding:8px 12px;display:flex;flex-direction:column;gap:6px}
+  .setHead{font-weight:900;font-size:16px} .setBar{height:12px;border:2px solid var(--ink);border-radius:8px;background:#eee;overflow:hidden} .setFill{height:100%;background:var(--sc)}
+  .setMiles{display:flex;flex-wrap:wrap;gap:6px}
+  /* ---- pack opening */
+  #packOpen{position:fixed;inset:0;z-index:60;background:radial-gradient(circle at 50% 40%,color-mix(in srgb,var(--pc) 35%,#1b1530) 0%,#0d0a1c 70%);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px}
+  #poStage{display:flex;align-items:center;justify-content:center;min-height:300px;width:100%}
+  #poHint{color:#d8d0ff;font-weight:700;margin:0;min-height:20px}
+  .poPack{width:200px;height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;box-shadow:0 0 40px color-mix(in srgb,var(--pc) 60%,transparent)}
+  .poPack .paIcon{font-size:76px}
+  .poPack.shake{animation:pshake .5s ease-in-out infinite}
+  .poPack.hot{box-shadow:0 0 70px 10px var(--bc)}
+  .poPack.burst{animation:pburst .5s ease-in forwards}
+  @keyframes pshake{0%,100%{transform:rotate(0)}25%{transform:rotate(-3deg) scale(1.02)}75%{transform:rotate(3deg) scale(1.02)}}
+  @keyframes pburst{to{transform:scale(1.6);opacity:0;filter:brightness(3)}}
+  .poCards{display:flex;flex-wrap:wrap;justify-content:center;gap:12px;max-width:760px}
+  .pcard{width:128px;height:182px;perspective:700px;cursor:pointer;animation:deal .45s cubic-bezier(.2,1.4,.4,1) both}
+  @keyframes deal{from{transform:translateY(-60px) scale(.4);opacity:0}}
+  .pcIn{position:relative;width:100%;height:100%;transition:transform .55s cubic-bezier(.3,1.3,.5,1);transform-style:preserve-3d}
+  .pcard.flip .pcIn{transform:rotateY(180deg)}
+  .pcBack,.pcFront{position:absolute;inset:0;border-radius:12px;border:3px solid var(--ink);backface-visibility:hidden;-webkit-backface-visibility:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .pcBack{background:repeating-linear-gradient(45deg,#2b2450 0 10px,#241e44 10px 20px);color:#ffd23f}
+  .pcBack .pcLogo{font-size:34px} .pcBack .pcQ{font-size:30px;font-weight:900;color:#fff;opacity:.8}
+  .pcFront{transform:rotateY(180deg);gap:3px;padding:6px;color:#fff;text-align:center;background:linear-gradient(170deg,color-mix(in srgb,var(--rc) 75%,#fff),var(--rc) 50%,color-mix(in srgb,var(--rc) 55%,#000));box-shadow:0 0 22px var(--rc)}
+  .pcard.r-legendary.flip .pcFront,.pcard.r-mythic.flip .pcFront,.pcard.r-exclusive.flip .pcFront,.pcard.r-secret.flip .pcFront{animation:glowp 1.4s ease-in-out infinite}
+  @keyframes glowp{50%{box-shadow:0 0 40px 8px var(--rc)}}
+  .pcRar{font-size:11px;font-weight:900;letter-spacing:1px;background:rgba(0,0,0,.35);border-radius:6px;padding:0 6px}
+  .pcIc{font-size:44px;line-height:1.1} .pcName{font-weight:900;font-size:14px;-webkit-text-stroke:.6px var(--ink)} .pcKind{font-size:11px;font-weight:700;opacity:.9}
+  .pcNote{font-size:10.5px;font-weight:900;background:rgba(0,0,0,.4);border-radius:6px;padding:1px 5px} .pcNote.new{background:#47e27a;color:#1b1530}
+  #poWalk{position:fixed;inset:0;z-index:61;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;background:radial-gradient(circle,color-mix(in srgb,var(--rc) 45%,#000) 0%,#000 75%);overflow:hidden}
+  #poWalk .wkRays{position:absolute;inset:-50%;background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--rc) 60%,transparent) 0 6deg,transparent 6deg 18deg);animation:spin 6s linear infinite;opacity:.55}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #poWalk > div:not(.wkRays){position:relative}
+  #poWalk .wkRar{font-size:44px;font-weight:900;letter-spacing:3px;color:var(--rc);-webkit-text-stroke:2px #fff;animation:slam .5s cubic-bezier(.2,1.6,.4,1) both}
+  #poWalk .wkIc{font-size:120px;line-height:1.1;animation:slam .6s .15s cubic-bezier(.2,1.6,.4,1) both;filter:drop-shadow(0 0 30px var(--rc))}
+  #poWalk .wkName{font-size:30px;font-weight:900;animation:slam .5s .3s both} #poWalk .wkKind{max-width:420px;opacity:.85;font-weight:700;animation:slam .5s .4s both}
+  @keyframes slam{from{transform:scale(2.6);opacity:0}}
+  @media (max-width:560px){ .pcard{width:100px;height:146px} .pcIc{font-size:34px} .poPack{width:160px;height:224px} }
   .vsTags{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-top:4px} .vsTags .ptitle,.vsTags .pbadge{font-size:12px;margin:0}
   .vsTeam{display:flex;flex-direction:column;gap:8px} .vsP{display:flex;flex-direction:column;align-items:center;gap:2px}
   .pbadge{display:inline-block;margin-left:6px;font-size:10px;font-weight:900;color:#fff;background:var(--tc,#555);border:2px solid var(--ink);border-radius:7px;padding:0 5px;vertical-align:middle;white-space:nowrap}
@@ -486,7 +542,7 @@
   <div class="tabs lockTabs" id="lockTabs"></div>
   <div id="shopList"></div>
   <p class="stats" id="shopStats"></p>
-  <p class="how" style="margin:0 0 10px">Earn 💰 for buckets, greens, blocks, steals, breaking ankles, and wins. Dupes refund 💰. Saved on this device.</p>
+  <p class="how" style="margin:0 0 10px">Earn 💰 for buckets, greens, blocks, steals, breaking ankles, and wins. Duplicates level up your item and give 💎 shards for the Workshop.</p>
   <button id="shopClose" class="btn big orange">Done</button>
 </div>
 
@@ -546,6 +602,12 @@
   <button id="rankedClose" class="btn big" style="margin-top:10px">Back</button>
 </div>
 
+<div id="packOpen" class="hidden">
+  <div id="poStage"></div>
+  <p id="poHint"></p>
+  <div id="poBtns" class="row hidden"><button id="poAll" class="btn yellow">Reveal all</button><button id="poAgain" class="btn orange hidden">Open another</button><button id="poDone" class="btn hidden">Done</button></div>
+  <div id="poWalk" class="hidden"></div>
+</div>
 <div id="unbox" class="hidden">
   <div class="ubBox">
     <h2 id="ubTitle">Opening…</h2>
@@ -2011,7 +2073,7 @@ function ctlGifts(){
   if(any){ persist(); updateCoinUI(); }
 }
 // 🏷️ admin-given titles shown next to names
-function titleEl(p){ const t=ctlPick(CTL.titles, keysOf(p)); if(!t) return null; const o=typeof t==='string'?{t}:t; if(!o.t) return null;
+function titleEl(p){ const t=ctlPick(CTL.titles, keysOf(p)); if(!t){ const S=p && p.ct && SETS[p.ct]; if(!S) return null; const s=el('span','ptitle', S.icon+' '+S.n.toUpperCase()+' MASTER'); s.style.background=S.col; s.style.color='#fff'; return s; } const o=typeof t==='string'?{t}:t; if(!o.t) return null;
   const s=el('span','ptitle', String(o.t).slice(0,24)); s.style.background=o.c||'#ffd23f'; return s; }
 setTimeout(ctlFetch, 300);
 setInterval(()=>{ if(document.visibilityState==='visible') ctlFetch(); }, 20000);   // admin changes reach everyone within ~20s
@@ -2689,8 +2751,35 @@ const SETS={
   spooky:  {n:'Spooky',   icon:'👻', col:'#5b2a86', price:300, odds:THEME_ODDS},
 };
 const KIND_ONE={cel:'Celly', gfx:'Green FX', js:'Jumpshot', dunk:'Dunk', trail:'Trail'};
-const CRATES=[];
-for(const k in KINDS){
+// 📦 PACKS (replaced the old one-crate-per-category-per-theme setup). Every pack can hold ANY kind of item.
+// The better the pack, the more cards and the higher the guaranteed card. Dupes level your item up + give 💎 shards.
+const PACKS=[
+  {id:'street',  name:'Street Pack',   icon:'🧢', col:'#c98a4b', price:200,  cards:3, odds:{common:58, rare:30, epic:9, legendary:2.4, mythic:.5, exclusive:.08, secret:.02}},
+  {id:'pro',     name:'Pro Pack',      icon:'⭐', col:'#3d8bff', price:600,  cards:4, guar:'epic',      odds:{common:30, rare:40, epic:21, legendary:7, mythic:1.6, exclusive:.3, secret:.1}},
+  {id:'allstar', name:'All-Star Pack', icon:'🌟', col:'#a55eea', price:1500, cards:5, guar:'legendary', odds:{rare:40, epic:38, legendary:17, mythic:4, exclusive:.8, secret:.2}},
+  {id:'legends', name:'Legends Pack',  icon:'👑', col:'#ffb400', price:4000, cards:5, guar:'mythic',    odds:{epic:55, legendary:30, mythic:11, exclusive:3, secret:1}},
+];
+const SPECIAL_PACKS=[
+  {id:'season', name:'Season Pack', icon:'🎟️', col:'#7b5cff', price:0, cards:3, guar:'legendary', odds:{epic:45, legendary:34, mythic:15, exclusive:5, secret:1}, freeOnly:true},
+  {id:'secret', name:'Secret Pack', icon:'🤫', col:'#ff00e5', price:0, cards:1, odds:{secret:100}, freeOnly:true},
+];
+// this week's FEATURED pack: one theme, rotating every Monday, so the shop changes all the time
+const FEAT_SETS=['brainrot','galaxy','anime','arcade','spooky','street'];
+function featWeek(){ return Math.floor((Date.now()/864e5 + 3) / 7); }       // weeks since 1970, starting Mondays
+function featuredPack(){ const k=FEAT_SETS[featWeek()%FEAT_SETS.length], S=SETS[k];
+  return {id:'feat', set:k, name:S.n+' Pack', icon:S.icon, col:S.col, price:900, cards:4, guar:'epic', odds:{rare:44, epic:33, legendary:15, mythic:6, exclusive:1.6, secret:.4}, featured:true}; }
+// old crate ids (saved free crates, pass rewards, admin gifts) still work
+function packId(id){ if(!id) return id; if(id==='season'||id==='secret'||PACKS.some(p=>p.id===id)||id==='feat') return id; if(/-elite$/.test(id)) return 'legends'; return 'pro'; }
+function packOf(id){ id=packId(id); return id==='feat' ? featuredPack() : PACKS.find(p=>p.id===id) || SPECIAL_PACKS.find(p=>p.id===id); }
+// 💎 shards: what a duplicate is worth, and what crafting costs (Vault + Secret items can't be crafted)
+const SHARD_GAIN={common:5, rare:12, epic:30, legendary:80, mythic:200, exclusive:400, secret:1000};
+const CRAFT_COST={common:60, rare:150, epic:400, legendary:1000, mythic:2500};
+// item levels: copies you own. Lv2 at 3 copies, Lv3 (MAX) at 6. Levelled cellys + green FX hit harder for everyone to see
+const LV_AT=[1,3,6];
+// collection book: finishing more of a theme pays out; 100% = a title on your match-up card
+const SET_MILES=[{p:25, rw:{shards:150}, t:'150 💎'}, {p:50, rw:{pack:'pro'}, t:'⭐ Pro Pack'}, {p:75, rw:{pack:'allstar'}, t:'🌟 All-Star Pack'}, {p:100, rw:{pack:'legends', title:1}, t:'👑 Legends Pack + Title'}];
+const CRATES=[...PACKS, ...SPECIAL_PACKS];                 // (the admin + Season Pass still call them CRATES)
+if(0) for(const k in KINDS){
   for(const s in SETS){
     const pool=KINDS[k].list.filter(i=>i.s===s && i.id!==KINDS[k].def); if(pool.length<2) continue;
     const S=SETS[s], odds={}; for(const r in S.odds) if(pool.some(i=>i.r===r)) odds[r]=S.odds[r];
@@ -2699,8 +2788,7 @@ for(const k in KINDS){
   CRATES.push({id:k+'-elite', tab:k, name:'Elite '+KIND_ONE[k]+' Crate', icon:'👑', price:750, col:'#ffb400', pool:[k], odds:{epic:46, legendary:38, mythic:12, exclusive:3, secret:1}});
 }
 // only shows up when a code gave you a free one
-CRATES.push({id:'season', tab:'special', name:'Season Crate', icon:'🎟️', price:0, col:'#7b5cff', pool:['cel','gfx','js','dunk','trail'], odds:{epic:45, legendary:34, mythic:15, exclusive:5, secret:1}, freeOnly:true});   // Season Pass reward
-CRATES.push({id:'secret', tab:'special', name:'Secret Crate', icon:'🤫', price:0, col:'#ff00e5', pool:['cel','gfx','js','dunk','trail'], odds:{secret:100}, freeOnly:true});
+// (Season + Secret packs live in SPECIAL_PACKS above)
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 const itemOf = (kind,id) => KINDS[kind].list.find(i=>i.id===id);
 // random gear for bots (never the top-tier stuff — that's for players to flex)
@@ -2718,7 +2806,12 @@ for(const k in KINDS){
   if(!SAVE.owned[k].includes(SAVE[k])) SAVE[k]=KINDS[k].def;
 }
 SAVE.stats=SAVE.stats||{games:0,wins:0,pts:0,greens:0};
-function myGear(){ const g={}; for(const k in KINDS) g[k]=SAVE[k]; if(SAVE.look) g.lk=SAVE.look; if(SAVE.badge) g.bdg='S'+SAVE.badge.s+':'+SAVE.badge.ti; if(SAVE.tk && (SAVE.tkUnl||[]).includes(SAVE.tk)) g.tk=SAVE.tk; return g; }
+{ const fc={}; for(const [k,n] of Object.entries(SAVE.freeCrates||{})) if(n>0){ const id=packId(k); fc[id]=(fc[id]||0)+n; } SAVE.freeCrates=fc; }
+SAVE.shards=SAVE.shards||0; SAVE.copies=SAVE.copies||{}; SAVE.setClaim=SAVE.setClaim||{};
+function copiesOf(kind,id){ if(!SAVE.owned[kind] || !SAVE.owned[kind].includes(id)) return 0; return Math.max(1, (SAVE.copies[kind]||{})[id]||1); }
+function lvOf(kind,id){ const c=copiesOf(kind,id); return c>=LV_AT[2]?3 : c>=LV_AT[1]?2 : c?1:0; }
+function addCopy(kind,id){ SAVE.copies[kind]=SAVE.copies[kind]||{}; SAVE.copies[kind][id]=copiesOf(kind,id)+1; }
+function myGear(){ const g={}; for(const k in KINDS) g[k]=SAVE[k]; g.lv=String(lvOf('cel',SAVE.cel)||1)+String(lvOf('gfx',SAVE.gfx)||1); if(SAVE.ctitle && SETS[SAVE.ctitle] && setPct(SAVE.ctitle)>=100) g.ct=SAVE.ctitle; if(SAVE.look) g.lk=SAVE.look; if(SAVE.badge) g.bdg='S'+SAVE.badge.s+':'+SAVE.badge.ti; if(SAVE.tk && (SAVE.tkUnl||[]).includes(SAVE.tk)) g.tk=SAVE.tk; return g; }
 function persist(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); }catch(e){} updateCoinUI(); if(typeof scheduleBackup==='function') try{ scheduleBackup(); }catch(e){} }
 function earn(n, why){ if(!V.inRoom || V.phase!=='game') return; const evc=eventNow(), cm=clamp(Math.round(Math.max(+CTL.mult||1, evc&&evc.kind==='coins2'?2:1)),1,5); SAVE.coins+=n*cm; persist(); V.coinPops.push({n:n*cm, why, t:1.8});   // 🎉 admin coin events
   if(typeof questProgress==='function'){ questProgress(why==='TIP'?'BLOCK_TIP':why); if(why==='DUNK'||why==='THREE'||why==='BUCKET') questProgress('PTS', n/2); if(why==='THREE'||why==='DUNK') questProgress('BUCKET_ANY'); } }
@@ -2932,7 +3025,20 @@ function cellyLift(c){
   if(c.kind==='superform'||c.kind==='powerup') return Math.abs(Math.sin(c.t*40))*2;
   return 0;
 }
+function lvFor(id, kind){ const inf=infoOf(id), v=inf && inf.lv; if(typeof v!=='string') return 1; const d=+v[kind==='cel'?0:1]; return d>=1&&d<=3 ? d : 1; }
+function levelFx(x,y,z,L){
+  if(L<2) return;
+  spray(x,y,z,L>=3?44:24,['#ffd23f','#fff3b0','#ffb400'],L>=3?420:300,{s:7});
+  ring3d(x,y+10,z,70,'#ffd23f',{ax:Math.PI/2,ay:0,sx:2.6,sy:0,t:.8,w:5});
+  if(L>=3){
+    ring3d(x,y+10,z,110,'#ff3b6b',{ax:Math.PI/2,ay:0,sx:3.2,sy:0,t:1,w:4});
+    for(let i=0;i<26;i++) P(x+rnd(-26,26),y-20,z+rnd(-10,10),{vx:rnd(-20,20),vy:rnd(420,760),vz:0,life:rnd(.6,1),max:1,c:pick(['#ffd23f','#fff','#ff9de2']),s:rnd(5,9),g:-120});
+    camFlashes(10); V.flash=Math.max(V.flash||0,.3);
+    floatText('★★★',x,y+250,z,'#ffd23f',30,1);
+  }
+}
 function cellyTick(c, q, dt){
+  if(!c.lvDone){ c.lvDone=true; levelFx(q[Q.x],q[Q.y]+60,q[Q.z],lvFor(c.id,'cel')); }
   const x=q[Q.x], z=q[Q.z], t=c.t, f=q[Q.face], first=!c.started; c.started=true; c.acc=(c.acc||0)+dt;
   c.ac=c.ac||{};                                   // one clock per interval, so a celly can run several rhythms at once
   const every=s=>{ const a=(c.ac[s]=(c.ac[s]||0)+dt); if(a>=s){ c.ac[s]=Math.min(a-s,s); return true; } return false; };
@@ -3301,7 +3407,7 @@ function handleEvent(e, demo){
         floatText(lab[0], p.x, p.y+180, p.z, lab[1], c<0.4?24:18, 1.3);
         if(e.f) floatText(e.f, p.x, p.y+158, p.z, e.f==='IN RHYTHM'?'#9fe7ff':'#ffb3a8', 15, 1.2); }
       if(p){ const good=e.q==='perfect'; floatText(good?'GREEN!':e.q, p.x, p.y+215, p.z, good?'#47e27a':'#ffd23f', good?32:20);
-        if(good){ greenFx(((infoOf(e.id)||{}).gfx)||'basic', p.x, p.y, p.z, attackHoop(p.team).cx, nm(e.id)); if(mine(e.id)){ earn(3,'GREEN'); SAVE.stats.greens++; persist(); } } }
+        if(good){ greenFx(((infoOf(e.id)||{}).gfx)||'basic', p.x, p.y, p.z, attackHoop(p.team).cx, nm(e.id)); levelFx(p.x, p.y+150, p.z, lvFor(e.id,'gfx')); if(mine(e.id)){ earn(3,'GREEN'); SAVE.stats.greens++; persist(); } } }
       if(loud) sfx('shoot');
       if(e.id===net.myId && V.meterShow) V.meterShow.released=performance.now();
       break;
@@ -4066,7 +4172,7 @@ function drawPlayer(q, hasBall, S, B, refl){
   ctx.globalAlpha = (ck==='glitch' && Math.random()<.18) ? A*.35 : A;
   if(ck==='glitch' && Math.random()<.25) ctx.translate(rnd(-9,9),0);
   if(ck==='timestop' && !refl){ ctx.fillStyle='rgba(255,255,255,.18)'; ctx.beginPath(); ctx.arc(0,-80,95,0,TAU); ctx.fill(); }
-  const auraC = (sp && sp.aura) || (ck==='westmode' ? '0,229,255' : ck==='ascend' ? '255,225,120' : ck==='superform' ? '255,210,60' : ck==='instinct' ? '210,235,255' : ck==='aurafarm' ? '200,120,255' : ck==='powerup' ? '255,220,120' : ck==='domain' ? '255,40,90' : ck==='ninetails' ? '255,100,20' : ck==='sundance' ? '255,200,90' : ck==='possessed' ? '220,0,40' : ck==='redeye' ? '255,30,30' : ck==='finalboss' ? '0,255,90' : null);
+  const auraC = (sp && sp.aura) || (cel && !ck.match(/^(westmode|ascend|superform)$/) && lvFor(id,'cel')>=3 ? '255,215,90' : null) || (ck==='westmode' ? '0,229,255' : ck==='ascend' ? '255,225,120' : ck==='superform' ? '255,210,60' : ck==='instinct' ? '210,235,255' : ck==='aurafarm' ? '200,120,255' : ck==='powerup' ? '255,220,120' : ck==='domain' ? '255,40,90' : ck==='ninetails' ? '255,100,20' : ck==='sundance' ? '255,200,90' : ck==='possessed' ? '220,0,40' : ck==='redeye' ? '255,30,30' : ck==='finalboss' ? '0,255,90' : null);
   if(auraC && !refl){ const g=ctx.createRadialGradient(0,-85,10,0,-85,110); g.addColorStop(0,`rgba(${auraC},.55)`); g.addColorStop(1,`rgba(${auraC},0)`); ctx.fillStyle=g; ctx.fillRect(-110,-200,220,220); }
   if(sp && sp.flip) ctx.scale(-1,1);
   if(sp && sp.rot) ctx.rotate(sp.rot);
@@ -5085,9 +5191,9 @@ setInterval(()=>{ const n=seasonNow().n; if(SAVE.season && SAVE.season.n<n && !V
 const PASS_XP=400, PASS_MAX=50;                 // ~1-2 games a level: maxing it in a 2-week season takes real grinding
 const PASS_REW={8:{tk:'lock'}, 16:{tk:'handles'}, 24:{tk:'play'}, 32:{tk:'slash'}, 40:{tk:'shot'},
   5:{crate:'season'}, 13:{crate:'season'}, 21:{crate:'season'}, 29:{crate:'season'}, 37:{crate:'season'}, 45:{crate:'season', coins:3000},
-  10:{crate:'cel-elite', coins:1000}, 20:{crate:'gfx-elite', coins:2000}, 30:{crate:'dunk-elite', coins:3000}, 35:{item:'passprism', coins:2500}, 50:{item:'passmax', coins:10000}};
+  10:{crate:'allstar', coins:1000}, 20:{crate:'legends', coins:2000}, 30:{crate:'legends', coins:3000}, 35:{item:'passprism', coins:2500}, 50:{item:'passmax', coins:10000}};
 function passRew(L){ return PASS_REW[L] || {coins: 500+Math.floor(L/5)*250}; }
-function passDesc(r){ const out=[]; if(r.tk) out.push(TK[r.tk].icon+' '+TK[r.tk].n+' takeover'); if(r.crate){ const c=CRATES.find(x=>x.id===r.crate); out.push('🎁 '+(c?c.name:'Crate')); }
+function passDesc(r){ const out=[]; if(r.tk) out.push(TK[r.tk].icon+' '+TK[r.tk].n+' takeover'); if(r.crate){ const c=packOf(r.crate); out.push('🎁 '+(c?c.name:'Pack')); }
   if(r.item){ const it=itemOf('trail',r.item); if(it) out.push(it.icon+' '+it.name+' trail'); } if(r.coins) out.push('💰'+r.coins); return out.join(' + '); }
 function passNow(){ const n=seasonNow().n; if(!SAVE.pass || SAVE.pass.s!==n) SAVE.pass={s:n, xp:0, lvl:1}; return SAVE.pass; }
 function passLevel(xp){ return Math.min(PASS_MAX, 1+Math.floor(xp/PASS_XP)); }
@@ -5096,7 +5202,7 @@ function passXP(n, why){
   for(let L=before+1; L<=after; L++){ const r=passRew(L);
     if(r.tk){ SAVE.tkUnl=SAVE.tkUnl||[]; if(!SAVE.tkUnl.includes(r.tk)) SAVE.tkUnl.push(r.tk); if(!SAVE.tk) SAVE.tk=r.tk; }
     if(r.coins) SAVE.coins+=r.coins;
-    if(r.crate){ SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[r.crate]=(SAVE.freeCrates[r.crate]||0)+1; }
+    if(r.crate){ const id=packId(r.crate); SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[id]=(SAVE.freeCrates[id]||0)+1; }
     if(r.item && !SAVE.owned.trail.includes(r.item)) SAVE.owned.trail.push(r.item);
     got.push('Lv '+L+': '+passDesc(r)); }
   P.lvl=after; persist();
@@ -5140,10 +5246,10 @@ function eventGame(win){ const e=eventNow(); if(!e || !e.goal || !e.goal.n) retu
 // a reward item is "kind:id" (any celly / green FX / jumpshot / dunk / trail); older events used a plain trail id
 function rewItem(v){ if(!v) return null; const [k,id]=String(v).includes(':') ? String(v).split(':') : ['trail', v]; const it=KINDS[k] && itemOf(k,id); return it ? {kind:k, id, it} : null; }
 function rewText(rw){ rw=rw||{}; const out=[]; if(+rw.coins) out.push('💰'+rw.coins); const r=rewItem(rw.item); if(r) out.push(r.it.icon+' '+r.it.name);
-  if(rw.crate){ const c=CRATES.find(x=>x.id===rw.crate); if(c) out.push('🎁 '+c.name); } return out.join(' + '); }
+  if(rw.crate){ const c=packOf(rw.crate); if(c) out.push('🎁 '+c.name); } return out.join(' + '); }
 function rewGive(rw){ rw=rw||{}; if(+rw.coins) SAVE.coins=Math.max(0, SAVE.coins+Math.round(+rw.coins));
   const r=rewItem(rw.item); if(r && !SAVE.owned[r.kind].includes(r.id)) SAVE.owned[r.kind].push(r.id);
-  if(rw.crate && CRATES.some(c=>c.id===rw.crate)){ SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[rw.crate]=(SAVE.freeCrates[rw.crate]||0)+1; } }
+  if(rw.crate && packOf(rw.crate)){ const id=packId(rw.crate); SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[id]=(SAVE.freeCrates[id]||0)+1; } }
 function eventClaim(){ const e=eventNow(), pr=evProg(); if(!e || !pr || pr.claimed || !e.goal || pr.n<e.goal.n) return;
   pr.claimed=true; const rw=e.reward||{}; rewGive(rw);
   persist(); passXP(150); try{ confetti(0); }catch(x){} toast('🎁 Event reward: '+rewText(rw)); ctlBanner(); }
@@ -5565,7 +5671,7 @@ function duoVsBots(){
 }
 
 // ---------------------------------------------------------------- crates + locker
-let shopMain='crates', lockTab='gfx', lastCrate=null, ubWin=null;
+let shopMain='crates', lockTab='gfx', lastCrate=null, ubWin=null, shopTab='packs', wsKind='cel';
 function updateCoinUI(){ document.querySelectorAll('.coinCount').forEach(e=>e.textContent=SAVE.coins);
   try{ const hr=document.getElementById('homeRank'); if(hr && SAVE.rank){ const k=SAVE.rank.rr+'|'+(SAVE.rank.games||0); if(hr.dataset.k!==k){ hr.dataset.k=k; hr.innerHTML=''; hr.append(rankBadge(SAVE.rank.rr)); } } }catch(e){} }
 function openShop(mode){ if(typeof mode==='string') shopMain=mode; else shopMain='crates'; if(shopMain==='locker') lockTab='look';
@@ -5581,15 +5687,16 @@ function renderShop(){
   V.lookOpen = shopMain==='locker' && lockTab==='look';
   // category tabs (shared by Shop + Locker); the Shop also has a ✨ Special tab
   const tabs=$('#lockTabs'); tabs.innerHTML='';
-  const hasFree=Object.values(SAVE.freeCrates||{}).some(n=>n>0);
-  if(lockTab==='special' && !hasFree) lockTab='gfx';
-  const cats=[...(shopMain==='locker'?['look']:[]), ...Object.keys(KINDS), ...(shopMain==='crates' && hasFree?['special']:[])];
+  if(shopMain==='crates'){
+    for(const [k,lab] of [['packs','📦 Packs'],['work','🛠️ Workshop'],['book','📖 Collection'+(setsClaimable()?' ❗':'')]]){ const b=el('button', k===shopTab?'on':'', lab); b.onclick=()=>{ shopTab=k; renderShop(); }; tabs.append(b); }
+  }
+  const cats=shopMain==='locker' ? ['look', ...Object.keys(KINDS)] : [];
   for(const k of cats){ const lab = k==='special' ? '✨ Special' : k==='look' ? '🧍 Look' : KINDS[k].icon+' '+KINDS[k].label+(shopMain==='locker' ? ' '+SAVE.owned[k].length+'/'+KINDS[k].list.length : '');
     const b=el('button', k===lockTab?'on':'', lab); b.onclick=()=>{ lockTab=k; renderShop(); }; tabs.append(b); }
-  const box=$('#shopList'); box.innerHTML=''; box.className = shopMain==='crates' ? 'crateGrid' : 'lockGrid';
-  if(shopMain==='crates') renderCrates(box); else renderLocker(box);
+  const box=$('#shopList'); box.innerHTML=''; box.className = shopMain==='crates' ? (shopTab==='packs'?'packGrid':'lockGrid') : 'lockGrid';
+  if(shopMain==='crates'){ if(shopTab==='work') renderWorkshop(box); else if(shopTab==='book') renderBook(box); else renderCrates(box); } else renderLocker(box);
   const st=SAVE.stats, owned=Object.values(SAVE.owned).reduce((s,a)=>s+a.length,0);
-  $('#shopStats').textContent=`Collection ${owned}/${ITEMS.length} · Crates opened ${st.crates||0} · Wins ${st.wins}`;
+  $('#shopStats').textContent=`Collection ${owned}/${ITEMS.length} · 💎 ${SAVE.shards} shards · Packs opened ${st.crates||0}`;
 }
 // promo codes. Only SHA-256 fingerprints live in this file, never the codes themselves,
 // so nobody can read them out of the page source. Each one works once per device.
@@ -5612,7 +5719,7 @@ async function redeemCode(raw){
   if(rw.coins){ SAVE.coins+=rw.coins; persist(); toast('🎟️ +'+rw.coins+' 💰 added!'); confetti(0); }
   if(rw.freeCrate){
     SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[rw.freeCrate]=(SAVE.freeCrates[rw.freeCrate]||0)+1;
-    persist(); V.flash=.5; confetti(1); toast('🎁 FREE Secret Crate added — open it below!'); shopMain='crates'; lockTab='special';
+    persist(); V.flash=.5; confetti(1); toast('🎁 FREE Secret Pack added — open it in the Shop!'); shopMain='crates'; shopTab='packs';
   }
   renderShop(); return true;
 }
@@ -5654,7 +5761,7 @@ function admTap2(btn, fn){ if(btn.dataset.arm==='1'){ btn.dataset.arm=''; btn.te
 function admItemSelect(){ const sel=el('select'); const o0=el('option','','No item'); o0.value=''; sel.append(o0);
   for(const k in KINDS){ const g=document.createElement('optgroup'); g.label=KINDS[k].icon+' '+KINDS[k].label;
     for(const it of KINDS[k].list){ if(it.id===KINDS[k].def) continue; const o=el('option','', it.icon+' '+it.name+' ('+it.r+')'); o.value=k+':'+it.id; g.append(o); } sel.append(g); } return sel; }
-function admCrateSelect(){ const sel=el('select'); const o0=el('option','','No crate'); o0.value=''; sel.append(o0); for(const c of CRATES){ const o=el('option','', c.icon+' '+c.name); o.value=c.id; sel.append(o); } return sel; }
+function admCrateSelect(){ const sel=el('select'); const o0=el('option','','No pack'); o0.value=''; sel.append(o0); for(const c of CRATES){ const o=el('option','', c.icon+' '+c.name); o.value=c.id; sel.append(o); } return sel; }
 function admSec(title, sub){ const s=el('section','adSec'); s.append(el('h4','',title)); if(sub) s.append(el('p','adSub',sub)); return s; }
 function admInput(ph, val, max){ const i=el('input'); i.placeholder=ph; if(val!==undefined) i.value=val; i.maxLength=max||80; i.setAttribute('autocomplete','off'); i.addEventListener('keydown',e=>e.stopPropagation()); return i; }
 function renderAdmin(){
@@ -5773,8 +5880,8 @@ function renderAdmin(){
       if(!rows.length && !qq) list.append(el('li','gap', LB.rows ? 'No ranked players found' : 'Loading leaderboard…')); };
     drawList();
     if(ADM.sel){ const k=ADM.sel.key, box=el('div','adSel'); box.append(el('b','', '🎯 '+ADM.sel.label));
-      const gi=admItemSelect(), gc=admCrateSelect(), gib=el('button','btn yellow','🎁 Send item / crate');
-      gib.onclick=()=>{ if(!gi.value && !gc.value) return toast('Pick an item or a crate'); admSave({['gifts/'+k+'/'+gid()]:{item:gi.value||'', crate:gc.value||'', msg:'Gift from the Buckets admin!'}}, '🎁 Sent'); };
+      const gi=admItemSelect(), gc=admCrateSelect(), gib=el('button','btn yellow','🎁 Send item / pack');
+      gib.onclick=()=>{ if(!gi.value && !gc.value) return toast('Pick an item or a pack'); admSave({['gifts/'+k+'/'+gid()]:{item:gi.value||'', crate:gc.value||'', msg:'Gift from the Buckets admin!'}}, '🎁 Sent'); };
       const c=admInput('Coins (use - to take)', '', 7), cm=admInput('Message (optional)', '', 60), cb=el('button','btn yellow','🎁 Send coins'); c.inputMode='numeric';
       cb.onclick=()=>{ const n=Math.round(+c.value||0); if(!n) return toast('Type an amount'); admSave({['gifts/'+k+'/'+gid()]:{coins:n, msg:cm.value.trim()}}, '🎁 Sent'); };
       const rr=admInput('Set rank RR (0-9999)', '', 5), rb=el('button','btn','🏆 Set rank'); rr.inputMode='numeric';
@@ -5817,7 +5924,31 @@ function renderCrates(box){
   go.onclick=()=>{ redeemCode(inp.value); inp.value=''; };
   inp.addEventListener('keydown', e=>{ e.stopPropagation(); if(e.key==='Enter') go.click(); });
   cc.append(inp,go); box.append(cc);
-  for(const cr of CRATES.filter(c=>c.tab===lockTab && (!c.freeOnly || ((SAVE.freeCrates||{})[c.id]>0)))){
+  // 🎁 free daily pack
+  const day=new Date().toDateString(), dailyOk=SAVE.dailyPack!==day;
+  { const d=el('div','dailyCard'+(dailyOk?' ready':'')); d.append(el('div','dIcon','🎁'), el('div','dTxt', dailyOk ? 'FREE daily Street Pack is ready!' : 'Free Street Pack again tomorrow'));
+    const b=el('button','btn '+(dailyOk?'yellow':''), dailyOk?'Open free':'✓ Claimed'); b.disabled=!dailyOk; b.onclick=()=>{ if(SAVE.dailyPack===day) return; SAVE.dailyPack=day; persist(); openPack('street', true); }; d.append(b); box.append(d); }
+  const shard=el('div','shardBar'); shard.append(el('b','','💎 '+SAVE.shards+' shards'), el('small','',' · from duplicates · spend them in the 🛠️ Workshop')); box.append(shard);
+  // free packs you've been given (Season Pass, admin gifts, codes)
+  for(const [id,n] of Object.entries(SAVE.freeCrates||{})) if(n>0 && packOf(id)) box.append(packCard(packOf(id), n));
+  const fp=featuredPack(), left=Math.ceil((featWeek()+1)*7 - (Date.now()/864e5+3)); box.append(packCard(fp, 0, '🔥 FEATURED · '+left+(left===1?' day':' days')+' left'));
+  for(const pk of PACKS) box.append(packCard(pk, 0));
+}
+function packCard(pk, free, tag){
+  const c=el('div','packCard'+(pk.featured?' feat':'')); c.style.setProperty('--pc', pk.col);
+  if(tag) c.append(el('div','pTag', tag));
+  const art=el('div','packArt'); art.append(el('div','paIcon', pk.icon), el('div','paName', pk.name.replace(' Pack','').toUpperCase()), el('div','paSub', pk.cards+' CARDS')); c.append(art);
+  if(pk.guar) c.append(el('div','pGuar', '1 '+RAR[pk.guar].n+' or better guaranteed'));
+  else if(pk.id==='secret') c.append(el('div','pGuar', '1 SECRET item'));
+  else c.append(el('div','pGuar', 'Anything can drop'));
+  const odds=el('div','odds'); for(const r of RORDER){ if(!pk.odds[r]) continue; const ch=el('span','oc', RAR[r].n+' '+pk.odds[r]+'%'); ch.style.background=RAR[r].c; odds.append(ch); } c.append(odds);
+  if(pk.set){ const pool=packPool(pk), have=pool.filter(i=>SAVE.owned[i.kind].includes(i.id)).length; c.append(el('small','pHave', SETS[pk.set].icon+' only '+SETS[pk.set].n+' items · '+have+'/'+pool.length+' owned')); }
+  const b=el('button','btn '+(free?'yellow':'orange'), free ? '🎁 Open FREE ('+free+')' : 'Open · 💰 '+pk.price);
+  b.disabled=!free && (pk.freeOnly || SAVE.coins<pk.price); b.onclick=()=>openPack(pk.id); c.append(b);
+  return c;
+}
+function renderCratesOld(box){
+  for(const cr of []){
     const locked = cr.code && !SAVE.vault;
     const card=el('div','crate'+(cr.id==='vault'?' vault':cr.id==='secret'?' secretc':'')); card.style.setProperty('--cc', cr.col);
     const inside=ITEMS.filter(i=>!i.noCrate && cr.pool.includes(i.kind) && (!cr.set||i.s===cr.set) && i.id!==KINDS[i.kind].def && cr.odds[i.r]);
@@ -5879,6 +6010,49 @@ function drawLookPreview(){
   catch(e){ console.warn(e); }
   finally{ ctx=main; }
 }
+// 🛠️ WORKSHOP: spend 💎 shards to craft exactly what you want, or add copies to level it up
+function renderWorkshop(box){
+  const top=el('div','shardBar'); top.append(el('b','','💎 '+SAVE.shards+' shards'), el('small','',' · craft any item, or add a copy to level up (Lv2 at '+LV_AT[1]+' copies, MAX at '+LV_AT[2]+')')); box.append(top);
+  const kt=el('div','wsKinds'); for(const k in KINDS){ const b=el('button','btn tiny'+(k===wsKind?' yellow':''), KINDS[k].icon+' '+KINDS[k].label); b.onclick=()=>{ wsKind=k; renderShop(); }; kt.append(b); } box.append(kt);
+  const list=KINDS[wsKind].list.filter(i=>CRAFT_COST[i.r] && !i.noCrate && i.id!==KINDS[wsKind].def)
+    .sort((a,b)=>(lvOf(wsKind,a.id)>=3)-(lvOf(wsKind,b.id)>=3) || RORDER.indexOf(b.r)-RORDER.indexOf(a.r));
+  for(const it of list){
+    const lv=lvOf(wsKind,it.id), own=lv>0, cost=CRAFT_COST[it.r];
+    const d=el('div','item r-'+it.r+(own?'':' locked')); d.style.setProperty('--rc', RAR[it.r].c);
+    d.append(el('div','rtag', RAR[it.r].n), el('div','ic', it.icon), el('b','', it.name), lvStars(lv, wsKind, it.id));
+    const b=el('button','btn '+(lv>=3?'':'yellow'), lv>=3 ? 'MAX ✓' : (own?'⬆ Add copy':'🛠️ Craft')+' · 💎 '+cost);
+    b.disabled=lv>=3 || SAVE.shards<cost;
+    b.onclick=()=>{ if(SAVE.shards<cost || lvOf(wsKind,it.id)>=3) return; SAVE.shards-=cost;
+      if(!own){ SAVE.owned[wsKind].push(it.id); toast('🛠️ Crafted '+it.icon+' '+it.name+'!'); } else { const l0=lvOf(wsKind,it.id); addCopy(wsKind,it.id); const l1=lvOf(wsKind,it.id); toast(l1>l0 ? '⬆️ '+it.name+' is now LEVEL '+l1+'!' : '+1 copy of '+it.name); if(l1>l0){ confetti(0); V.flash=.4; } }
+      persist(); syncGear(); renderShop(); };
+    d.append(b); box.append(d);
+  }
+}
+// ★ level display: Lv1-3 stars + copies toward the next level
+function lvStars(lv, kind, id){ const w=el('div','lvStars'); if(!lv){ w.textContent='Not owned'; return w; }
+  w.textContent='★'.repeat(lv)+'☆'.repeat(3-lv)+(lv<3 ? ' · '+copiesOf(kind,id)+'/'+LV_AT[lv]+' copies' : ' · MAX'); if(lv>=3) w.classList.add('max'); return w; }
+// 📖 COLLECTION BOOK: every theme is a set; finishing more of it pays out
+function setItems(k){ return ITEMS.filter(i=>i.s===k && !i.noCrate && i.id!==KINDS[i.kind].def); }
+function setPct(k){ const a=setItems(k); if(!a.length) return 0; return Math.floor(a.filter(i=>SAVE.owned[i.kind].includes(i.id)).length/a.length*100); }
+function setsClaimable(){ for(const k in SETS){ const pc=setPct(k); for(const m of SET_MILES) if(pc>=m.p && !(SAVE.setClaim[k]||{})[m.p]) return true; } return false; }
+function renderBook(box){
+  box.append(el('p','how','Collect every item in a theme. Each step pays out, and finishing a set gives you its MASTER title on your match-up card.'));
+  for(const k in SETS){ const S=SETS[k], a=setItems(k), have=a.filter(i=>SAVE.owned[i.kind].includes(i.id)).length, pc=setPct(k);
+    const d=el('div','setCard'); d.style.setProperty('--sc', S.col);
+    d.append(el('div','setHead', S.icon+' '+S.n+' · '+have+'/'+a.length));
+    const bar=el('div','setBar'), fill=el('div','setFill'); fill.style.width=pc+'%'; bar.append(fill); d.append(bar);
+    const row=el('div','setMiles');
+    for(const m of SET_MILES){ const got=!!(SAVE.setClaim[k]||{})[m.p], can=pc>=m.p && !got;
+      const b=el('button','btn tiny'+(can?' yellow':''), (got?'✓ ':can?'🎁 ':'🔒 ')+m.p+'% · '+m.t); b.disabled=!can;
+      b.onclick=()=>{ if(!(setPct(k)>=m.p) || (SAVE.setClaim[k]||{})[m.p]) return; SAVE.setClaim[k]=SAVE.setClaim[k]||{}; SAVE.setClaim[k][m.p]=true;
+        if(m.rw.shards) SAVE.shards+=m.rw.shards; if(m.rw.pack){ SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[m.rw.pack]=(SAVE.freeCrates[m.rw.pack]||0)+1; }
+        if(m.rw.title){ SAVE.ctitle=k; }
+        persist(); syncGear(); confetti(0); toast('📖 '+S.n+' '+m.p+'%: '+m.t+(m.rw.pack?' (in Packs)':'')); renderShop(); };
+      row.append(b); }
+    d.append(row);
+    if(pc>=100){ const t=el('button','btn tiny'+(SAVE.ctitle===k?'':' yellow'), SAVE.ctitle===k?'Title equipped ✓':'Wear '+S.n.toUpperCase()+' MASTER title'); t.disabled=SAVE.ctitle===k; t.onclick=()=>{ SAVE.ctitle=k; persist(); syncGear(); renderShop(); }; d.append(t); }
+    box.append(d); }
+}
 function renderLocker(box){
   if(lockTab==='look'){ renderLook(box); return; }
   // owned stuff first, rarest first; locked ones after
@@ -5887,16 +6061,94 @@ function renderLocker(box){
   for(const it of list){
     const own=SAVE.owned[lockTab].includes(it.id), eq=SAVE[lockTab]===it.id;
     const d=el('div','item r-'+it.r+(eq?' eq':'')+(own?'':' locked')); d.style.setProperty('--rc', RAR[it.r].c);
-    d.append(el('div','rtag', RAR[it.r].n), el('div','ic', own?it.icon:'❔'), el('b','', own?it.name:'???'), el('div','stag', (SETS[it.s]||{icon:'',n:''}).icon+' '+((SETS[it.s]||{}).n||'')), el('small','', own?it.desc:(it.r==='secret'?'🤫 Only in the Secret Crate':it.r==='exclusive'?'Only in the Buckets Vault':'Found in crates')));
+    d.append(el('div','rtag', RAR[it.r].n), el('div','ic', own?it.icon:'❔'), el('b','', own?it.name:'???'), el('div','stag', (SETS[it.s]||{icon:'',n:''}).icon+' '+((SETS[it.s]||{}).n||'')), el('small','', own?it.desc:(it.r==='secret'?'🤫 Secret: Legends Packs (1%) or the Secret Pack':it.r==='exclusive'?'Vault: very rare in packs':'Packs or the 🛠️ Workshop')));
     if(own){
       const row=el('div','row'), pv=el('button','btn pv','▶'), b=el('button','btn'+(eq?'':' yellow'), eq?'Equipped ✓':'Equip');
       pv.title='Preview'; pv.onclick=()=>previewItem(lockTab,it.id);
       b.disabled=eq; b.onclick=()=>{ SAVE[lockTab]=it.id; persist(); syncGear(); renderShop(); };
-      row.append(pv,b); d.append(row);
+      row.append(pv,b); d.append(lvStars(lvOf(lockTab,it.id), lockTab, it.id), row);
     }
     box.append(d);
   }
 }
+function packPool(pk){ return ITEMS.filter(i=>!i.noCrate && i.id!==KINDS[i.kind].def && (!pk.set || i.s===pk.set)); }
+function rollRarity(odds, items, minR){
+  const lo=minR?RORDER.indexOf(minR):0, avail=RORDER.filter((r,i)=>i>=lo && odds[r] && items.some(x=>x.r===r));
+  if(!avail.length) return null; const tot=avail.reduce((t,r)=>t+odds[r],0); let x=Math.random()*tot;
+  for(const r of avail){ x-=odds[r]; if(x<0) return r; } return avail[avail.length-1]; }
+function rollPack(pk){
+  const items=packPool(pk), out=[];
+  for(let i=0;i<pk.cards;i++){
+    const last=i===pk.cards-1, need=last && pk.guar && !out.some(c=>RORDER.indexOf(c.r)>=RORDER.indexOf(pk.guar));
+    let r=rollRarity(pk.odds, items, need?pk.guar:null) || rollRarity(pk.odds, items);
+    out.push(pick(items.filter(x=>x.r===r)));
+  }
+  return out.sort((a,b)=>RORDER.indexOf(a.r)-RORDER.indexOf(b.r));      // best card last
+}
+let PK=null;
+function openPack(id, dailyFree){
+  const pk=packOf(id); if(!pk) return;
+  SAVE.freeCrates=SAVE.freeCrates||{};
+  if(!dailyFree){
+    if(SAVE.freeCrates[pk.id]>0) SAVE.freeCrates[pk.id]--;
+    else { if(pk.freeOnly){ toast('No free '+pk.name+'s left'); return; } if(SAVE.coins<pk.price){ toast('Not enough 💰 — go win some games'); return; } SAVE.coins-=pk.price; }
+  }
+  const cards=rollPack(pk).map(it=>{
+    const own=SAVE.owned[it.kind].includes(it.id), l0=lvOf(it.kind,it.id);
+    let shards=0; if(own){ addCopy(it.kind,it.id); shards=SHARD_GAIN[it.r]||0; SAVE.shards+=shards; } else SAVE.owned[it.kind].push(it.id);
+    return {...it, isNew:!own, shards, lvUp:own && lvOf(it.kind,it.id)>l0 ? lvOf(it.kind,it.id) : 0};
+  });
+  SAVE.stats.crates=(SAVE.stats.crates||0)+1; questProgress('CRATE');
+  persist(); syncGear();                                         // saved before the show, so closing the app can't lose it
+  PK={pk, cards, flipped:0}; showPackOpen();
+}
+function showPackOpen(){
+  const o=$('#packOpen'), pk=PK.pk, best=PK.cards[PK.cards.length-1];
+  o.classList.remove('hidden'); o.style.setProperty('--pc', pk.col); o.style.setProperty('--bc', RAR[best.r].c);
+  const stage=$('#poStage'); stage.innerHTML=''; $('#poBtns').classList.add('hidden'); $('#poWalk').classList.add('hidden');
+  // 1) the pack shakes, glowing the colour of the best card inside (a tease), then bursts
+  const pack=el('div','poPack'); pack.append(el('div','paIcon',pk.icon), el('div','paName',pk.name.toUpperCase()), el('div','paSub','TAP TO OPEN'));
+  if(RORDER.indexOf(best.r)>=3) pack.classList.add('hot');
+  stage.append(pack); sfx('dribble');
+  let opened=false; const burst=()=>{ if(opened) return; opened=true; pack.classList.add('burst'); V.flash=.5; setTimeout(dealCards, 520); };
+  pack.onclick=burst; setTimeout(()=>pack.classList.add('shake'), 150); setTimeout(burst, 2300);
+}
+function dealCards(){
+  const stage=$('#poStage'); stage.innerHTML=''; const row=el('div','poCards'); stage.append(row);
+  PK.cards.forEach((c,i)=>{ const card=el('div','pcard r-'+c.r); card.style.setProperty('--rc', RAR[c.r].c); card.style.animationDelay=(i*0.12)+'s';
+    const inner=el('div','pcIn'), back=el('div','pcBack'), front=el('div','pcFront');
+    back.append(el('div','pcLogo','🏀'), el('div','pcQ','?'));
+    front.append(el('div','pcRar', RAR[c.r].n.toUpperCase()), el('div','pcIc', c.icon), el('div','pcName', c.name), el('div','pcKind', KIND_ONE[c.kind]),
+      el('div','pcNote'+(c.isNew?' new':''), c.isNew ? '✨ NEW' : c.lvUp ? '⬆ LEVEL '+c.lvUp+'!  +'+c.shards+' 💎' : 'DUPLICATE +'+c.shards+' 💎'));
+    inner.append(back, front); card.append(inner); row.append(card);
+    card.onclick=()=>flipCard(card, c);
+  });
+  $('#poBtns').classList.remove('hidden'); $('#poAll').classList.remove('hidden'); updatePoBtns();
+}
+function flipCard(card, c){
+  if(card.classList.contains('flip')){ if(!c.isNew && !c.lvUp) return; SAVE[c.kind]=c.id; persist(); syncGear(); toast('Equipped '+c.icon+' '+c.name); return; }
+  card.classList.add('flip'); PK.flipped++; sfx(RORDER.indexOf(c.r)>=3?'slam':'swish');
+  if(RORDER.indexOf(c.r)>=3) walkout(c); else if(RORDER.indexOf(c.r)>=2) V.flash=.25;
+  updatePoBtns();
+}
+// LEGENDARY+ pull: the screen goes dark, light beams in the card's colour, the card slams in big
+function walkout(c){
+  const w=$('#poWalk'); w.className='r-'+c.r; w.style.setProperty('--rc', RAR[c.r].c); w.innerHTML='';
+  w.append(el('div','wkRays'), el('div','wkRar', RAR[c.r].n.toUpperCase()+'!'), el('div','wkIc', c.icon), el('div','wkName', c.name), el('div','wkKind', KINDS[c.kind].label+' · '+c.desc));
+  w.classList.remove('hidden'); confetti(0); V.flash=.7; V.shake=Math.max(V.shake||0,.5);
+  const close=()=>w.classList.add('hidden'); w.onclick=close; setTimeout(close, RORDER.indexOf(c.r)>=5?3200:2400);
+}
+function updatePoBtns(){
+  const all=PK.flipped>=PK.cards.length, pk=PK.pk, fr=(SAVE.freeCrates||{})[pk.id]||0;
+  $('#poAll').classList.toggle('hidden', all);
+  $('#poAgain').classList.toggle('hidden', !all); $('#poDone').classList.toggle('hidden', !all);
+  $('#poAgain').textContent = fr ? 'Open another · FREE ('+fr+')' : pk.freeOnly ? 'None left' : 'Open another · 💰 '+pk.price;
+  $('#poAgain').disabled = !fr && (pk.freeOnly || SAVE.coins<pk.price);
+  $('#poHint').textContent = all ? 'Tap a NEW card to equip it' : 'Tap the cards to flip them';
+}
+$('#poAll').onclick=()=>{ const cards=[...document.querySelectorAll('#poStage .pcard')]; let t=0; cards.forEach((card,i)=>{ if(card.classList.contains('flip')) return; setTimeout(()=>flipCard(card, PK.cards[i]), t); t+=RORDER.indexOf(PK.cards[i].r)>=3?2600:260; }); };
+$('#poAgain').onclick=()=>{ $('#poWalk').classList.add('hidden'); openPack(PK.pk.id); };
+$('#poDone').onclick=()=>{ $('#packOpen').classList.add('hidden'); $('#poWalk').classList.add('hidden'); PK=null; renderShop(); };
 function rollCrate(cr){
   // starter items everyone already owns never come out of crates
   const items=ITEMS.filter(i=>!i.noCrate && cr.pool.includes(i.kind) && (!cr.set || i.s===cr.set) && i.id!==KINDS[i.kind].def);
@@ -5958,7 +6210,7 @@ function previewItem(kind,id){
   let q=null; if(V.phase==='game' && V.inRoom) q=S.p.find(p=>p[0]===net.myId);
   if(!q){ const hid=S.b[3]===0?S.b[4]:null; q=S.p.find(p=>p[0]===hid)||S.p[0]; }
   if(!q) return;
-  if(kind==='gfx'){ greenFx(id,q[Q.x],q[Q.y],q[Q.z],attackHoop(q[Q.team]).cx); floatText('GREEN!',q[Q.x],q[Q.y]+215,q[Q.z],'#47e27a',32); return; }
+  if(kind==='gfx'){ greenFx(id,q[Q.x],q[Q.y],q[Q.z],attackHoop(q[Q.team]).cx); levelFx(q[Q.x],q[Q.y]+150,q[Q.z],lvOf('gfx',id)); floatText('GREEN!',q[Q.x],q[Q.y]+215,q[Q.z],'#47e27a',32); return; }
   if(kind==='cel'){ V.celly={id:q[0],kind:id,t:0}; return; }
   // jumpshots / dunks / trails: make a demo player actually do it
   if(V.phase==='game'){ toast('Equipped styles show up on your next shot'); return; }
@@ -5991,7 +6243,7 @@ const QUEST_POOL=[
   {id:'ankles', t:'Break ankles {n} times',         n:2,  k:'ANKLES', r:220, i:'🦴'},
   {id:'froze',  t:'Freeze defenders with a hesi {n} times', n:2, k:'FROZE', r:200, i:'🥶'},
   {id:'ranked', t:'Play {n} ranked games',          n:2,  k:'RANKED', r:220, i:'👑'},
-  {id:'crates', t:'Open {n} crates',                n:2,  k:'CRATE',  r:100, i:'📦'},
+  {id:'crates', t:'Open {n} packs',                  n:2,  k:'CRATE',  r:100, i:'📦'},
 ];
 const QUEST_BONUS=300;                                       // finish all three
 function questDay(){ return Math.floor((Date.now()-new Date().getTimezoneOffset()*60000)/86400000); }   // local midnight
