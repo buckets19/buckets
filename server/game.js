@@ -13,7 +13,7 @@ const NO_GEAR = new Set(['t','name','pk','duo','r2','q','exp','create','party','
 const rid = n => { const A = 'abcdefghjkmnpqrstuvwxyz23456789'; let s = ''; for (let i = 0; i < n; i++) s += A[Math.floor(Math.random() * A.length)]; return s; };
 
 export class GameRoom {
-  constructor(state, env) { this.state = state; this.env = env; this.reset(); }
+  constructor(state, env) { this.state = state; this.env = env; this.simT = 0; this.reset(); }
   reset() {
     this.G = { phase: 'lobby', players: new Map(), toWin: 11, diff: 'pro', winBy2: false, ranked: false, ranked2: false, party: false, srch: false };
     this.socks = new Map();      // id -> { ws, away }
@@ -149,9 +149,10 @@ export class GameRoom {
   tick() {
     const RM = this.RM; if (!RM) { clearInterval(this.loop); this.loop = null; return; }
     const now = Date.now(); this.acc += Math.min(250, now - this.last) / 1000; this.last = now;
-    try { while (this.acc >= 1 / 60) { this.acc -= 1 / 60; S.stepMatch(RM, 1 / 60); } } catch (e) { console.log('sim error', e && e.stack); }
+    try { while (this.acc >= 1 / 60) { this.acc -= 1 / 60; S.stepMatch(RM, 1 / 60); this.simT += 1000 / 60; } } catch (e) { console.log('sim error', e && e.stack); }
     if (RM.phase === 'over' && !this.overSeen) { this.overSeen = true; if (this.q) RM.phaseT = 1e6; }    // ranked queue games stay on the results
-    this.all(S.makeSnap(RM, true)); RM.events = [];
+    const snap = S.makeSnap(RM, true); snap.st = Math.round(this.simT); if (!snap.ev.length) delete snap.ev;   // st: game time of this update (60 steps/s vs 50 updates/s, so wall time would wobble)
+    this.all(snap); RM.events = [];
     if (RM.phase === 'over' && RM.phaseT <= 0) this.toLobby();
   }
   toLobby() {

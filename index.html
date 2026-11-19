@@ -1061,7 +1061,10 @@ function movePlayer(M,p,dt){
   // a joiner's own iPad decides where they are while they're just running around (no lag for them).
   // The host follows it within reason; during moves, shots, stumbles etc. the host stays in charge.
   if(!p.bot && p.authAt && ground && !locked && p.burstT<=0 && p.hesiT<=0 && p.stumbleT<=0 && p.downT<=0 && p.act!=='reach' && performance.now()-p.authAt<450){
-    const ex=p.authX-p.x, ez=p.authZ-p.z, d=hyp(ex,ez);
+    // the iPad's position report is up to ~50ms old by now: carry it forward at the current speed, so a
+    // steady run isn't tugged back a little between reports (that tug looked like a stutter to everyone)
+    const age=Math.min(0.08, (performance.now()-p.authAt)/1000);
+    const ex=p.authX+p.vx*age-p.x, ez=p.authZ+p.vz*age-p.z, d=hyp(ex,ez);
     if(d<180){ const k=Math.min(1,dt*12); p.x+=ex*k; p.z+=ez*k; }
   }
   p.z=clamp(p.z+p.vz*dt, -HALF_D+12, HALF_D-12);
@@ -2069,7 +2072,7 @@ function SrvConn(code, hello){
     const fin=v=>{ if(done) return; done=true; clearTimeout(to); res(v); };
     const to=setTimeout(()=>{ c.open=false; clearInterval(c.hb); try{ ws&&ws.close(); }catch(e){} fin({fail:'timeout'}); }, 7000);
     const open=re=>{
-      let w; try{ w=new WebSocket(srvWS()+'/g/'+encodeURIComponent(code)); }catch(e){ if(!welcomed){ c.open=false; fin({fail:'error'}); } else setTimeout(retry,1000); return; }
+      c.tryAt=performance.now(); let w; try{ w=new WebSocket(srvWS()+'/g/'+encodeURIComponent(code)); }catch(e){ if(!welcomed){ c.open=false; fin({fail:'error'}); } else setTimeout(retry,1000); return; }
       ws=w;
       w.onopen=()=>{ try{ w.send(JSON.stringify({...hello, t:'hello', ...(re?{rejoin:1, id:c.myId}:{})})); }catch(e){} };
       w.onmessage=ev=>{ if(ws!==w) return; let d; try{ d=JSON.parse(ev.data); }catch(e){ return; } if(!d || typeof d!=='object') return; c.lastIn=performance.now();
@@ -2082,15 +2085,21 @@ function SrvConn(code, hello){
         if(d.t==='qnone'){ c.qnone=true; c.kill(); return; }
         c.emit('data', d); };
       w.onclose=()=>{ if(ws!==w) return; if(!welcomed){ c.open=false; clearInterval(c.hb); fin({fail:'closed'}); return; } if(!c.open) return;
-        if(!lostAt){ lostAt=performance.now(); V.netLost=true; } setTimeout(retry, 600); };
+        if(!lostAt){ lostAt=performance.now(); V.netLost=true; } setTimeout(retry, performance.now()-lostAt<1500 ? 150 : 700); };   // first tries right away
       w.onerror=()=>{};
     };
     const retry=()=>{ if(!c.open) return; if(performance.now()-lostAt>15000){ V.netLost=false; c.kill(); return; } open(true); };
-    c.send=d=>{ if(c.open && ws && ws.readyState===1) try{ ws.send(JSON.stringify(d)); }catch(e){} };
+    // stick updates while the Wi-Fi is backed up would just arrive late in a pile: skip them (the next one has the newest)
+    c.send=d=>{ if(c.open && ws && ws.readyState===1) try{ if(d.t==='in' && ws.bufferedAmount>1500) return; ws.send(JSON.stringify(d)); }catch(e){} };
     c.raw=c.send;
     c.close=()=>{ if(!c.open) return; c.send({t:'bye'}); const w=ws; ws=null; setTimeout(()=>{ try{ w&&w.close(); }catch(e){} },100); c.kill(); };
-    // the server talks at least every 2s (pongs, updates): 5s of silence = the link died, reconnect
-    c.hb=setInterval(()=>{ if(!c.open || !welcomed || lostAt) return; if(performance.now()-c.lastIn>5000){ lostAt=performance.now(); V.netLost=true; const w=ws; ws=null; try{ w.onclose=null; w.close(); }catch(e){} retry(); } }, 1000);
+    // the server talks at least every 2s (pongs) and 50x a second in a game: silence = the link died (phone switched
+    // Wi-Fi, school network hiccup), so reconnect fast instead of waiting on a dead socket
+    const drop=()=>{ const w=ws; ws=null; try{ if(w){ w.onclose=null; w.onmessage=null; w.close(); } }catch(e){} };
+    c.hb=setInterval(()=>{ if(!c.open || !welcomed) return; const now=performance.now();
+      // reconnecting: this try hasn't got back in after 2.5s (the Wi-Fi died again mid-handshake): start a fresh one
+      if(lostAt){ if(now-(c.tryAt||0)>2500){ drop(); retry(); } return; }
+      if(now-c.lastIn>(V.phase==='game'?1600:5000)){ lostAt=now; V.netLost=true; drop(); retry(); } }, 250);
     open(false);
   });
 }
@@ -2340,7 +2349,18 @@ function onClientData(d){
   else if(d.t==='pong'){ const r=performance.now()-(+d.ts||0); if(r>0 && r<5000){ V.rtt=V.rtt?lerp(V.rtt,r,.3):r; diagAdd('ping', r); } }
   else if(d.t==='migrate') migrateTo(String(d.code||'').slice(0,8), d.tag);
   else if(d.t==='s'){
-    d.rt=performance.now(); if(V.lastSnap && V.lastSnap.rt && !d.rs){ const g=Math.min(400,d.rt-V.lastSnap.rt); V.gapA=V.gapA?lerp(V.gapA,g,.06):g; V.gapJ=V.gapJ!==undefined?lerp(V.gapJ,Math.abs(g-V.gapA),.06):10; }
+    d.rt=performance.now();
+    if(typeof d.st==='number'){
+      // game server: play updates out on the server's own even spacing (Wi-Fi bunches them up), measured
+      // from the fastest trip seen. late = how far behind that this one landed (= the jitter to buffer for)
+      const raw=d.rt-d.st;
+      if(V.stOff===undefined || raw<V.stOff || d.st<(V.lastSt||0)){ V.stOff=raw; V.stMin=1e9; V.stMinT=d.rt; }
+      const late=Math.min(150, raw-V.stOff); V.stMin=Math.min(V.stMin, late);
+      if(d.rt-V.stMinT>2000){ if(V.stMin>2) V.stOff+=V.stMin*0.6; V.stMin=1e9; V.stMinT=d.rt; }   // the route got slower: follow it
+      V.late=V.late===undefined?late:lerp(V.late, late, late>V.late?.15:.04);   // rises fast, settles in ~1s after a spike
+      V.lastSt=d.st; d.rt=d.st+V.stOff;
+    }
+    else if(V.lastSnap && V.lastSnap.rt && !d.rs){ const g=Math.min(400,d.rt-V.lastSnap.rt); V.gapA=V.gapA?lerp(V.gapA,g,.06):g; V.gapJ=V.gapJ!==undefined?lerp(V.gapJ,Math.abs(g-V.gapA),.06):10; }
     V.snaps.push(d); if(V.snaps.length>40) V.snaps.shift(); V.lastSnap=d;
     if(d.ev) d.ev.forEach(e=>handleEvent(e,false));
   }
@@ -3612,7 +3632,8 @@ function predictLocalMove(kind){
     if(has){ const h=attackHoop(me[Q.team]), v=hoopVec({x:me[Q.x],z:me[Q.z]},h); if((a.x*v.ux+a.z*v.uz)/l<-0.5) return; }   // stepback: let the host do it
     V.pred.bdx=a.x/l; V.pred.bdz=a.z/l; V.pred.bt=BURST_T; V.pred.cdT=performance.now()+BURST_CD*1000; }
 }
-function interpDelay(){ const g=V.gapA||(isRelay()?50:25), j=V.gapJ||10; return clamp(g+2.2*j+12, isRelay()?70:srvRoom()?28:45, 260); }   // game server: 50 updates/s, so a smaller buffer
+function interpDelay(){ if(srvRoom() && V.late!==undefined) return clamp(26+1.8*V.late, 30, 260);   // game server: 20ms between updates + the jitter
+  const g=V.gapA||(isRelay()?50:25), j=V.gapJ||10; return clamp(g+2.2*j+12, isRelay()?70:srvRoom()?28:45, 260); }   // game server: 50 updates/s, so a smaller buffer
 function rrect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function txt(s,x,y,size,color,align='center',stroke=6){
   ctx.font=`700 ${size}px ${FONT}`; ctx.textAlign=align; ctx.textBaseline='middle'; ctx.lineJoin='round';

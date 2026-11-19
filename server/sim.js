@@ -448,7 +448,10 @@ function movePlayer(M,p,dt){
   // a joiner's own iPad decides where they are while they're just running around (no lag for them).
   // The host follows it within reason; during moves, shots, stumbles etc. the host stays in charge.
   if(!p.bot && p.authAt && ground && !locked && p.burstT<=0 && p.hesiT<=0 && p.stumbleT<=0 && p.downT<=0 && p.act!=='reach' && performance.now()-p.authAt<450){
-    const ex=p.authX-p.x, ez=p.authZ-p.z, d=hyp(ex,ez);
+    // the iPad's position report is up to ~50ms old by now: carry it forward at the current speed, so a
+    // steady run isn't tugged back a little between reports (that tug looked like a stutter to everyone)
+    const age=Math.min(0.08, (performance.now()-p.authAt)/1000);
+    const ex=p.authX+p.vx*age-p.x, ez=p.authZ+p.vz*age-p.z, d=hyp(ex,ez);
     if(d<180){ const k=Math.min(1,dt*12); p.x+=ex*k; p.z+=ez*k; }
   }
   p.z=clamp(p.z+p.vz*dt, -HALF_D+12, HALF_D-12);
