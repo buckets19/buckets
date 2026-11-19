@@ -1962,8 +1962,8 @@ function ctlBanner(){
   if(ev){ const box=el('div','ctlMsg evBox'); box.style.background='linear-gradient(90deg,#c77dff,#7b5cff)'; box.style.color='#fff';
     const what = ev.kind==='rr2' ? ' · ⚡ 2x RR on ranked wins' : ev.kind==='coins2' ? ' · 💰 2x coins' : '';
     box.append(el('b','', '🎪 '+String(ev.name||'EVENT').slice(0,40)+what), el('small','', ' · ends in '+ago2(+ev.end-Date.now())));
-    if(ev.goal && ev.goal.n){ const pr=evProg(), done=pr.n>=ev.goal.n, rw=ev.reward||{}, it=rw.item&&itemOf('trail',rw.item);
-      const line=el('div','evLine'); line.append(el('span','', (ev.goal.t==='win'?'Win ':'Play ')+ev.goal.n+' ranked game'+(ev.goal.n>1?'s':'')+' → '+(+rw.coins?'💰'+rw.coins+' ':'')+(it?it.icon+' '+it.name:'')));
+    if(ev.goal && ev.goal.n){ const pr=evProg(), done=pr.n>=ev.goal.n, rw=ev.reward||{};
+      const line=el('div','evLine'); line.append(el('span','', (ev.goal.t==='win'?'Win ':'Play ')+ev.goal.n+' ranked game'+(ev.goal.n>1?'s':'')+' → '+rewText(rw)));
       const bar=el('div','evBar'), fill=el('div','evFill'); fill.style.width=Math.round(pr.n/ev.goal.n*100)+'%'; bar.append(fill); line.append(bar, el('small','', pr.claimed?'✅ claimed':pr.n+'/'+ev.goal.n));
       if(done && !pr.claimed){ const cl=el('button','btn tiny yellow','🎁 Claim'); cl.onclick=eventClaim; line.append(cl); }
       box.append(line); }
@@ -1976,9 +1976,9 @@ function ctlGifts(){
   SAVE.gifts=SAVE.gifts||[]; let any=false;
   for(const key of [...myKeys(), '*']){ const g=G0[key]; if(!g || typeof g!=='object') continue;
     for(const id in g){ if(SAVE.gifts.includes(id)) continue; const x=g[id]||{}; SAVE.gifts.push(id); any=true;
-      const coins=Math.round(+x.coins||0); if(coins) SAVE.coins=Math.max(0, SAVE.coins+coins);
+      const coins=Math.round(+x.coins||0); rewGive({coins, item:x.item, crate:x.crate});
       if(x.rr!==undefined && x.rr!==null && x.rr!=='' && Number.isFinite(+x.rr)){ SAVE.rank.rr=clamp(Math.round(+x.rr),0,9999); SAVE.rank.best=Math.max(SAVE.rank.best||0, SAVE.rank.rr); }
-      toast('🎁 '+(x.msg||'Gift from the Buckets admin!')+(coins?' '+(coins>0?'+':'')+coins+' 💰':'')); try{ confetti(0); }catch(e){} } }
+      toast('🎁 '+(x.msg||'Gift from the Buckets admin!')+' '+(rewText({coins:Math.max(0,coins), item:x.item, crate:x.crate})||(coins<0?coins+' 💰':''))); try{ confetti(0); }catch(e){} } }
   if(SAVE.gifts.length>300) SAVE.gifts=SAVE.gifts.slice(-300);
   if(any){ persist(); updateCoinUI(); }
 }
@@ -1986,7 +1986,7 @@ function ctlGifts(){
 function titleEl(p){ const t=ctlPick(CTL.titles, keysOf(p)); if(!t) return null; const o=typeof t==='string'?{t}:t; if(!o.t) return null;
   const s=el('span','ptitle', String(o.t).slice(0,24)); s.style.background=o.c||'#ffd23f'; return s; }
 setTimeout(ctlFetch, 300);
-setInterval(()=>{ if(document.visibilityState==='visible') ctlFetch(); }, 60000);
+setInterval(()=>{ if(document.visibilityState==='visible') ctlFetch(); }, 20000);   // admin changes reach everyone within ~20s
 addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && Date.now()-CTL_AT>20000) ctlFetch(); });
 // 📡 live room count for the admin: hosts of online rooms check in every 30s (no codes, just counts)
 const LIVE_ID=Math.random().toString(36).slice(2,12);
@@ -4937,10 +4937,16 @@ function eventNow(){ const e=CTL.event; return e && e.id && +e.end>Date.now() ? 
 function evProg(){ const e=eventNow(); if(!e) return null; if(!SAVE.evp || SAVE.evp.id!==e.id) SAVE.evp={id:e.id, n:0, claimed:false}; return SAVE.evp; }
 function eventGame(win){ const e=eventNow(); if(!e || !e.goal || !e.goal.n) return; const pr=evProg(); if(pr.claimed) return;
   if(e.goal.t==='play' || (e.goal.t==='win' && win)){ pr.n=Math.min(e.goal.n, pr.n+1); persist(); if(pr.n>=e.goal.n) toast('🎪 Event challenge done! Claim your reward on the home screen'); } }
+// a reward item is "kind:id" (any celly / green FX / jumpshot / dunk / trail); older events used a plain trail id
+function rewItem(v){ if(!v) return null; const [k,id]=String(v).includes(':') ? String(v).split(':') : ['trail', v]; const it=KINDS[k] && itemOf(k,id); return it ? {kind:k, id, it} : null; }
+function rewText(rw){ rw=rw||{}; const out=[]; if(+rw.coins) out.push('💰'+rw.coins); const r=rewItem(rw.item); if(r) out.push(r.it.icon+' '+r.it.name);
+  if(rw.crate){ const c=CRATES.find(x=>x.id===rw.crate); if(c) out.push('🎁 '+c.name); } return out.join(' + '); }
+function rewGive(rw){ rw=rw||{}; if(+rw.coins) SAVE.coins=Math.max(0, SAVE.coins+Math.round(+rw.coins));
+  const r=rewItem(rw.item); if(r && !SAVE.owned[r.kind].includes(r.id)) SAVE.owned[r.kind].push(r.id);
+  if(rw.crate && CRATES.some(c=>c.id===rw.crate)){ SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[rw.crate]=(SAVE.freeCrates[rw.crate]||0)+1; } }
 function eventClaim(){ const e=eventNow(), pr=evProg(); if(!e || !pr || pr.claimed || !e.goal || pr.n<e.goal.n) return;
-  pr.claimed=true; const rw=e.reward||{}; if(+rw.coins) SAVE.coins+=Math.round(+rw.coins);
-  if(rw.item && itemOf('trail', rw.item) && !SAVE.owned.trail.includes(rw.item)) SAVE.owned.trail.push(rw.item);
-  persist(); passXP(150); try{ confetti(0); }catch(x){} toast('🎁 Event reward: '+(+rw.coins?'+'+rw.coins+' 💰 ':'')+(rw.item&&itemOf('trail',rw.item)?itemOf('trail',rw.item).icon+' '+itemOf('trail',rw.item).name+' trail':'')); ctlBanner(); }
+  pr.claimed=true; const rw=e.reward||{}; rewGive(rw);
+  persist(); passXP(150); try{ confetti(0); }catch(x){} toast('🎁 Event reward: '+rewText(rw)); ctlBanner(); }
 setInterval(()=>{ if(eventNow() || $('#ctlBanner').querySelector('.evBox')) ctlBanner(); }, 30000);
 
 // ----- ranked panel
@@ -5429,6 +5435,14 @@ function openAdmin(){ if(!ADM.k) return; $('#home').classList.add('hidden'); $('
 function closeAdmin(){ $('#adminPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); }
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 function admSeg(opts, cur, on){ const r=el('div','adSeg'); for(const [v,label] of opts){ const b=el('button','btn tiny'+(String(cur)===String(v)?' on':''), label); b.onclick=()=>on(v); r.append(b); } return r; }
+// risky buttons: first tap arms, second tap (within 4s) does it. No popups: Safari can silently block them.
+function admTap2(btn, fn){ if(btn.dataset.arm==='1'){ btn.dataset.arm=''; btn.textContent=btn.dataset.lbl; fn(); return; }
+  btn.dataset.lbl=btn.textContent; btn.dataset.arm='1'; btn.textContent='⚠️ Tap again to confirm'; setTimeout(()=>{ if(btn.dataset.arm==='1'){ btn.dataset.arm=''; btn.textContent=btn.dataset.lbl; } },4000); }
+// item + crate pickers for rewards
+function admItemSelect(){ const sel=el('select'); const o0=el('option','','No item'); o0.value=''; sel.append(o0);
+  for(const k in KINDS){ const g=document.createElement('optgroup'); g.label=KINDS[k].icon+' '+KINDS[k].label;
+    for(const it of KINDS[k].list){ if(it.id===KINDS[k].def) continue; const o=el('option','', it.icon+' '+it.name+' ('+it.r+')'); o.value=k+':'+it.id; g.append(o); } sel.append(g); } return sel; }
+function admCrateSelect(){ const sel=el('select'); const o0=el('option','','No crate'); o0.value=''; sel.append(o0); for(const c of CRATES){ const o=el('option','', c.icon+' '+c.name); o.value=c.id; sel.append(o); } return sel; }
 function admSec(title, sub){ const s=el('section','adSec'); s.append(el('h4','',title)); if(sub) s.append(el('p','adSub',sub)); return s; }
 function admInput(ph, val, max){ const i=el('input'); i.placeholder=ph; if(val!==undefined) i.value=val; i.maxLength=max||80; i.setAttribute('autocomplete','off'); i.addEventListener('keydown',e=>e.stopPropagation()); return i; }
 function renderAdmin(){
@@ -5483,8 +5497,8 @@ function renderAdmin(){
   { const s=admSec('🚨 EMERGENCY');
     const em=admInput('Message shown to players (optional)', '', 120);
     const end=el('button','btn red','⛔ End ALL online games now'), rel=el('button','btn','🔄 Make everyone reload (push my update)');
-    end.onclick=()=>{ if(confirm('End every online game right now? Players go back to the home screen.')) admSave({endAt:{'.sv':'timestamp'}, endMsg:em.value.trim()}, '⛔ Ending all online games'); };
-    rel.onclick=()=>{ if(confirm('Make every open copy of Buckets reload? (Players mid-game reload when their game ends.)')) admSave({reloadAt:{'.sv':'timestamp'}}, '🔄 Everyone will reload'); };
+    end.onclick=()=>admTap2(end, ()=>admSave({endAt:{'.sv':'timestamp'}, endMsg:em.value.trim()}, '⛔ Ending all online games'));
+    rel.onclick=()=>admTap2(rel, ()=>admSave({reloadAt:{'.sv':'timestamp'}}, '🔄 Everyone will reload'));
     s.append(em, el('div','adBtns'), ); s.lastChild.append(end, rel);
     B.append(s); }
   // ---- 📢 announcement + 🎉 events
@@ -5501,19 +5515,19 @@ function renderAdmin(){
     const r3=el('div','row'); r3.append(lb, lbb); e.append(r3);
     const ga=admInput('Coins for EVERYONE', '', 7), gm=admInput('Message (optional)', '', 60), gb=el('button','btn yellow','🎁 Gift everyone');
     ga.inputMode='numeric';
-    gb.onclick=()=>{ const n=Math.round(+ga.value||0); if(!n) return toast('Type an amount'); if(confirm('Give '+n+' coins to EVERY player (once each)?')) admSave({['gifts/*/'+gid()]:{coins:n, msg:gm.value.trim()||'Gift for everyone from the Buckets admin!'}}, '🎁 Gift sent to everyone'); };
+    gb.onclick=()=>{ const n=Math.round(+ga.value||0); if(!n) return toast('Type an amount'); admTap2(gb, ()=>admSave({['gifts/*/'+gid()]:{coins:n, msg:gm.value.trim()||'Gift for everyone from the Buckets admin!'}}, '🎁 Gift sent to everyone')); };
     const r4=el('div','row'); r4.append(ga, gm, gb); e.append(r4);
     B.append(e); }
   // ---- 🎪 events
   { const s=admSec('🎪 EVENTS', 'Everyone sees the event on their home screen. Challenges count ranked games (1v1 + 2v2).');
     const ev=eventNow();
     if(ev){ const cur=el('div','adSel'); cur.append(el('b','', '🔴 LIVE: '+(ev.name||'Event')+' · ends in '+ago2(+ev.end-Date.now())));
-      cur.append(el('small','', (ev.kind==='rr2'?'2x RR on ranked wins':ev.kind==='coins2'?'2x coins':'challenge only')+(ev.goal&&ev.goal.n?' · '+(ev.goal.t==='win'?'win ':'play ')+ev.goal.n+' ranked → '+((ev.reward||{}).coins||0)+' coins'+((ev.reward||{}).item?' + '+(itemOf('trail',ev.reward.item)||{}).name:''):'')));
-      const stop=el('button','btn red','⏹ End event now'); stop.onclick=()=>{ if(confirm('End the event for everyone?')) admSave({event:null}, 'Event ended'); }; cur.append(stop); s.append(cur); }
+      cur.append(el('small','', (ev.kind==='rr2'?'2x RR on ranked wins':ev.kind==='coins2'?'2x coins':'challenge only')+(ev.goal&&ev.goal.n?' · '+(ev.goal.t==='win'?'win ':'play ')+ev.goal.n+' ranked → '+rewText(ev.reward):'')));
+      const stop=el('button','btn red','⏹ End event now'); stop.onclick=()=>admTap2(stop, ()=>admSave({event:null}, '⏹ Event ended for everyone')); cur.append(stop); s.append(cur); }
     const H=3600000, midnight=()=>{ const d=new Date(); d.setHours(23,59,0,0); return d.getTime(); };
     const go=(o,msg)=>admSave({event:{id:gid(), ...o}}, msg||'🎪 Event started');
     const pre=el('div','adBtns');
-    const P=(label,o)=>{ const b=el('button','btn tiny',label); b.onclick=()=>{ if(!ev || confirm('Replace the event that\u2019s running?')) go(o()); }; pre.append(b); };
+    const P=(label,o)=>{ const b=el('button','btn tiny',label); b.onclick=()=>{ if(!ev) go(o()); else admTap2(b, ()=>go(o())); }; pre.append(b); };
     P('⚡ 2x RR · 1 hour', ()=>({name:'2x RR HOUR', kind:'rr2', end:Date.now()+H}));
     P('⚡ 2x RR · rest of today', ()=>({name:'2x RR DAY', kind:'rr2', end:midnight()}));
     P('💰 2x Coins · 1 hour', ()=>({name:'DOUBLE COINS', kind:'coins2', end:Date.now()+H}));
@@ -5521,18 +5535,18 @@ function renderAdmin(){
     P('🌌 Weekend: play 10 ranked → 6000 + Aurora', ()=>({name:'WEEKEND GRIND', kind:'rr2', end:Date.now()+48*H, goal:{t:'play', n:10}, reward:{coins:6000, item:'evaurora'}}));
     s.append(el('label','','Quick start'), pre);
     // custom builder
-    const nm=admInput('Event name (e.g. LUNCH RUSH)', '', 30), kind=el('select'), dur=el('select'), goal=el('select'), n=admInput('How many', '3', 3), coins=admInput('Reward coins', '2000', 6), item=el('select');
+    const nm=admInput('Event name (e.g. LUNCH RUSH)', '', 30), kind=el('select'), dur=el('select'), goal=el('select'), n=admInput('How many', '3', 3), coins=admInput('Reward coins', '2000', 6), item=admItemSelect(), crate=admCrateSelect();
     for(const [v,t] of [['rr2','⚡ 2x RR on ranked wins'],['coins2','💰 2x coins'],['','Challenge only']]){ const o=el('option','',t); o.value=v; kind.append(o); }
     for(const [v,t] of [[H,'1 hour'],[3*H,'3 hours'],['today','Rest of today'],[48*H,'2 days'],[168*H,'1 week']]){ const o=el('option','',t); o.value=v; dur.append(o); }
     for(const [v,t] of [['','No challenge'],['play','Play N ranked'],['win','Win N ranked']]){ const o=el('option','',t); o.value=v; goal.append(o); }
-    for(const [v,t] of [['','No item'],['evspark','⚡ Event Spark trail'],['evaurora','🌌 Aurora trail']]){ const o=el('option','',t); o.value=v; item.append(o); }
+
     n.inputMode='numeric'; coins.inputMode='numeric';
     const start=el('button','btn yellow','🎪 Start event');
     start.onclick=()=>{ const end = dur.value==='today' ? midnight() : Date.now()+(+dur.value);
       const o={name:(nm.value.trim()||'EVENT').slice(0,30), kind:kind.value, end};
-      if(goal.value){ o.goal={t:goal.value, n:Math.max(1,Math.min(50,Math.round(+n.value||1)))}; o.reward={coins:Math.max(0,Math.min(100000,Math.round(+coins.value||0))), item:item.value||''}; }
-      if(!ev || confirm('Replace the event that\u2019s running?')) go(o); };
-    const r1=el('div','row'); r1.append(nm, kind); const r2=el('div','row'); r2.append(dur, goal, n); const r3=el('div','row'); r3.append(coins, item);
+      if(goal.value){ o.goal={t:goal.value, n:Math.max(1,Math.min(50,Math.round(+n.value||1)))}; o.reward={coins:Math.max(0,Math.min(100000,Math.round(+coins.value||0))), item:item.value||'', crate:crate.value||''}; }
+      if(!ev) go(o); else admTap2(start, ()=>go(o)); };
+    const r1=el('div','row'); r1.append(nm, kind); const r2=el('div','row'); r2.append(dur, goal, n); const r3=el('div','row'); r3.append(coins, item, crate);
     s.append(el('label','','Make your own'), r1, r2, r3, start);
     B.append(s); }
   // ---- 👥 players
@@ -5547,6 +5561,8 @@ function renderAdmin(){
       if(!rows.length && !qq) list.append(el('li','gap', LB.rows ? 'No ranked players found' : 'Loading leaderboard…')); };
     drawList();
     if(ADM.sel){ const k=ADM.sel.key, box=el('div','adSel'); box.append(el('b','', '🎯 '+ADM.sel.label));
+      const gi=admItemSelect(), gc=admCrateSelect(), gib=el('button','btn yellow','🎁 Send item / crate');
+      gib.onclick=()=>{ if(!gi.value && !gc.value) return toast('Pick an item or a crate'); admSave({['gifts/'+k+'/'+gid()]:{item:gi.value||'', crate:gc.value||'', msg:'Gift from the Buckets admin!'}}, '🎁 Sent'); };
       const c=admInput('Coins (use - to take)', '', 7), cm=admInput('Message (optional)', '', 60), cb=el('button','btn yellow','🎁 Send coins'); c.inputMode='numeric';
       cb.onclick=()=>{ const n=Math.round(+c.value||0); if(!n) return toast('Type an amount'); admSave({['gifts/'+k+'/'+gid()]:{coins:n, msg:cm.value.trim()}}, '🎁 Sent'); };
       const rr=admInput('Set rank RR (0-9999)', '', 5), rb=el('button','btn','🏆 Set rank'); rr.inputMode='numeric';
@@ -5555,7 +5571,7 @@ function renderAdmin(){
       const tb=el('button','btn','🏷️ Give title'); tb.onclick=()=>{ if(!tt.value.trim()) return toast('Type a title'); admSave({['titles/'+k]:{t:tt.value.trim().slice(0,24), c:tc.value}}, '🏷️ Title given'); };
       const banned=!!(CTL.banned||{})[k], bb=el('button','btn '+(banned?'':'red'), banned?'✅ Unban from online':'🚫 Ban from online');
       bb.onclick=()=>admSave({['banned/'+k]: banned?null:true}, banned?'Unbanned':'🚫 Banned from online');
-      for(const row of [[c,cm,cb],[rr,rb],[tt,tc,tb]]){ const r=el('div','row'); r.append(...row); box.append(r); }
+      for(const row of [[c,cm,cb],[gi,gc,gib],[rr,rb],[tt,tc,tb]]){ const r=el('div','row'); r.append(...row); box.append(r); }
       if(k[0]==='p'){ const hid=!!(CTL.lbHide||{})[k], hb=el('button','btn tiny', hid?'👁 Show on leaderboard':'🙈 Hide from leaderboard'); hb.onclick=()=>admSave({['lbHide/'+k]: hid?null:true}, hid?'Shown again':'Hidden from the leaderboard'); box.append(hb); }
       box.append(bb); s.append(box); }
     // current titles / bans / gifts
@@ -5567,7 +5583,7 @@ function renderAdmin(){
       x.onclick=()=>admSave({['titles/'+k]:null}, 'Title removed'); li.append(t, el('span','',' '+label(k)+' '), x); cur.append(li); } }
     if(bans.length){ cur.append(el('h5','','🚫 Banned from online')); for(const k of bans){ const li=el('div','adItem'), x=el('button','btn tiny','Unban'); x.onclick=()=>admSave({['banned/'+k]:null}, 'Unbanned'); li.append(el('span','',label(k)+' '), x); cur.append(li); } }
     if(gifts.length){ cur.append(el('h5','','🎁 Gifts (each player gets each one once)')); for(const [k,id,x] of gifts.slice(-15)){ const li=el('div','adItem'), d=el('button','btn tiny','✕');
-      d.onclick=()=>admSave({['gifts/'+k+'/'+id]:null}, 'Gift removed'); li.append(el('span','', label(k)+': '+(x.coins?x.coins+' 💰 ':'')+(x.rr!==undefined?'RR→'+x.rr+' ':'')+(x.msg?'“'+x.msg+'” ':'')), d); cur.append(li); } }
+      d.onclick=()=>admSave({['gifts/'+k+'/'+id]:null}, 'Gift removed'); li.append(el('span','', label(k)+': '+(rewText({coins:x.coins>0?x.coins:0, item:x.item, crate:x.crate})||'')+' '+(x.coins<0?x.coins+' 💰 ':'')+(x.rr!==undefined?'RR→'+x.rr+' ':'')+(x.msg?'“'+x.msg+'” ':'')), d); cur.append(li); } }
     if(cur.children.length) s.append(cur);
     B.append(s); }
   // ---- 🔒
