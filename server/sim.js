@@ -177,7 +177,7 @@ function hoopVec(p, h){ const dx=h.cx-p.x, dz=-p.z, d=hyp(dx,dz)||1; return {dx,
 //  • Create space the right way (stepback / hesi) and you shoot "in rhythm" = a bigger green.
 const HEAVE_D = COURT_W/2 - HOOPS[0].cx + 40;                       // past half court
 // coverage -> share of the open green you keep, by defender distance
-const CONTEST_PTS=[[44,0],[52,0.18],[58,0.28],[68,0.40],[84,0.55],[102,0.70],[130,0.87],[150,1]];   // 44 = bodies touching = smothered
+const CONTEST_PTS=[[38,0],[45,0.18],[51,0.3],[62,0.43],[78,0.58],[96,0.74],[120,0.9],[140,1]];   // 38 = bodies touching; smothered only when you're right in his chest
 function contestAt(d){ if(d<=CONTEST_PTS[0][0]) return 0; for(let i=1;i<CONTEST_PTS.length;i++){ const [d1,v1]=CONTEST_PTS[i]; if(d<=d1){ const [d0,v0]=CONTEST_PTS[i-1]; return v0+(v1-v0)*(d-d0)/(d1-d0); } } return 1; }
 function shotWindow(M,p){
   const h=attackHoop(p.team), v=hoopVec(p,h), dist=v.d;
@@ -317,7 +317,7 @@ function releaseShot(M,p,m){
   else {
     const ODDS=[[0.78,0.42,0.15],[0.56,0.24,0.05],[0.42,0.13,0.02],[0.2,0.05,0.01],[0.15,0.05,0.01]];   // slightly off · off · way off (open)
     const ae=Math.abs(err); let pr=ODDS[band][ae<0.06?0:ae<0.12?1:2];
-    pr *= c0<0.3 ? (band===0?0.25:0.04) : Math.pow(c0, band===0?0.8:1.4);   // jumpers: coverage is brutal; at the rim you can still finish through contact sometimes                 // light ~60%, covered ~28%, tight ~14% of the open odds; smothered = no
+    pr *= c0<0.3 ? 0 : Math.pow(c0, band===0?0.8:1.4);   // SMOTHERED never falls   // jumpers: coverage is brutal; at the rim you can still finish through contact sometimes                 // light ~60%, covered ~28%, tight ~14% of the open odds; smothered = no
     pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
     if(p.fire) pr*=1.15; if(p.cold) pr*=0.85;
     if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2; if(p.pmT>0) pr*=1.15;
@@ -590,7 +590,8 @@ function updateBall(M,dt){
       }
     }
   }
-  for(const p of M.players){
+  const grabOrder = b.st==='loose' ? [...M.players].sort((a,c)=>hyp(a.x-b.x,a.z-b.z)-hyp(c.x-b.x,c.z-b.z)) : M.players;   // closest player wins a loose ball
+  for(const p of grabOrder){
     if(p.noGrabT>0 || p.stumbleT>0.3) continue;
     if(b.st==='dead'||b.st==='held') break;
     if(b.st==='shot' && !b.touchedRim) break;
@@ -599,7 +600,8 @@ function updateBall(M,dt){
     const yy=b.y-p.y;
     // the player the pass is meant for gets a much bigger catch zone (hands out, step to the ball)
     const forMe = b.st==='pass' && p.id===b.passTo;
-    if(hyp(b.x-p.x,b.z-p.z)>(forMe?P_R+BALL_R+50:P_R+BALL_R+10) || yy<(forMe?-30:8) || yy>REACH+(forMe?80:32)) continue;
+    const loose=b.st==='loose';
+    if(hyp(b.x-p.x,b.z-p.z)>(forMe?P_R+BALL_R+50:loose?P_R+BALL_R+24:P_R+BALL_R+10) || yy<(forMe?-30:8) || yy>REACH+(forMe?80:loose?48:32)) continue;
     if(b.st==='pass' && p.team!==b.passTeam){
       if(b.passTry[p.id]) continue; b.passTry[p.id]=1;
       if(Math.random()>0.15) continue;             // a defender in the lane only picks it off sometimes
