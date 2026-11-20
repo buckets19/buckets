@@ -3260,6 +3260,33 @@ const BALLS=[
   {id:'signedball',r:'icon', s:'icon', name:'Signed Game Ball', icon:'🖊️', desc:'ICON · Your signature on a gold-trimmed game ball.', base:'#f07b22', line:'#1b1530', pat:'signed', glow:'232,183,48'},
   {id:'voidb',   r:'secret',    s:'galaxy',   name:'The Void',     icon:'🕳️', desc:'SECRET · A black hole you can dribble.', base:'#05010d', line:'#b06bff', pat:'void', glow:'170,90,255'},
 ];
+// 💠 Cyber theme
+CELLYS.push(
+  {id:'hacker',     r:'rare',      s:'cyber', name:'Hacker',       icon:'💻', desc:'Green code rains down. You just hacked the game.'},
+  {id:'holoproj',   r:'epic',      s:'cyber', name:'Hologram Projection', icon:'🔷', desc:'You flicker like a hologram while scan lines run.'},
+  {id:'robot',      r:'legendary', s:'cyber', name:'Robot',        icon:'🤖', desc:'Stiff robot dance. Sparks fly off your joints.'},
+  {id:'overclock',  r:'mythic',    s:'cyber', name:'Overclocked',  icon:'⚡', desc:'Neon rings pulse up your body at max speed.'},
+  {id:'mainframe',  r:'exclusive', s:'cyber', name:'Mainframe',    icon:'🖥️', desc:'VAULT · Cutscene. Binary rain fills the arena. ACCESS GRANTED.'},
+  {id:'singularity',r:'secret',    s:'cyber', name:'Singularity',  icon:'🕳️', desc:'SECRET · Cutscene. You rise into a neon black hole that sucks in the arena, then it explodes.'});
+GFX.push(
+  {id:'neonring',   r:'rare',      s:'cyber', name:'Neon Rings',   icon:'⭕', desc:'Neon pink and cyan rings at your feet.'},
+  {id:'bluescreen', r:'epic',      s:'cyber', name:'Blue Screen',  icon:'🟦', desc:'The arena crashes. ":( Your defense ran into a problem."'},
+  {id:'download',   r:'legendary', s:'cyber', name:'Download',     icon:'📥', desc:'DOWNLOADING GREEN... 100%. INSTALLED.'},
+  {id:'firewall',   r:'mythic',    s:'cyber', name:'Firewall',     icon:'🧱', desc:'A wall of neon fire shoots up across the court.'},
+  {id:'syshack',    r:'exclusive', s:'cyber', name:'System Hacked',icon:'💻', desc:'VAULT · Matrix rain, glitches, and every opponent gets ERROR 404.'},
+  {id:'aidetect',   r:'secret',    s:'cyber', name:'A.I. Detected',icon:'👁️', desc:'SECRET · Cutscene. A giant eye locks on. TARGET LOCKED. 100% ACCURACY.'});
+TRAILS.push(
+  {id:'dataT',   r:'rare',      s:'cyber', name:'Binary',  icon:'0️⃣', desc:'A stream of 1s and 0s.'},
+  {id:'laserT',  r:'epic',      s:'cyber', name:'Laser',   icon:'🔴', desc:'A thin red laser beam.'},
+  {id:'glitchT', r:'mythic',    s:'cyber', name:'Glitch',  icon:'📺', desc:'The trail splits into RGB and jitters.'});
+BALLS.push(
+  {id:'cyberball',  r:'epic',      s:'cyber', name:'Cyber',    icon:'💠', desc:'Glowing cyan grid.', base:'#10142a', line:'#00e5ff', pat:'grid', glow:'0,229,255'},
+  {id:'circuitball',r:'legendary', s:'cyber', name:'Circuit',  icon:'🔌', desc:'Neon pink circuitry.', base:'#1b0f3a', line:'#ff3df2', pat:'grid', glow:'255,60,240'},
+  {id:'quantumb',   r:'mythic',    s:'cyber', name:'Quantum',  icon:'⚛️', desc:'It exists in two places at once.', base:'#0a0a14', line:'#00e5ff', pat:'glitch', glow:'0,229,255'});
+DUNKS.push(
+  {id:'hackdunk',   r:'legendary', s:'cyber', name:'Hack Dunk',   icon:'💻', desc:'The rim gets hacked. Code everywhere.'},
+  {id:'overload',   r:'mythic',    s:'cyber', name:'Overload',    icon:'⚡', desc:'Neon rings blast out of the rim.'},
+  {id:'glitchslam', r:'exclusive', s:'cyber', name:'Glitch Slam', icon:'📺', desc:'VAULT · The game glitches out when you slam it.'});
 // ⛈️ Storm theme
 CELLYS.push(
   {id:'raincloud',  r:'rare',      s:'storm', name:'Make It Rain',    icon:'🌧️', desc:'A storm cloud follows you and rains on the court.'},
@@ -3367,6 +3394,7 @@ const SETS={
   spooky:  {n:'Spooky',   icon:'👻', col:'#5b2a86', price:300, odds:THEME_ODDS},
   xmas:    {n:'Christmas',icon:'🎄', col:'#c62828', price:300, odds:THEME_ODDS},
   storm:   {n:'Storm',    icon:'⛈️', col:'#3b4a8b', price:300, odds:THEME_ODDS},
+  cyber:   {n:'Cyber',    icon:'💠', col:'#00a3c4', price:300, odds:THEME_ODDS},
 };
 const KIND_ONE={cel:'Celly', gfx:'Green FX', js:'Jumpshot', dunk:'Dunk', trail:'Trail', ball:'Ball'};
 // 📦 PACKS (replaced the old one-crate-per-category-per-theme setup). Every pack can hold ANY kind of item.
@@ -3384,7 +3412,7 @@ const SPECIAL_PACKS=[
   {id:'secret', name:'Secret Pack', icon:'🤫', col:'#ff00e5', price:0, cards:1, odds:{secret:100}, freeOnly:true},
 ];
 // this week's FEATURED pack: one theme, rotating every Monday, so the shop changes all the time
-const FEAT_SETS=['storm','brainrot','galaxy','anime','arcade','spooky','street'];
+const FEAT_SETS=['cyber','storm','brainrot','galaxy','anime','arcade','spooky','street'];
 function featWeek(){ return Math.floor((Date.now()/864e5 + 3) / 7); }       // weeks since 1970, starting Mondays
 function featuredPack(){ const L=XMAS ? FEAT_SETS.filter(k=>k!=='spooky') : FEAT_SETS, k=L[featWeek()%L.length], S=SETS[k];   // 🎄 no Spooky at Christmas
   return {id:'feat', set:k, name:S.n+' Pack', icon:S.icon, col:S.col, gems:250, cards:4, guar:'epic', odds:{rare:44, epic:33, legendary:15, mythic:6, exclusive:1.6, secret:.4}, featured:true}; }
@@ -3661,6 +3689,15 @@ function greenFx(kind,x,y,z,hx,who){
     case 'glitchgod': screenFx('glitch',2); screenFx('rgb',2); V.shake=Math.max(V.shake,18); V.zoom=Math.max(V.zoom,.1);
       for(let i=0;i<8;i++) later(i*.1,()=>{ spray(x+rnd(-200,200),hy+rnd(-50,200),z,20,[`hsl(${rnd(0,360)},100%,60%)`,'#fff'],400,{g:0,life:.4,max:.4,sq:1}); V.flash=Math.max(V.flash,.2); });
       later(1,()=>sphereBurst(x,hy,z,120,['#ff00e5','#00e5ff','#00ff41','#ffd23f','#fff'],700)); break;
+    // ---------------- cyber
+    case 'neonring': for(let i=0;i<3;i++) later(i*.08,()=>ring3d(x,hy,z,50+i*30,i%2?'#ff3df2':'#00e5ff',{ax:Math.PI/2,ay:0,sx:3,sy:0,t:.7,w:4})); floatText('NEON',x,hy+150,z,'#00e5ff',42,1); break;
+    case 'bluescreen': screenFx('tint',1.2,{c:'30,80,220'}); floatText(':(',x,hy+210,z,'#ffffff',84,1.3); later(.3,()=>floatText('YOUR DEFENSE RAN INTO A PROBLEM',x,hy+120,z,'#ffffff',20,1.2)); break;
+    case 'download': for(let i=0;i<=5;i++) later(i*.16,()=>floatText('DOWNLOADING GREEN '+'▮'.repeat(i)+'▯'.repeat(5-i)+' '+(i*20)+'%',x,hy+170,z,i===5?'#47e27a':'#00e5ff',22,.18)); later(.85,()=>{ floatText('INSTALLED',x,hy+140,z,'#47e27a',48,1); sphereBurst(x,hy,z,60,['#00e5ff','#47e27a','#ffffff'],460); }); break;
+    case 'firewall': screenFx('tint',1.4,{c:'255,61,242'}); for(let i=0;i<20;i++) later(i*.04,()=>{ for(let k=0;k<4;k++) P(x-400+i*40+rnd(-10,10),0,z-30,{vy:rnd(400,800),g:200,life:.8,max:.8,c:pick(['#ff3df2','#00e5ff','#ffffff']),s:rnd(5,9)}); }); floatText('FIREWALL',x,hy+170,z,'#ff3df2',54,1.3); break;
+    case 'syshack': { screenFx('matrix',1.8); screenFx('glitch',1); V.shake=Math.max(V.shake,10); floatText('SYSTEM HACKED',x,hy+180,z,'#00ff41',56,1.5);
+      const S=currentSnap(); if(S) for(const o of S.p){ if(Math.abs(o[Q.x]-x)<2&&Math.abs(o[Q.z]-z)<2) continue; floatText('ERROR 404',o[Q.x],o[Q.y]+230,o[Q.z],'#ff3b3b',22,1.6); emo(o[Q.x],o[Q.y]+260,o[Q.z],'💻',{g:-10,life:1.6,max:1.6,s:26,vr:0}); } break; }
+    case 'aidetect': cutscene('A.I. DETECTED',(who||'YOU').toUpperCase(),'#ff2030',2); screenFx('darken',2.2); emo(x,hy+260,z-80,'👁️',{s:140,g:0,life:2,max:2,vr:0});
+      later(.5,()=>{ beam(x,z,'rgba(255,40,50,',1.2,60); floatText('TARGET LOCKED',x,hy+170,z,'#ff2030',46,1.2); }); later(1.2,()=>{ V.flash=Math.max(V.flash,.6); sphereBurst(x,hy,z,100,['#ff2030','#ffffff'],600); floatText('100% ACCURACY',x,hy+130,z,'#ffffff',42,1); }); break;
     // ---------------- storm
     case 'zap': bolt(hx,0,RIM_Y); for(let i=0;i<24;i++) P(hx,RIM_Y,0,{vx:rnd(-300,300),vy:rnd(0,400),g:600,life:.6,max:.6,c:pick(['#ffe066','#ffffff','#9fe7ff']),s:rnd(3,6)}); floatText('ZAP',x,hy+150,z,'#ffe066',42,1); break;
     case 'hailstorm': floatText('HAILSTORM',x,hy+160,z,'#dff6ff',46,1.3); for(let i=0;i<40;i++) later(i*.03,()=>P(x+rnd(-350,350),rnd(450,560),z+rnd(-80,80),{vy:-rnd(300,500),vx:rnd(-40,40),g:900,life:1.2,max:1.2,c:pick(['#ffffff','#dff6ff']),s:rnd(5,9),sq:1})); later(.5,()=>{ V.shake=Math.max(V.shake,8); }); break;
@@ -3704,6 +3741,7 @@ function greenFx(kind,x,y,z,hx,who){
 
 // cellys: run every frame for the player who just scored
 function cellyLift(c){
+  if(c.kind==='singularity') return Math.min(1,c.t*.9)*120;
   if(c.kind==='thunderking') return Math.min(1,c.t*2)*50+Math.sin(c.t*4)*6;
   if(c.kind==='stormgod') return c.t>.6 ? Math.min(1,(c.t-.6)*2)*90+Math.sin(c.t*3)*5 : 0;
   if(c.kind==='tornado') return Math.sin(Math.min(1,c.t/2.2)*Math.PI)*70;
@@ -3863,6 +3901,24 @@ function cellyTick(c, q, dt){
       if(every(.1) && t<1.8){ P(x,150,z,{vy:1100,g:0,life:.35,max:.35,c:'#00ff41',s:5,trail:1}); if(Math.random()<.5){ const ey=330-((t*60)|0); later(.3,()=>{ const ex=x-300+Math.floor(rnd(0,6))*120; for(let k=0;k<14;k++) P(ex,ey,z-60,{vx:rnd(-200,200),vy:rnd(-150,200),g:300,life:.5,max:.5,c:pick(['#00ff41','#ff3df2','#ffffff']),s:7,sq:1}); }); } } break;
     case 'finalboss': if(first){ screenFx('retro',2.3); screenFx('boss',2.3); cutscene('FINAL BOSS',(infoOf(q[0])||{}).name||'','#00ff41',1.4); }
       if(t>1.6 && !c.p){ c.p=true; floatText('PERFECT',x,350,z,'#ffd23f',70,1); V.flash=Math.max(V.flash,.8); V.shake=Math.max(V.shake,20); for(let i=0;i<60;i++) P(x,150,z,{vx:rnd(-500,500),vy:rnd(0,600),g:500,life:1.2,max:1.2,c:`hsl(${i*12},100%,60%)`,s:9,sq:1}); } break;
+    // ---------------- cyber
+    case 'hacker': if(first){ screenFx('matrix',2.2); floatText('HACKED',x,340,z,'#00ff41',48,2); }
+      if(every(.08)) floatText(pick(['0','1','01','10','{}','</>']),x+rnd(-200,200),rnd(150,330),z,'#00ff41',rnd(14,22),.6); break;
+    case 'holoproj': if(first){ screenFx('scan',2.3); floatText('HOLOGRAM',x,340,z,'#00e5ff',44,2); }
+      if(every(.15)) ring3d(x,cy+rnd(10,180),z,40,'#00e5ff',{ax:Math.PI/2,ay:0,sx:0,sy:0,t:.5,w:2});
+      if(every(.05)) P(x+rnd(-40,40),cy+rnd(0,190),z,{g:0,life:.3,max:.3,c:'rgba(0,229,255,.7)',s:rnd(2,4)}); break;
+    case 'robot': if(first) floatText('BEEP BOOP',x,330,z,'#c9d3e0',42,2);
+      if(every(.25)){ V.shake=Math.max(V.shake,3); for(let k=0;k<10;k++) P(x+rnd(-30,30),cy+rnd(60,160),z,{vx:rnd(-200,200),vy:rnd(50,250),g:500,life:.4,max:.4,c:pick(['#ffd23f','#ffffff','#9fe7ff']),s:3}); } break;
+    case 'overclock': if(first){ screenFx('speed',2.2); floatText('OVERCLOCKED',x,350,z,'#ff3df2',50,2); }
+      if(every(.12)) ring3d(x,cy+100,z,50+((t*120)%90),pick(['#ff3df2','#00e5ff']),{ax:Math.PI/2,ay:0,sx:0,sy:0,t:.5,w:3});
+      if(every(.03)) P(x+rnd(-30,30),cy+rnd(20,180),z,{vy:rnd(300,600),g:0,life:.35,max:.35,c:pick(['#ff3df2','#00e5ff','#ffffff']),s:rnd(2,4)}); break;
+    case 'mainframe': if(first){ cutscene('MAINFRAME',(infoOf(q[0])||{}).name||'','#00ff41',2.2); screenFx('matrix',2.6); screenFx('darken',2.6);
+        later(1.3,()=>{ floatText('ACCESS GRANTED',x,360,z,'#00ff41',58,1.4); V.flash=Math.max(V.flash,.4); sphereBurst(x,150,z,100,['#00ff41','#ffffff','#00e5ff'],620); }); }
+      if(every(.06)) floatText(pick(['0','1']),x+rnd(-450,450),rnd(200,450),z-60,'#00ff41',rnd(14,24),.7); break;
+    case 'singularity': if(first){ cutscene('SINGULARITY',(infoOf(q[0])||{}).name||'','#ff3df2',2.2); screenFx('warp',2.4); screenFx('darken',2.6);
+        later(1.6,()=>{ V.flash=1; V.shake=Math.max(V.shake,26); sphereBurst(x,260,z,160,['#ff3df2','#00e5ff','#ffffff'],820); floatText('SINGULARITY',x,380,z,'#ff3df2',68,1.4); }); }
+      if(t<1.6 && every(.02)){ const a=rnd(0,TAU), r=rnd(250,500); P(x+Math.cos(a)*r,260+Math.sin(a)*r*.6,z,{vx:-Math.cos(a)*r*1.6,vy:-Math.sin(a)*r,g:0,life:.6,max:.6,c:pick(['#ff3df2','#00e5ff','#ffffff']),s:rnd(2,4)}); }
+      if(t<1.6 && every(.2)) ring3d(x,260,z,60-((t*30)%40),'#ff3df2',{t:.4,w:4}); break;
     // ---------------- storm
     case 'raincloud': if(first) floatText('MAKE IT RAIN',x,330,z,'#9fe7ff',40,1.8);
       if(every(.06)) for(let k=0;k<3;k++) P(x+rnd(-80,80),cy+250,z+rnd(-20,20),{vy:-rnd(380,520),g:300,life:.6,max:.6,c:'#7fc8ff',s:rnd(2.5,4)});
@@ -4266,6 +4322,9 @@ function handleEvent(e, demo){
           floatText('SUPERNOVA',dx,RIM_Y+170,0,'#ffd23f',50,1.6); camFlashes(40); }); }
       else if(ds==='flamedunk'){ later(.15,()=>{ for(let k=0;k<3;k++) ring3d(dx,RIM_Y,0,50+k*20,['#ff5a00','#ffb347','#ffe066'][k],{ax:0,ay:Math.PI/2-.3,sx:0,sy:0,t:.9,w:6,grow:1});
           spray(dx,RIM_Y,0,50,['#ff3b00','#ff8a1f','#ffd23f'],480,{g:-60}); V.shake=Math.max(V.shake,16); floatText('FLAME SLAM',dx,RIM_Y+150,0,'#ff8a1f',42,1.3); }); }
+      else if(ds==='hackdunk'){ later(.12,()=>{ screenFx('matrix',1); floatText('HACKED',dx,RIM_Y+170,0,'#00ff41',54,1.2); for(let i=0;i<30;i++) floatText(pick(['0','1']),dx+rnd(-200,200),RIM_Y+rnd(-50,150),0,'#00ff41',rnd(14,22),.7); }); }
+      else if(ds==='overload'){ later(.12,()=>{ V.flash=1; V.shake=Math.max(V.shake,22); for(let i=0;i<5;i++) later(i*.08,()=>ring3d(dx,RIM_Y,0,40+i*40,i%2?'#ff3df2':'#00e5ff',{t:.8,w:5})); sphereBurst(dx,RIM_Y,0,120,['#ff3df2','#00e5ff','#ffffff'],700); floatText('OVERLOAD',dx,RIM_Y+190,0,'#ff3df2',62,1.3); }); }
+      else if(ds==='glitchslam'){ screenFx('glitch',1.2); screenFx('rgb',1.2); later(.12,()=>{ V.shake=Math.max(V.shake,24); for(let i=0;i<6;i++) later(i*.07,()=>spray(dx+rnd(-150,150),RIM_Y+rnd(-50,150),0,18,['#ff0050','#00e5ff','#ffffff'],380,{sq:1})); floatText('GL1TCH',dx,RIM_Y+190,0,'#00e5ff',64,1.3); }); }
       else if(ds==='thunderdunk'){ later(.12,()=>{ bolt(dx,0,RIM_Y); V.flash=Math.max(V.flash,.6); V.shake=Math.max(V.shake,18); ring(dx,RIM_Y,0,'#ffe066',200,.5,8); for(let i=0;i<40;i++) P(dx,RIM_Y,0,{vx:rnd(-400,400),vy:rnd(-100,400),g:600,life:.7,max:.7,c:pick(['#ffe066','#ffffff','#9fe7ff']),s:rnd(3,6)}); floatText('THUNDER',dx,RIM_Y+170,0,'#ffe066',52,1.2); }); }
       else if(ds==='quakedunk'){ later(.15,()=>{ V.shake=Math.max(V.shake,30); const pt=V.camT?V.camT(dx,0,0):null; screenFx('crack',1.6,pt?{cx:pt[0],cy:pt[1]}:{}); for(let i=0;i<40;i++) P(dx+rnd(-200,200),4,rnd(-80,80),{vx:rnd(-200,200),vy:rnd(300,700),g:1200,life:.9,max:.9,c:pick(['#7a5a3a','#a07a4a','#5a4030']),s:rnd(6,12),sq:1}); ring(dx,4,0,'#c98a4b',300,.6,10); floatText('EARTHQUAKE',dx,RIM_Y+170,0,'#c98a4b',52,1.3); }); }
       else if(ds==='skyfall'){ emo(dx+500,RIM_Y+700,0,'☄️',{vx:-1300,vy:-1250,g:0,life:.45,max:.45,s:70,vr:0}); later(.45,()=>{ V.flash=1; V.shake=Math.max(V.shake,30); sphereBurst(dx,RIM_Y,0,140,['#ff3b00','#ff8a1f','#ffd23f','#ffffff'],760); ring(dx,4,0,'#ff7a1a',360,.7,12); screenFx('tint',1.2,{c:'255,90,20'}); floatText('SKYFALL',dx,RIM_Y+190,0,'#ff8a1f',62,1.4); }); }
@@ -4990,6 +5049,9 @@ function drawTrail(style, dt){
       case 'rgbT':     seg(i,`hsla(${(clock*720+i*18)%360},100%,60%,${k*.95})`,12*k); seg(i,`rgba(255,255,255,${k*.6})`,3*k); break;
       case 'northT':   { const o=Math.sin(i*.5+clock*4)*10*k; seg(i,`rgba(71,226,122,${k*.55})`,10*k,o); seg(i,`rgba(160,90,255,${k*.55})`,8*k,-o); seg(i,`rgba(255,255,255,${k*.5})`,2*k); break; }
       case 'reindeerT':seg(i,`rgba(201,138,75,${k*.35})`,12*k); seg(i,`rgba(255,255,255,${k*.6})`,3*k); break;
+      case 'dataT':    { seg(i,`rgba(0,255,65,${k*.35})`,10*k); if(i%3===0){ const b=T[i]; ctx.fillStyle=`rgba(0,255,65,${k})`; ctx.font='bold 11px monospace'; ctx.textAlign='center'; ctx.fillText((i*7)%2?'1':'0',PX(b.x,b.z),PY(b.y,b.z)); } break; }
+      case 'laserT':   seg(i,`rgba(255,40,50,${k*.35})`,12*k); seg(i,`rgba(255,220,220,${k})`,2.5*k); break;
+      case 'glitchT':  { const j=(Math.random()-.5)*8*k; seg(i,`rgba(255,0,80,${k*.7})`,6*k,j); seg(i,`rgba(0,229,255,${k*.7})`,6*k,-j); seg(i,`rgba(255,255,255,${k*.6})`,2*k); break; }
       case 'rainT':    seg(i,`rgba(79,195,255,${k*.5})`,10*k); seg(i,`rgba(255,255,255,${k*.6})`,2*k); break;
       case 'stormT':   { seg(i,`rgba(60,70,90,${k*.55})`,22*k); if(i%4===0 && Math.random()<.35){ const b=T[i], X=PX(b.x,b.z), Y=PY(b.y,b.z); ctx.strokeStyle=`rgba(255,240,140,${k})`; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+rnd(-14,14),Y+rnd(-14,14)); ctx.lineTo(X+rnd(-20,20),Y+rnd(-20,20)); ctx.stroke(); } break; }
       case 'lavaT':    seg(i,`rgba(40,10,10,${k*.6})`,16*k); seg(i,`rgba(255,${90+k*120|0},20,${k*.95})`,7*k); break;
@@ -5135,7 +5197,7 @@ function drawPlayer(q, hasBall, S, B, refl){
   ctx.save();
   if(refl){ ctx.translate(PX(x+walkX,z),PY(-y,z)); ctx.scale(s,-s); }
   else { ctx.translate(PX(x+walkX,z),PY(y,z)); ctx.scale(s,s); }
-  ctx.globalAlpha = (ck==='glitch' && Math.random()<.18) ? A*.35 : A;
+  ctx.globalAlpha = (ck==='glitch' && Math.random()<.18) ? A*.35 : ck==='holoproj' ? A*(.5+.35*Math.abs(Math.sin(clock*9))) : A;
   if(ck==='glitch' && Math.random()<.25) ctx.translate(rnd(-9,9),0);
   if(ck==='timestop' && !refl){ ctx.fillStyle='rgba(255,255,255,.18)'; ctx.beginPath(); ctx.arc(0,-80,95,0,TAU); ctx.fill(); }
   const auraC = (sp && sp.aura) || (cel && !ck.match(/^(westmode|ascend|superform)$/) && lvFor(id,'cel')>=3 ? '255,215,90' : null) || (ck==='westmode' ? '0,229,255' : ck==='ascend' ? '255,225,120' : ck==='superform' ? '255,210,60' : ck==='instinct' ? '210,235,255' : ck==='aurafarm' ? '200,120,255' : ck==='powerup' ? '255,220,120' : ck==='domain' ? '255,40,90' : ck==='ninetails' ? '255,100,20' : ck==='sundance' ? '255,200,90' : ck==='possessed' ? '220,0,40' : ck==='redeye' ? '255,30,30' : ck==='finalboss' ? '0,255,90' : null);
@@ -5247,6 +5309,12 @@ function drawPlayer(q, hasBall, S, B, refl){
     case 'orbit': fH=[face*40,-128]; bH=[-face*40,-128]; mouth='grin'; break;
     case 'starfall': fH=[face*8,-180]; bH=[-face*16,-104]; mouth='o'; break;
     case 'eclipse': fH=[face*26,-170]; bH=[-face*26,-170]; mouth='o'; break;
+    case 'hacker': fH=[face*24,-80]; bH=[face*10,-80]; mouth='flat'; break;
+    case 'holoproj': fH=[face*40,-120]; bH=[-face*40,-120]; mouth='flat'; break;
+    case 'robot': { const k=Math.sign(Math.sin(cel.t*8))||1; fH=[face*30,-110+k*20]; bH=[-face*30,-110-k*20]; mouth='flat'; break; }
+    case 'overclock': fH=[face*26,-170]; bH=[-face*26,-170]; mouth='yell'; break;
+    case 'mainframe': fH=[face*36,-140]; bH=[face*20,-130]; mouth='flat'; angry=true; break;
+    case 'singularity': fH=[face*40,-160]; bH=[-face*40,-160]; mouth='o'; break;
     case 'raincloud': fH=[face*24,-120]; bH=[-face*20,-118]; mouth='grin'; break;
     case 'tornado': fH=[face*48,-110]; bH=[-face*48,-110]; mouth='yell'; break;
     case 'quake': fH=[face*20,-70]; bH=[-face*20,-70]; mouth='yell'; angry=true; break;
