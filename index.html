@@ -3285,6 +3285,12 @@ BALLS.push(
   {id:'magmaball',  r:'legendary', s:'storm', name:'Magma',     icon:'🌋', desc:'Cracked rock with lava inside.', base:'#2a1410', line:'#ff6a00', pat:'lava', glow:'255,120,30'},
   {id:'stormorb',   r:'mythic',    s:'storm', name:'Storm Orb', icon:'🌀', desc:'A tiny hurricane.', base:'#3b4a6b', line:'#9fe7ff', pat:'swirl', glow:'150,220,255'},
   {id:'tsunamib',   r:'exclusive', s:'storm', name:'Tsunami',   icon:'🌊', desc:'VAULT · Deep ocean blue.', base:'#1d6fd6', line:'#bfefff', pat:'swirl', glow:'80,170,255'});
+JS.push(
+  {id:'stormjs',   r:'epic',      s:'storm', name:'Charged Up',        icon:'⚡', desc:'Lightning cracks off your release.'},
+  {id:'tornadojs', r:'legendary', s:'storm', name:'Whirlwind',         icon:'🌪️', desc:'A whirlwind spins up and lifts the shot.'},
+  {id:'lavajs',    r:'mythic',    s:'storm', name:'Magma Shot',        icon:'🌋', desc:'The floor glows under you and magma rises as you shoot.'},
+  {id:'snowjs',    r:'epic',      s:'xmas',  name:'Snowfall Shot',     icon:'❄️', desc:'Snow bursts off your fingertips.'},
+  {id:'sleighjs',  r:'legendary', s:'xmas',  name:'Up on the Rooftop', icon:'🛷', desc:'Reindeer and the sleigh leap right over you as you shoot.'});
 DUNKS.push(
   {id:'thunderdunk',r:'legendary', s:'storm', name:'Thunder Dunk',   icon:'⚡', desc:'Lightning hits the rim as you slam it.'},
   {id:'quakedunk',  r:'mythic',    s:'storm', name:'Earthquake Slam',icon:'🫨', desc:'The floor cracks open when you land.'},
@@ -4005,6 +4011,11 @@ function shotPose(inf, act, k, face){
     case 'npcjs':   return {fH:[face*2,-182],  bH:[face*2,-178],  ball:[face*2,-190]};
     case 'ninjajs': return {fH:[face*12,-132], bH:[face*4,-128],  ball:[face*10,-138], kick:[face*18,-30]};
     case 'starjs':  return {fH:[face*6,-170],  bH:[-face*2,-166], ball:[face*4,-178], aura:'255,220,120'};
+    case 'stormjs': return {fH:[face*6,-166],  bH:[-face*2,-162], ball:[face*4,-172], aura:'255,230,100'};
+    case 'tornadojs': return {fH:[face*6,-170], bH:[-face*2,-166], ball:[face*4,-178], aura:'200,210,225', kick:[face*10,-30]};
+    case 'lavajs':  return {fH:[face*6,-168],  bH:[-face*2,-164], ball:[face*4,-176], aura:'255,120,30'};
+    case 'snowjs':  return {fH:[face*8,-160],  bH:[-face*3,-154], ball:[face*6,-166], aura:'220,245,255'};
+    case 'sleighjs':return {fH:[face*6,-170],  bH:[-face*2,-166], ball:[face*4,-178], aura:'255,80,80'};
     case 'legendfade': return {fH:[face*4,-156], bH:[-face*6,-150], ball:[face*2,-162], rot:-face*0.42, kick:[face*30,-44], aura:'150,80,255'};
     case 'logojs':  return {fH:[face*6,-176], bH:[-face*2,-172], ball:[face*4,-184], aura:'255,210,80'};
     case 'icejs':   return {fH:[face*8,-158], bH:[-face*3,-152], ball:[face*6,-164], aura:'160,230,255'};
@@ -5962,6 +5973,11 @@ function actFx(q){
   if(act===2 && inf.js==='cinejs'){ screenFx('darken',1); screenFx('letterbox',1.1); camFlashes(36); V.zoom=Math.max(V.zoom||0,.08); }
   if(act===4 && inf.dunk==='thundergod') for(let i=0;i<3;i++) later(i*.08,()=>bolt(x+rnd(-80,80),z,0));
   if(act===4 && inf.dunk==='ftline'){ screenFx('letterbox',.9); later(.05,()=>floatText('FROM THE LINE',x,y+260,z,'#ffd23f',34,1)); }
+  if(act===2 && inf.js==='stormjs'){ bolt(x+rnd(-40,40),z,0); for(let i=0;i<16;i++) P(x,y+160,z,{vx:rnd(-200,200),vy:rnd(0,240),g:300,life:.5,max:.5,c:pick(['#ffe066','#9fe7ff','#ffffff']),s:3}); }
+  if(act===2 && inf.js==='tornadojs') for(let i=0;i<30;i++){ const a=i*.6; P(x+Math.cos(a)*30,y+i*6,z+Math.sin(a)*10,{vx:-Math.sin(a)*180,vy:160,vz:Math.cos(a)*60,g:0,life:.7,max:.7,c:pick(['rgba(200,210,225,.8)','#ffffff']),s:rnd(4,8)}); }
+  if(act===2 && inf.js==='lavajs'){ screenFx('tint',.8,{c:'255,90,20'}); ring3d(x,4,z,50,'#ff7a1a',{ax:Math.PI/2,ay:0,sx:0,sy:0,t:.9,w:5}); for(let i=0;i<24;i++) P(x+rnd(-40,40),4,z+rnd(-12,12),{vy:rnd(200,420),g:300,life:.8,max:.8,c:pick(['#ff3b00','#ff8a1f','#ffd23f']),s:rnd(4,8)}); }
+  if(act===2 && inf.js==='snowjs') for(let i=0;i<20;i++) P(x,y+170,z,{vx:rnd(-200,200),vy:rnd(0,220),g:200,life:.8,max:.8,c:pick(['#ffffff','#dff6ff']),s:rnd(3,6)});
+  if(act===2 && inf.js==='sleighjs'){ for(let k=0;k<3;k++) emo(x-260+k*40,y+260,z-20,'🦌',{vx:700,vy:120,g:300,life:.9,max:.9,s:32,vr:0}); later(.15,()=>emo(x-300,y+250,z-20,'🛷',{vx:700,vy:120,g:300,life:.9,max:.9,s:40,vr:0})); }
   if(act===2 && inf.js==='npcjs') floatText('beep boop',x,y+220,z,'#aab3c2',16,.8);
   if(act===4 && inf.dunk==='spiral') orbitBurst(x,y+100,z,30,['#9fe7ff','#fff','#3d8bff'],{rise:80,r:22,w:20,life:.5,dr:0});
   if(act===4 && inf.dunk==='starslam') orbitBurst(x,y,z,24,['#ffd23f','#fff'],{rise:380,r:30,w:12,life:.6});
