@@ -2617,7 +2617,7 @@ function acceptConn(conn){
   conn.on('error', ()=>dropConn(conn));
 }
 // joiners ping the host every 2s so we can show the real lag
-setInterval(()=>{ if(net.role==='client' && net.hostConn && net.hostConn.open && V.inRoom) try{ net.hostConn.send({t:'ping', ts:performance.now()}); }catch(e){} }, 2000);
+setInterval(()=>{ if(net.role==='client' && net.hostConn && net.hostConn.open && V.inRoom) try{ net.hostConn.send({t:'ping', ts:performance.now()}); }catch(e){} }, 1000);
 function sendSnap(s){
   for(const c of net.conns.values()) if(c.open && !c.isRelay) c.send(s);
   if(net.hub) net.hub.snap(s);
@@ -4089,12 +4089,12 @@ function clientSendInput(){
   if(net.role!=='client' || V.phase!=='game' || !net.hostConn || !net.hostConn.open) return;
   // stick snapped to 1/8 steps and rate-capped: a thumb on an iPad joystick changes every frame, and 60 msgs/s
   // through a relay piles up into SECONDS of delay. Direct: up to 30/s. Server/relay: up to 12/s. Keepalive every 250ms.
-  const a=ctl.axis(), x=Math.round(a.x*8)/8, z=Math.round(a.z*8)/8, now=performance.now(), gap=srvRoom()?80:isRelay()?80:33;
+  const a=ctl.axis(), x=Math.round(a.x*8)/8, z=Math.round(a.z*8)/8, now=performance.now(), gap=srvRoom()?50:isRelay()?80:33;
   // also send where MY screen says I am, so the host follows me instead of the other way around
   const P=V.pred, mine=P && P.blend>0.5 ? {px:Math.round(P.x), pz:Math.round(P.z)} : null;
   const key=x+','+z+(mine?','+(mine.px>>2)+','+(mine.pz>>2):'');
   const dir=x+','+z;                                   // a new direction goes out right away; routine position updates keep the normal pace
-  if((dir!==lastDir && now-lastInAt>=35) || (key!==lastIn && now-lastInAt>=gap) || now-lastInAt>500){ net.hostConn.send({t:'in', x, z, ...(mine||{})}); lastIn=key; lastInAt=now; lastDir=dir; }
+  if((dir!==lastDir && now-lastInAt>=16) || (key!==lastIn && now-lastInAt>=gap) || now-lastInAt>250){ net.hostConn.send({t:'in', x, z, ...(mine||{})}); lastIn=key; lastInAt=now; lastDir=dir; }
 }
 
 // =====================================================================
@@ -4247,7 +4247,7 @@ function predictLocalMove(kind){
     if(has){ const h=attackHoop(me[Q.team]), v=hoopVec({x:me[Q.x],z:me[Q.z]},h); if((a.x*v.ux+a.z*v.uz)/l<-0.5) return; }   // stepback: let the host do it
     V.pred.bdx=a.x/l; V.pred.bdz=a.z/l; V.pred.bt=BURST_T; V.pred.cdT=performance.now()+BURST_CD*1000; }
 }
-function interpDelay(){ if(srvRoom() && V.late!==undefined) return clamp(26+1.8*V.late, 30, 260);   // game server: 20ms between updates + the jitter
+function interpDelay(){ if(srvRoom() && V.late!==undefined) return clamp(19+1.8*V.late, 24, 260);   // 60 updates/s: one game step per update   // game server: 20ms between updates + the jitter
   const g=V.gapA||(isRelay()?50:25), j=V.gapJ||10; return clamp(g+2.2*j+12, isRelay()?70:srvRoom()?28:45, 260); }   // game server: 50 updates/s, so a smaller buffer
 function rrect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 function txt(s,x,y,size,color,align='center',stroke=6){
