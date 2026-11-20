@@ -3260,6 +3260,35 @@ const BALLS=[
   {id:'signedball',r:'icon', s:'icon', name:'Signed Game Ball', icon:'🖊️', desc:'ICON · Your signature on a gold-trimmed game ball.', base:'#f07b22', line:'#1b1530', pat:'signed', glow:'232,183,48'},
   {id:'voidb',   r:'secret',    s:'galaxy',   name:'The Void',     icon:'🕳️', desc:'SECRET · A black hole you can dribble.', base:'#05010d', line:'#b06bff', pat:'void', glow:'170,90,255'},
 ];
+// ⛈️ Storm theme
+CELLYS.push(
+  {id:'raincloud',  r:'rare',      s:'storm', name:'Make It Rain',    icon:'🌧️', desc:'A storm cloud follows you and rains on the court.'},
+  {id:'tornado',    r:'epic',      s:'storm', name:'Tornado',         icon:'🌪️', desc:'A tornado spins up around you and lifts you off the floor.'},
+  {id:'quake',      r:'legendary', s:'storm', name:'Earthquake',      icon:'🫨', desc:'You stomp and the whole court shakes and cracks.'},
+  {id:'thunderking',r:'mythic',    s:'storm', name:'Thunder King',    icon:'⚡', desc:'You float in the air while lightning strikes all around you.'},
+  {id:'eyeofstorm', r:'exclusive', s:'storm', name:'Eye of the Storm',icon:'🌀', desc:'VAULT · A hurricane wall spins around you. You stand calm in the middle.'},
+  {id:'stormgod',   r:'secret',    s:'storm', name:'Storm God',       icon:'🌩️', desc:'SECRET · Cutscene. The sky opens, a beam hits you, and lightning strikes every opponent.'});
+GFX.push(
+  {id:'zap',        r:'rare',      s:'storm', name:'Zap',             icon:'⚡', desc:'Lightning hits the rim.'},
+  {id:'hailstorm',  r:'epic',      s:'storm', name:'Hailstorm',       icon:'🧊', desc:'Hail pours down on the court.'},
+  {id:'tidal',      r:'legendary', s:'storm', name:'Tidal Wave',      icon:'🌊', desc:'A wave crashes across the whole court.'},
+  {id:'rimvolcano', r:'mythic',    s:'storm', name:'Rim Eruption',    icon:'🌋', desc:'The rim erupts: lava, rocks, the arena glows orange.'},
+  {id:'skysplit',   r:'exclusive', s:'storm', name:'Sky Split',       icon:'🌩️', desc:'VAULT · A beam of lightning splits the sky and hits you.'},
+  {id:'apocalypse', r:'secret',    s:'storm', name:'Apocalypse',      icon:'☄️', desc:'SECRET · Cutscene. Meteors rain down on the court.'});
+TRAILS.push(
+  {id:'rainT',    r:'rare',      s:'storm', name:'Rain',        icon:'🌧️', desc:'A blue streak dripping rain.'},
+  {id:'stormT',   r:'epic',      s:'storm', name:'Storm Cloud', icon:'⛈️', desc:'A dark cloud trail crackling with lightning.'},
+  {id:'lavaT',    r:'legendary', s:'storm', name:'Lava Flow',   icon:'🌋', desc:'Glowing lava with embers.'},
+  {id:'tornadoT', r:'mythic',    s:'storm', name:'Twister',     icon:'🌪️', desc:'Two winds spiralling around the ball.'});
+BALLS.push(
+  {id:'thunderball',r:'epic',      s:'storm', name:'Thunder',   icon:'⚡', desc:'Charged up. Crackles.', base:'#2a3560', line:'#ffe066', pat:'spark', glow:'255,230,100'},
+  {id:'magmaball',  r:'legendary', s:'storm', name:'Magma',     icon:'🌋', desc:'Cracked rock with lava inside.', base:'#2a1410', line:'#ff6a00', pat:'lava', glow:'255,120,30'},
+  {id:'stormorb',   r:'mythic',    s:'storm', name:'Storm Orb', icon:'🌀', desc:'A tiny hurricane.', base:'#3b4a6b', line:'#9fe7ff', pat:'swirl', glow:'150,220,255'},
+  {id:'tsunamib',   r:'exclusive', s:'storm', name:'Tsunami',   icon:'🌊', desc:'VAULT · Deep ocean blue.', base:'#1d6fd6', line:'#bfefff', pat:'swirl', glow:'80,170,255'});
+DUNKS.push(
+  {id:'thunderdunk',r:'legendary', s:'storm', name:'Thunder Dunk',   icon:'⚡', desc:'Lightning hits the rim as you slam it.'},
+  {id:'quakedunk',  r:'mythic',    s:'storm', name:'Earthquake Slam',icon:'🫨', desc:'The floor cracks open when you land.'},
+  {id:'skyfall',    r:'exclusive', s:'storm', name:'Skyfall',        icon:'☄️', desc:'VAULT · A meteor smashes into the rim with you.'});
 // 🎄 Christmas theme
 CELLYS.push(
   {id:'snowangel', r:'epic',      s:'xmas', name:'Snow Day',   icon:'⛄', desc:'Snow falls on you and a snowman pops up.'},
@@ -3331,6 +3360,7 @@ const SETS={
   arcade:  {n:'Arcade',   icon:'🕹️', col:'#00c2a8', price:300, odds:THEME_ODDS},
   spooky:  {n:'Spooky',   icon:'👻', col:'#5b2a86', price:300, odds:THEME_ODDS},
   xmas:    {n:'Christmas',icon:'🎄', col:'#c62828', price:300, odds:THEME_ODDS},
+  storm:   {n:'Storm',    icon:'⛈️', col:'#3b4a8b', price:300, odds:THEME_ODDS},
 };
 const KIND_ONE={cel:'Celly', gfx:'Green FX', js:'Jumpshot', dunk:'Dunk', trail:'Trail', ball:'Ball'};
 // 📦 PACKS (replaced the old one-crate-per-category-per-theme setup). Every pack can hold ANY kind of item.
@@ -3348,7 +3378,7 @@ const SPECIAL_PACKS=[
   {id:'secret', name:'Secret Pack', icon:'🤫', col:'#ff00e5', price:0, cards:1, odds:{secret:100}, freeOnly:true},
 ];
 // this week's FEATURED pack: one theme, rotating every Monday, so the shop changes all the time
-const FEAT_SETS=['brainrot','galaxy','anime','arcade','spooky','street'];
+const FEAT_SETS=['storm','brainrot','galaxy','anime','arcade','spooky','street'];
 function featWeek(){ return Math.floor((Date.now()/864e5 + 3) / 7); }       // weeks since 1970, starting Mondays
 function featuredPack(){ const L=XMAS ? FEAT_SETS.filter(k=>k!=='spooky') : FEAT_SETS, k=L[featWeek()%L.length], S=SETS[k];   // 🎄 no Spooky at Christmas
   return {id:'feat', set:k, name:S.n+' Pack', icon:S.icon, col:S.col, gems:250, cards:4, guar:'epic', odds:{rare:44, epic:33, legendary:15, mythic:6, exclusive:1.6, secret:.4}, featured:true}; }
@@ -3625,6 +3655,17 @@ function greenFx(kind,x,y,z,hx,who){
     case 'glitchgod': screenFx('glitch',2); screenFx('rgb',2); V.shake=Math.max(V.shake,18); V.zoom=Math.max(V.zoom,.1);
       for(let i=0;i<8;i++) later(i*.1,()=>{ spray(x+rnd(-200,200),hy+rnd(-50,200),z,20,[`hsl(${rnd(0,360)},100%,60%)`,'#fff'],400,{g:0,life:.4,max:.4,sq:1}); V.flash=Math.max(V.flash,.2); });
       later(1,()=>sphereBurst(x,hy,z,120,['#ff00e5','#00e5ff','#00ff41','#ffd23f','#fff'],700)); break;
+    // ---------------- storm
+    case 'zap': bolt(hx,0,RIM_Y); for(let i=0;i<24;i++) P(hx,RIM_Y,0,{vx:rnd(-300,300),vy:rnd(0,400),g:600,life:.6,max:.6,c:pick(['#ffe066','#ffffff','#9fe7ff']),s:rnd(3,6)}); floatText('ZAP',x,hy+150,z,'#ffe066',42,1); break;
+    case 'hailstorm': floatText('HAILSTORM',x,hy+160,z,'#dff6ff',46,1.3); for(let i=0;i<40;i++) later(i*.03,()=>P(x+rnd(-350,350),rnd(450,560),z+rnd(-80,80),{vy:-rnd(300,500),vx:rnd(-40,40),g:900,life:1.2,max:1.2,c:pick(['#ffffff','#dff6ff']),s:rnd(5,9),sq:1})); later(.5,()=>{ V.shake=Math.max(V.shake,8); }); break;
+    case 'tidal': floatText('TIDAL WAVE',x,hy+170,z,'#4fc3ff',50,1.4); screenFx('tint',1.2,{c:'40,140,255'}); for(let i=0;i<18;i++) later(i*.04,()=>{ const wx=x-600+i*70; for(let k=0;k<10;k++) P(wx+rnd(-20,20),rnd(0,40),z+rnd(-120,120),{vx:600,vy:rnd(250,520),g:900,life:.8,max:.8,c:pick(['#1d6fd6','#4fc3ff','#bfefff','#ffffff']),s:rnd(6,12)}); }); break;
+    case 'rimvolcano': screenFx('tint',1.6,{c:'255,90,20'}); V.shake=Math.max(V.shake,16); floatText('ERUPTION',x,hy+170,z,'#ff7a1a',54,1.4);
+      for(let i=0;i<20;i++) later(i*.04,()=>{ for(let k=0;k<6;k++) P(hx,RIM_Y,0,{vx:rnd(-220,220),vy:rnd(700,1100),vz:rnd(-80,80),g:900,life:1.3,max:1.3,c:pick(['#ff3b00','#ff8a1f','#ffd23f','#3a1a10']),s:rnd(6,12)}); });
+      later(.4,()=>{ for(let k=0;k<6;k++) emo(hx,RIM_Y,0,'🪨',{vx:rnd(-400,400),vy:rnd(500,800),g:900,life:1.4,max:1.4,s:rnd(20,30)}); }); break;
+    case 'skysplit': screenFx('darken',1.6); later(.15,()=>{ beam(x,z,'rgba(255,240,140,',1.2,90); V.flash=1; V.shake=Math.max(V.shake,24); bolt(x,z); sphereBurst(x,hy,z,90,['#ffe066','#ffffff','#9fe7ff'],600); floatText('SKY SPLIT',x,hy+180,z,'#ffe066',58,1.4); for(let k=0;k<4;k++) later(.1+k*.12,()=>bolt(x+rnd(-300,300),z+rnd(-60,60))); }); break;
+    case 'apocalypse': cutscene('APOCALYPSE',(who||'YOU').toUpperCase(),'#ff3b00',2); screenFx('bloodred',2.2); V.shake=Math.max(V.shake,18);
+      for(let i=0;i<14;i++) later(.2+i*.09,()=>{ const mx=x+rnd(-500,500), mz=z+rnd(-120,60); emo(mx+300,560,mz,'☄️',{vx:-600,vy:-1000,g:0,life:.55,max:.55,s:40,vr:0}); later(.5,()=>{ for(let k=0;k<16;k++) P(mx,4,mz,{vx:rnd(-300,300),vy:rnd(150,500),g:800,life:.8,max:.8,c:pick(['#ff3b00','#ff8a1f','#ffd23f']),s:rnd(5,9)}); ring(mx,4,mz,'#ff7a1a',120,.5,6); V.shake=Math.max(V.shake,10); }); });
+      later(1.5,()=>{ V.flash=Math.max(V.flash,.7); floatText('APOCALYPSE',x,hy+190,z,'#ff3b00',66,1.4); }); break;
     // ---------------- christmas
     case 'snowburst': for(let i=0;i<40;i++) P(x,hy,z,{vx:rnd(-380,380),vy:rnd(0,480),g:420,life:1.2,max:1.2,c:pick(['#ffffff','#dff6ff','#bfefff']),s:rnd(3,7)}); for(let i=0;i<8;i++) emo(x,hy,z,'❄️',{vx:rnd(-300,300),vy:rnd(100,400),g:400,life:1.2,max:1.2,s:rnd(16,26)}); floatText('ICE COLD',x,hy+170,z,'#bfefff',30,1.3); break;
     case 'giftpop': emo(x,hy+30,z,'🎁',{s:60,g:0,life:.4,max:.4,vr:0}); later(.35,()=>{ V.flash=Math.max(V.flash,.25); spray(x,hy+30,z,50,['#e2342d','#1f8a3a','#ffd23f','#ffffff'],500,{g:500}); for(let i=0;i<6;i++) emo(x,hy+30,z,pick(['🍬','⭐','🧸','🎄']),{vx:rnd(-300,300),vy:rnd(150,450),g:500,life:1.2,max:1.2,s:rnd(18,28)}); floatText('UNWRAPPED',x,hy+180,z,'#ffd23f',34,1.3); }); break;
@@ -3657,6 +3698,9 @@ function greenFx(kind,x,y,z,hx,who){
 
 // cellys: run every frame for the player who just scored
 function cellyLift(c){
+  if(c.kind==='thunderking') return Math.min(1,c.t*2)*50+Math.sin(c.t*4)*6;
+  if(c.kind==='stormgod') return c.t>.6 ? Math.min(1,(c.t-.6)*2)*90+Math.sin(c.t*3)*5 : 0;
+  if(c.kind==='tornado') return Math.sin(Math.min(1,c.t/2.2)*Math.PI)*70;
   if(c.kind==='sleighride') return Math.sin(Math.min(1,c.t/2.4)*Math.PI)*240;
   if(c.kind==='rocket') return Math.sin(Math.min(1,c.t/2.1)*Math.PI)*380;
   if(c.kind==='ascend') return Math.min(1,c.t/1.4)*170*(c.t>1.9?Math.max(0,1-(c.t-1.9)*3):1);
@@ -3813,6 +3857,28 @@ function cellyTick(c, q, dt){
       if(every(.1) && t<1.8){ P(x,150,z,{vy:1100,g:0,life:.35,max:.35,c:'#00ff41',s:5,trail:1}); if(Math.random()<.5){ const ey=330-((t*60)|0); later(.3,()=>{ const ex=x-300+Math.floor(rnd(0,6))*120; for(let k=0;k<14;k++) P(ex,ey,z-60,{vx:rnd(-200,200),vy:rnd(-150,200),g:300,life:.5,max:.5,c:pick(['#00ff41','#ff3df2','#ffffff']),s:7,sq:1}); }); } } break;
     case 'finalboss': if(first){ screenFx('retro',2.3); screenFx('boss',2.3); cutscene('FINAL BOSS',(infoOf(q[0])||{}).name||'','#00ff41',1.4); }
       if(t>1.6 && !c.p){ c.p=true; floatText('PERFECT',x,350,z,'#ffd23f',70,1); V.flash=Math.max(V.flash,.8); V.shake=Math.max(V.shake,20); for(let i=0;i<60;i++) P(x,150,z,{vx:rnd(-500,500),vy:rnd(0,600),g:500,life:1.2,max:1.2,c:`hsl(${i*12},100%,60%)`,s:9,sq:1}); } break;
+    // ---------------- storm
+    case 'raincloud': if(first) floatText('MAKE IT RAIN',x,330,z,'#9fe7ff',40,1.8);
+      if(every(.06)) for(let k=0;k<3;k++) P(x+rnd(-80,80),cy+250,z+rnd(-20,20),{vy:-rnd(380,520),g:300,life:.6,max:.6,c:'#7fc8ff',s:rnd(2.5,4)});
+      if(every(.1)) P(x+rnd(-70,70),cy+268,z,{vx:rnd(-15,15),g:0,life:.45,max:.45,c:'rgba(70,80,100,.8)',s:rnd(26,38)});
+      if(every(.7)){ bolt(x+rnd(-60,60),z,cy+240); } break;
+    case 'tornado': if(first){ floatText('TORNADO',x,340,z,'#c9d3e0',46,1.8); V.shake=Math.max(V.shake,6); }
+      if(every(.02)){ const a=t*14, h=(t*500)%260; for(let k=0;k<2;k++){ const aa=a+k*Math.PI, r=30+h*.45; P(x+Math.cos(aa)*r,h,z+Math.sin(aa)*r*.35,{vx:-Math.sin(aa)*220,vy:120,vz:Math.cos(aa)*80,g:0,life:.5,max:.5,c:pick(['rgba(200,210,225,.7)','rgba(150,160,180,.6)','#ffffff']),s:rnd(5,10)}); } }
+      if(every(.25)) emo(x+rnd(-120,120),rnd(20,200),z,pick(['🍃','📄','🧢']),{vx:rnd(-200,200),vy:rnd(100,300),g:200,life:1,max:1,s:20}); break;
+    case 'quake': if(first){ floatText('EARTHQUAKE',x,340,z,'#c98a4b',50,2); const pt=V.camT?V.camT(x,0,z):null; screenFx('crack',2,pt?{cx:pt[0],cy:pt[1]}:{}); }
+      if(every(.35)){ V.shake=Math.max(V.shake,16); ring(x,4,z,'#c98a4b',220,.5,8); for(let k=0;k<14;k++) P(x+rnd(-200,200),4,z+rnd(-60,60),{vx:rnd(-120,120),vy:rnd(250,600),g:1200,life:.8,max:.8,c:pick(['#7a5a3a','#a07a4a','#5a4030']),s:rnd(5,10),sq:1}); } break;
+    case 'thunderking': if(first){ screenFx('darken',2.3); floatText('THUNDER KING',x,360,z,'#ffe066',52,2); }
+      if(every(.3)){ const bx=x+rnd(-260,260), bz=z+rnd(-60,60); bolt(bx,bz); for(let k=0;k<16;k++) P(bx,4,bz,{vx:rnd(-260,260),vy:rnd(100,400),g:700,life:.5,max:.5,c:pick(['#ffe066','#ffffff','#9fe7ff']),s:rnd(3,6)}); V.shake=Math.max(V.shake,8); }
+      if(every(.04)) P(x+rnd(-40,40),cy+rnd(30,190),z,{vx:rnd(-80,80),vy:rnd(-80,80),g:0,life:.18,max:.18,c:pick(['#ffe066','#9fe7ff']),s:rnd(2,4)}); break;
+    case 'eyeofstorm': if(first){ screenFx('darken',2.4); screenFx('spot',2.4,{id:c.id}); floatText('EYE OF THE STORM',x,360,z,'#bfefff',42,2.2); }
+      if(every(.03)) for(let k=0;k<2;k++){ const a=t*5+rnd(0,TAU), r=rnd(230,300); P(x+Math.cos(a)*r,rnd(0,320),z+Math.sin(a)*r*.3,{vx:-Math.sin(a)*500,vy:-rnd(80,200),vz:Math.cos(a)*150,g:0,life:.4,max:.4,c:pick(['rgba(160,200,255,.8)','#ffffff']),s:rnd(2,4)}); }
+      if(every(.5)){ const a=rnd(0,TAU); bolt(x+Math.cos(a)*280,z+Math.sin(a)*80); }
+      if(every(.6)) ring3d(x,cy+100,z,150,'#bfefff',{ax:Math.PI/2,ay:0,sx:3,sy:0,t:.8,w:3}); break;
+    case 'stormgod': if(first){ cutscene('STORM GOD',(infoOf(q[0])||{}).name||'','#ffe066',2.2); screenFx('darken',2.6); screenFx('tint',2.6,{c:'80,90,160'});
+        later(.6,()=>{ beam(x,z,'rgba(255,240,140,',1.4,110); V.flash=1; V.shake=Math.max(V.shake,28); floatText('STORM GOD',x,380,z,'#ffe066',68,1.6); sphereBurst(x,150,z,120,['#ffe066','#ffffff','#9fe7ff'],700);
+          const S=currentSnap(); if(S) S.p.forEach((o,k)=>{ if(o[Q.team]===q[Q.team]) return; later(.2+k*.15,()=>{ bolt(o[Q.x],o[Q.z]); emo(o[Q.x],o[Q.y]+240,o[Q.z],'😵',{s:40,g:0,life:1.2,max:1.2,vr:0}); }); }); }); }
+      if(every(.18)) bolt(x+rnd(-500,500),z+rnd(-120,0));
+      if(every(.03)) P(x+rnd(-600,600),rnd(380,520),z+rnd(-100,100),{vy:-rnd(700,900),vx:-120,g:0,life:.7,max:.7,c:'rgba(160,190,255,.7)',s:2.5}); break;
     // ---------------- christmas
     case 'snowangel': if(first){ emo(x+90,40,z+10,'⛄',{s:64,g:0,life:2.2,max:2.2,vr:0}); floatText('SNOW DAY',x,300,z,'#dff6ff',38,1.8); }
       if(every(.05)) P(x+rnd(-220,220),rnd(260,360),z+rnd(-60,60),{vy:-rnd(60,120),vx:rnd(-30,30),g:0,life:2,max:2,c:'#ffffff',s:rnd(3,6)}); break;
@@ -4185,6 +4251,9 @@ function handleEvent(e, demo){
           floatText('SUPERNOVA',dx,RIM_Y+170,0,'#ffd23f',50,1.6); camFlashes(40); }); }
       else if(ds==='flamedunk'){ later(.15,()=>{ for(let k=0;k<3;k++) ring3d(dx,RIM_Y,0,50+k*20,['#ff5a00','#ffb347','#ffe066'][k],{ax:0,ay:Math.PI/2-.3,sx:0,sy:0,t:.9,w:6,grow:1});
           spray(dx,RIM_Y,0,50,['#ff3b00','#ff8a1f','#ffd23f'],480,{g:-60}); V.shake=Math.max(V.shake,16); floatText('FLAME SLAM',dx,RIM_Y+150,0,'#ff8a1f',42,1.3); }); }
+      else if(ds==='thunderdunk'){ later(.12,()=>{ bolt(dx,0,RIM_Y); V.flash=Math.max(V.flash,.6); V.shake=Math.max(V.shake,18); ring(dx,RIM_Y,0,'#ffe066',200,.5,8); for(let i=0;i<40;i++) P(dx,RIM_Y,0,{vx:rnd(-400,400),vy:rnd(-100,400),g:600,life:.7,max:.7,c:pick(['#ffe066','#ffffff','#9fe7ff']),s:rnd(3,6)}); floatText('THUNDER',dx,RIM_Y+170,0,'#ffe066',52,1.2); }); }
+      else if(ds==='quakedunk'){ later(.15,()=>{ V.shake=Math.max(V.shake,30); const pt=V.camT?V.camT(dx,0,0):null; screenFx('crack',1.6,pt?{cx:pt[0],cy:pt[1]}:{}); for(let i=0;i<40;i++) P(dx+rnd(-200,200),4,rnd(-80,80),{vx:rnd(-200,200),vy:rnd(300,700),g:1200,life:.9,max:.9,c:pick(['#7a5a3a','#a07a4a','#5a4030']),s:rnd(6,12),sq:1}); ring(dx,4,0,'#c98a4b',300,.6,10); floatText('EARTHQUAKE',dx,RIM_Y+170,0,'#c98a4b',52,1.3); }); }
+      else if(ds==='skyfall'){ emo(dx+500,RIM_Y+700,0,'☄️',{vx:-1300,vy:-1250,g:0,life:.45,max:.45,s:70,vr:0}); later(.45,()=>{ V.flash=1; V.shake=Math.max(V.shake,30); sphereBurst(dx,RIM_Y,0,140,['#ff3b00','#ff8a1f','#ffd23f','#ffffff'],760); ring(dx,4,0,'#ff7a1a',360,.7,12); screenFx('tint',1.2,{c:'255,90,20'}); floatText('SKYFALL',dx,RIM_Y+190,0,'#ff8a1f',62,1.4); }); }
       else if(ds==='snowdunk'){ later(.15,()=>{ for(let i=0;i<60;i++) P(dx,RIM_Y,0,{vx:rnd(-450,450),vy:rnd(0,520),g:500,life:1.3,max:1.3,c:pick(['#ffffff','#dff6ff']),s:rnd(4,9)}); emo(dx,40,40,'⛄',{s:70,g:0,life:1.6,max:1.6,vr:0}); floatText('SNOWED IN',dx,RIM_Y+160,0,'#bfefff',40,1.3); }); }
       else if(ds==='sleighdunk'){ emo(dx-800,RIM_Y+200,-60,'🛷',{vx:1400,g:0,life:1.2,max:1.2,s:56,vr:0}); for(let k=1;k<=3;k++) emo(dx-800+k*55,RIM_Y+200,-60,'🦌',{vx:1400,g:0,life:1.2,max:1.2,s:44,vr:0});
         later(.55,()=>{ for(let i=0;i<8;i++) emo(dx+rnd(-200,200),RIM_Y+220,rnd(-40,40),'🎁',{vy:-rnd(50,150),g:600,life:1.2,max:1.2,s:rnd(24,34)}); floatText('SPECIAL DELIVERY',dx,RIM_Y+170,0,'#ffd23f',38,1.4); V.shake=Math.max(V.shake,10); }); }
@@ -4905,6 +4974,10 @@ function drawTrail(style, dt){
       case 'rgbT':     seg(i,`hsla(${(clock*720+i*18)%360},100%,60%,${k*.95})`,12*k); seg(i,`rgba(255,255,255,${k*.6})`,3*k); break;
       case 'northT':   { const o=Math.sin(i*.5+clock*4)*10*k; seg(i,`rgba(71,226,122,${k*.55})`,10*k,o); seg(i,`rgba(160,90,255,${k*.55})`,8*k,-o); seg(i,`rgba(255,255,255,${k*.5})`,2*k); break; }
       case 'reindeerT':seg(i,`rgba(201,138,75,${k*.35})`,12*k); seg(i,`rgba(255,255,255,${k*.6})`,3*k); break;
+      case 'rainT':    seg(i,`rgba(79,195,255,${k*.5})`,10*k); seg(i,`rgba(255,255,255,${k*.6})`,2*k); break;
+      case 'stormT':   { seg(i,`rgba(60,70,90,${k*.55})`,22*k); if(i%4===0 && Math.random()<.35){ const b=T[i], X=PX(b.x,b.z), Y=PY(b.y,b.z); ctx.strokeStyle=`rgba(255,240,140,${k})`; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(X,Y); ctx.lineTo(X+rnd(-14,14),Y+rnd(-14,14)); ctx.lineTo(X+rnd(-20,20),Y+rnd(-20,20)); ctx.stroke(); } break; }
+      case 'lavaT':    seg(i,`rgba(40,10,10,${k*.6})`,16*k); seg(i,`rgba(255,${90+k*120|0},20,${k*.95})`,7*k); break;
+      case 'tornadoT': { const o=Math.sin(i*.9+clock*18)*12*k; seg(i,`rgba(200,210,225,${k*.5})`,6*k,o); seg(i,`rgba(150,160,180,${k*.5})`,6*k,-o); seg(i,`rgba(255,255,255,${k*.6})`,2*k); break; }
       case 'snowT':    seg(i,`rgba(255,255,255,${k*.35})`,20*k); seg(i,`rgba(220,240,255,${k*.8})`,5*k); break;
       case 'candyT':   seg(i,(i>>1)%2?`rgba(226,52,45,${k*.95})`:`rgba(255,255,255,${k*.95})`,11*k); break;
       case 'lightsT':  { seg(i,`rgba(30,90,40,${k*.8})`,2.5); if(i%3===0){ const b=T[i], c=['255,70,70','255,210,63','71,226,122','61,139,255'][(i/3|0)%4]; ctx.fillStyle=`rgba(${c},${k*(Math.sin(clock*8+i)>-.2?1:.3)})`; ctx.beginPath(); ctx.arc(PX(b.x,b.z),PY(b.y,b.z),5*k+2,0,TAU); ctx.fill(); } break; }
@@ -4935,6 +5008,8 @@ function drawTrail(style, dt){
     else if(style==='ice') emo(h.x,h.y,h.z,'❄️',{vy:10,g:80,life:.8,max:.8,s:12});
     else if(style==='galaxy') P(h.x+rnd(-8,8),h.y+rnd(-8,8),h.z,{g:0,life:.7,max:.7,c:pick(['#fff','#c77dff','#9fe7ff']),s:rnd(1.5,3)});
     else if(style==='lightning' && Math.random()<.35) spray(h.x,h.y,h.z,4,['#fff','#ffe066'],120,{g:0});
+    else if(style==='rainT' && Math.random()<.4) P(h.x,h.y,h.z,{vy:-200,g:600,life:.4,max:.4,c:'#7fc8ff',s:2.5});
+    else if(style==='lavaT' && Math.random()<.4) P(h.x,h.y,h.z,{vx:rnd(-40,40),vy:rnd(20,90),g:400,life:.5,max:.5,c:pick(['#ff3b00','#ffd23f']),s:3});
     else if(style==='reindeerT' && Math.random()<.3) emo(h.x,h.y,h.z,'🦌',{vy:20,g:0,life:.6,max:.6,s:16,vr:0});
     else if(style==='snowT' && Math.random()<.35) emo(h.x,h.y,h.z,'❄️',{vy:30,g:-10,life:.8,max:.8,s:12,vr:0});
     else if(style==='ghostT' && Math.random()<.4) emo(h.x,h.y,h.z,'👻',{vy:40,g:-20,life:.8,max:.8,s:14,vr:0});
@@ -5156,6 +5231,12 @@ function drawPlayer(q, hasBall, S, B, refl){
     case 'orbit': fH=[face*40,-128]; bH=[-face*40,-128]; mouth='grin'; break;
     case 'starfall': fH=[face*8,-180]; bH=[-face*16,-104]; mouth='o'; break;
     case 'eclipse': fH=[face*26,-170]; bH=[-face*26,-170]; mouth='o'; break;
+    case 'raincloud': fH=[face*24,-120]; bH=[-face*20,-118]; mouth='grin'; break;
+    case 'tornado': fH=[face*48,-110]; bH=[-face*48,-110]; mouth='yell'; break;
+    case 'quake': fH=[face*20,-70]; bH=[-face*20,-70]; mouth='yell'; angry=true; break;
+    case 'thunderking': fH=[face*20,-176]; bH=[-face*30,-140]; mouth='yell'; angry=true; break;
+    case 'eyeofstorm': fH=[face*36,-140]; bH=[-face*36,-140]; mouth='flat'; break;
+    case 'stormgod': fH=[face*10,-180]; bH=[-face*40,-150]; mouth='yell'; angry=true; break;
     case 'bigbang': if(cel.t<1.1){ fH=[face*6,-118]; bH=[-face*6,-118]; mouth='grit'; } else { fH=[face*46,-170]; bH=[-face*46,-170]; mouth='yell'; } break;
   }
   const fS=[face*8,-101], bS=[-face*8,-101];
