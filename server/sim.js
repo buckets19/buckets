@@ -184,7 +184,7 @@ function shotWindow(M,p){
   let w = dist<220 ? 0.15
         : !isThree(p,h) ? lerp(0.105, 0.085, clamp((dist-220)/(THREE_D-220),0,1))
         : lerp(0.075, 0.055, clamp((dist-THREE_D)/220,0,1));
-  if(dist>THREE_D+260) w*=0.65;
+  if(dist>THREE_D+70) w*=clamp(1-(dist-(THREE_D+70))/330, 0.3, 1);      // the deeper you go the smaller it gets (half court ~ a third)
   if(dist>=220) w*=(p.shotForm||1);                                    // how you got into the shot
   if(tkOn(p,'shot')) w*=1.22;                                          // 🔥 Sniper takeover
   if(p.pmT>0) w*=1.2;                                                   // 🤝 fed by a Playmaker
@@ -196,7 +196,7 @@ function shotWindow(M,p){
     let ox=o.x-p.x, oz=o.z-p.z;
     if(!o.bot && o.authAt){ const age=(performance.now()-o.authAt)/1000; if(age<0.3){ const ax=o.authX+o.vx*Math.min(age,0.08)-p.x, az=o.authZ+o.vz*Math.min(age,0.08)-p.z; if(hyp(ax,az)<hyp(ox,oz)){ ox=ax; oz=az; } } }
     let d=hyp(ox,oz); const ahead=ox*v.ux+oz*v.uz;
-    if(!o.bot && d>1){ const closing=-(o.vx*ox+o.vz*oz)/d; if(closing>0) d=Math.max(0, d-Math.min(closing,450)*0.1); }
+    if(!o.bot && d>1 && d<95){ const closing=-(o.vx*ox+o.vz*oz)/d; if(closing>0) d=Math.max(0, d-Math.min(closing,400)*0.06); }
     if(d<150){
       // how much green you keep vs. this defender (1 = wide open): in your body = none, tight 25%, covered 40%, light ~70%
       let f=contestAt(d);
@@ -210,9 +210,9 @@ function shotWindow(M,p){
       if(dr<100 && ahead>-10 && ahead<dist+25){ let f=Math.pow(0.55+0.45*(dr/100),1.1); if(o.y>20) f*=0.8; c=Math.min(c,f); } }
   }
   p.contest=c;
-  if(c<0.12) return dist<220 ? 0.012 : 0;                // smothered: no green on a jumper (a sliver at the rim)
+  if(c<0.3) return 0;                                     // tight or smothered: there is no green
   if(dist>HEAVE_D) return 0.005;                         // past half court: just a sliver on the meter (it can't green; see releaseShot)
-  return clamp(w*0.8*c, 0.01, 0.16);                         // scaled by coverage: open = full green, light ~70%, covered 40%, tight 25%
+  return clamp(w*0.8*Math.pow(c,1.5), 0.01, 0.16);       // contested greens shrink fast: light ~60%, covered ~25% of open                         // scaled by coverage: open = full green, light ~70%, covered 40%, tight 25%
 }
 function previewWin(M,p){ const v=hoopVec(p,attackHoop(p.team)), sf=p.shotForm, c=p.contest; p.shotForm=shotFormAt(p,v)[0]; const w=shotWindow(M,p); p.shotForm=sf; p.contest=c; return w; }
 // judge HOW the shot started: set shot, in rhythm off a move, on the run, or fading away
@@ -220,8 +220,8 @@ function shotFormAt(p, v){
   const sp=hyp(p.vx,p.vz), away=sp>1 ? -(p.vx*v.ux+p.vz*v.uz)/sp : 0, k=clamp((sp-60)/(RUN-60),0,1);
   if(p.rhythmT>0) return [1.25,'IN RHYTHM'];
   if(sp<=60) return [1,''];
-  if(away>0.45) return [lerp(1,0.5,k), k>0.35?'FADING':''];
-  return [lerp(1,0.84,k), k>0.6?'ON THE RUN':''];
+  if(away>0.45) return [lerp(1,0.66,k), k>0.35?'FADING':''];          // fades + runners: a medium-small green, easy with decent timing
+  return [lerp(1,0.7,k), k>0.55?'ON THE RUN':''];
 }
 
 function handleActions(M,p){
@@ -235,7 +235,7 @@ function handleActions(M,p){
         p.vx=clamp((h.cx-v.ux*8-p.x)/T,-520,520); p.vz=clamp((0-p.z)/T,-400,400); p.face=Math.sign(v.ux)||p.face; p.burstT=0;
         pushEv(M,{k:'dunkgo', id:p.id});
       } else {
-        [p.shotForm, p.formTag]=shotFormAt(p,v); if(v.d<220) p.formTag=""; p.rhythmT=0;
+        [p.shotForm, p.formTag]=shotFormAt(p,v); if(v.d<220) p.formTag=""; if(v.d>THREE_D+110 && v.d<HEAVE_D) p.formTag = v.d>THREE_D+230 ? 'WAY DOWNTOWN' : 'LONG RANGE'; p.rhythmT=0;
         p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.4; p.vz*=0.4; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.hesiT=0; p.meterWin=shotWindow(M,p); p.cMin=p.contest;
         p.reqW=null;
       }
@@ -302,7 +302,7 @@ function releaseShot(M,p,m){
   // ^ a closeout at the release still counts (not after landing: that's just lag)
   const sx=p.x+p.face*6, sz=p.z, sy=p.y+150;
   const v=hoopVec({x:sx,z:sz},h), dist=hyp(h.cx-p.x, p.z);
-  const w=p.meterWin, e=m-SWEET; let err=0, q='perfect';
+  const w=(p.contest!==undefined && p.contest<0.3) ? 0 : p.meterWin, e=m-SWEET; let err=0, q='perfect';   // smothered at any point = no green
   if(w<=0 || Math.abs(e)>w){                                   // smothered (no green) or outside the green
     err = w<=0 ? e : e-Math.sign(e)*w; if(Math.abs(err)<0.004) err=0.004*(Math.sign(e)||pick([-1,1]));
     q = Math.abs(err)<0.06 ? (err<0?'Slightly early':'Slightly late') : (err<0?'Early':'Late'); }
@@ -311,13 +311,13 @@ function releaseShot(M,p,m){
   // the closer to green, the more open you are, and the cleaner you got into the shot, the better the odds.
   const c0=(p.contest===undefined?1:p.contest), cm=1-c0, green=q==='perfect';
   const three = isThree(p,h);
-  const band = dist<220 ? 0 : !three ? 1 : dist<THREE_D+260 ? 2 : dist<HEAVE_D ? 3 : 4;   // layup · mid · three · deep · heave
+  const band = dist<220 ? 0 : !three ? 1 : dist<THREE_D+180 ? 2 : dist<HEAVE_D ? 3 : 4;   // layup · mid · three · deep · heave
   let made;
   if(green) made = true;                                 // (past half court the green is a sliver, so this is rare)
   else {
-    const ODDS=[[0.82,0.55,0.25],[0.62,0.35,0.1],[0.48,0.2,0.04],[0.25,0.08,0.02],[0.15,0.05,0.01]];   // slightly off · off · way off (open)
+    const ODDS=[[0.78,0.42,0.15],[0.56,0.24,0.05],[0.42,0.13,0.02],[0.2,0.05,0.01],[0.15,0.05,0.01]];   // slightly off · off · way off (open)
     const ae=Math.abs(err); let pr=ODDS[band][ae<0.06?0:ae<0.12?1:2];
-    pr *= c0<0.12 ? (band===0?0.2:0.03) : Math.pow(c0, band===0?0.8:1.4);   // jumpers: coverage is brutal; at the rim you can still finish through contact sometimes                 // light ~60%, covered ~28%, tight ~14% of the open odds; smothered = no
+    pr *= c0<0.3 ? (band===0?0.25:0.04) : Math.pow(c0, band===0?0.8:1.4);   // jumpers: coverage is brutal; at the rim you can still finish through contact sometimes                 // light ~60%, covered ~28%, tight ~14% of the open odds; smothered = no
     pr *= clamp(p.shotForm||1, 0.5, 1.2);                    // set shot / off a move / on the run / fading
     if(p.fire) pr*=1.15; if(p.cold) pr*=0.85;
     if(tkOn(p,'shot') && band>0) pr*=1.15; if(tkOn(p,'slash') && band===0) pr*=1.2; if(p.pmT>0) pr*=1.15;
