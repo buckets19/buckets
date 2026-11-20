@@ -6697,7 +6697,7 @@ function renderCrates(box){
   const day=new Date().toDateString(), dailyOk=SAVE.dailyPack!==day;
   { const d=el('div','dailyCard'+(dailyOk?' ready':'')); d.append(el('div','dIcon','🎁'), el('div','dTxt', dailyOk ? 'FREE daily Street Pack is ready!' : 'Free Street Pack again tomorrow'));
     const b=el('button','btn '+(dailyOk?'yellow':''), dailyOk?'Open free':'✓ Claimed'); b.disabled=!dailyOk; b.onclick=()=>{ if(SAVE.dailyPack===day) return; SAVE.dailyPack=day; persist(); openPack('street', true); }; d.append(b); box.append(d); }
-  { const g=el('div','shardBar'); g.append(el('b','','💎 '+(SAVE.gems||0)+' Gems'), el('small','',' · earn them playing online + ranked (~25-40 a game), +60 daily quests, +30 per pass level, +250 per trophy, and from codes + events't give Gems.')); box.append(g); }
+  { const g=el('div','shardBar'); g.append(el('b','','💎 '+(SAVE.gems||0)+' Gems'), el('small','',' · earn them playing online + ranked (~25-40 a game), +60 daily quests, +30 per pass level, +250 per trophy, and from codes + events.')); box.append(g); }
   // free packs you've been given (Season Pass, admin gifts, codes)
   for(const [id,n] of Object.entries(SAVE.freeCrates||{})) if(n>0 && packOf(id)) box.append(packCard(packOf(id), n));
   const fp=featuredPack(), left=Math.ceil((featWeek()+1)*7 - (Date.now()/864e5+3)); box.append(packCard(fp, 0, '🔥 FEATURED · '+left+(left===1?' day':' days')+' left'));
