@@ -4149,7 +4149,7 @@ function sfx(kind,p=1){
 // =====================================================================
 const cv=$('#c'); let ctx=cv.getContext('2d');
 let W=0,H=0,dpr=1;
-function resize(){ dpr=Math.min(V.lowFx2?0.85:V.lowFx?1:1.6,devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*dpr; cv.height=H*dpr;
+function resize(){ dpr=Math.min(V.lowFx2?1.25:V.lowFx?1.6:2,devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*dpr; cv.height=H*dpr;
   $('#rotate').classList.toggle('hidden', !(touchMode && H>W)); }
 addEventListener('resize', resize); resize();
 const FONT='"Barlow Condensed","Arial Narrow",system-ui,sans-serif';
@@ -4416,7 +4416,7 @@ const FAN_SHIRTS=['#e04f45','#3f7fd9','#f2c14e','#2f9e62','#8c5bd6','#ef7d3a','#
 const FAN_SPR={};
 function fanSprite(v, up){
   const k=v+(up?'u':''); if(FAN_SPR[k]) return FAN_SPR[k];
-  const c=document.createElement('canvas'); c.width=64; c.height=100; const g=c.getContext('2d'); g.scale(2,2);
+  const c=document.createElement('canvas'); c.width=96; c.height=150; const g=c.getContext('2d'); g.scale(3,3);
   const r=n=>{ const x=Math.sin(v*999+n*77)*10000; return x-Math.floor(x); };
   const shirt=FAN_SHIRTS[Math.floor(r(1)*FAN_SHIRTS.length)], skin=SKINS[Math.floor(r(2)*SKINS.length)], hair=['#1b1530','#3b2314','#6b3e1f','#d9a441','#7a1f1f'][Math.floor(r(3)*5)];
   const dim=c2=>shadeCol(c2,.62);                       // the stands are darker than the court
@@ -4439,16 +4439,18 @@ function fanSprite(v, up){
 }
 const CROWD_C={};
 function crowdLayer(kind){   // 'bg' = empty stands, 'full' = stands + fans + lights; drawn in world units, cached
-  if(CROWD_C[kind]) return CROWD_C[kind];
+  const k=clamp(Math.round(dpr*Math.min(W/960,H/640)*4)/4, 1, 1.75), key=kind+k;
+  if(CROWD_C[key]) return CROWD_C[key];
+  for(const kk in CROWD_C) if(kk.startsWith(kind)) delete CROWD_C[kk];          // a new size: drop the old picture
   const zc=HALF_D+70, base=PY(0,zc), sk=zc*SKEW, W0=COURT_W+1900, H0=560;
-  const c=document.createElement('canvas'); c.width=W0; c.height=H0; const g=c.getContext('2d'); g.translate(900,H0-base);
+  const c=document.createElement('canvas'); c.width=Math.round(W0*k); c.height=Math.round(H0*k); const g=c.getContext('2d'); g.scale(k,k); g.translate(900,H0-base);
   g.fillStyle='#1d1838'; g.fillRect(-900,base-560,W0,560);
   g.fillStyle='#2b2450'; for(let r=0;r<7;r++) g.fillRect(-900,base-(50+r*58),W0,10);
   if(kind==='full'){
     for(const f of crowd){ const x=f.x+sk, y=base-(f.y+40); g.drawImage(fanSprite(f.v,false), x-16, y-17, 32, 50); }
     crowdLight(g, base, sk);
   }
-  CROWD_C[kind]=c; return c;
+  CROWD_C[key]=c; return c;
 }
 function crowdLight(g, base, sk){
   const fade=g.createLinearGradient(0,base-470,0,base-120); fade.addColorStop(0,'rgba(10,6,24,.82)'); fade.addColorStop(1,'rgba(10,6,24,0)');
@@ -4463,7 +4465,7 @@ function drawCrowd(dt){
   const sk=zc*SKEW;
   if(V.cheer>0.05){
     // big play: everyone's on their feet
-    ctx.drawImage(crowdLayer('bg'), -900, base-560);
+    ctx.drawImage(crowdLayer('bg'), -900, base-560, COURT_W+1900, 560);
     let ci=0;
     for(const c of crowd){
       if(V.lowFx && (ci++&1)) continue;
@@ -4472,7 +4474,7 @@ function drawCrowd(dt){
     }
     const fade=ctx.createLinearGradient(0,base-470,0,base-120); fade.addColorStop(0,'rgba(10,6,24,.82)'); fade.addColorStop(1,'rgba(10,6,24,0)');
     ctx.fillStyle=fade; ctx.fillRect(-900,base-560,COURT_W+1900,440);
-  } else ctx.drawImage(crowdLayer('full'), -900, base-560);
+  } else ctx.drawImage(crowdLayer('full'), -900, base-560, COURT_W+1900, 560);
   // fan signs
   ctx.font=`700 13px ${FONT}`; ctx.textAlign='center'; ctx.textBaseline='middle';
   for(const sg of SIGNS){
@@ -4504,7 +4506,7 @@ const AD_BRANDS=[['SPLASH COLA','#e2342d','#fff'],['DRIP KICKS','#15171c','#ffc2
 const FLOOR_ADS=[[COURT_L-190,-110,'SPLASH COLA','#fff'],[COURT_L-190,120,'DRIP KICKS','#ffc21a'],[COURT_R+190,-110,'BKT ENERGY','#fff'],[COURT_R+190,120,'SWISH BANK','#9fe7ff']];
 function benchSprite(team, i, stand){   // a seated (or standing coach) teammate in team colours
   const k=team+':'+i+(stand?'s':''); if(SL_SPR[k]) return SL_SPR[k];
-  const c=document.createElement('canvas'); c.width=72; c.height=stand?140:110; const g=c.getContext('2d'); g.scale(2,2);
+  const c=document.createElement('canvas'); c.width=108; c.height=stand?210:165; const g=c.getContext('2d'); g.scale(3,3);
   const skin=SKINS[(i*3+team)%SKINS.length], col=stand?'#2b2e36':TEAM_COL[team], dark=stand?'#15171c':TEAM_DARK[team], H0=stand?70:55;
   g.lineJoin='round'; g.lineCap='round';
   // legs (seated: knees forward)
