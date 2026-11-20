@@ -1385,7 +1385,7 @@ function dribbleMove(M,p){
   } else if(toward<-0.5){                                // STEPBACK: hop back for space, shoot in rhythm
     m='stepback'; const lat=-(p.inX*v.uz-p.inZ*v.ux)/il*0.35;
     p.bdx=-v.ux - v.uz*lat; p.bdz=-v.uz + v.ux*lat; const l=hyp(p.bdx,p.bdz); p.bdx/=l; p.bdz/=l;
-    p.burstT=STEP_T; p.moveKind='step'; p.rhythmT=STEP_T+0.75;
+    p.burstT=STEP_T; p.moveKind='step'; p.rhythmT=STEP_T+0.75; p.face=Math.sign(v.ux)||p.face; p.stepFaceT=STEP_T+0.45;   // a stepback faces the rim (it used to turn and look like running away)
   } else if(toward>0.5 && def && dd<100){                // SPIN: whirl around a close defender toward the rim
     m='spin'; const side=Math.sign(-(def.x-p.x)*v.uz+(def.z-p.z)*v.ux)||1;     // spin away from the defender's side
     p.bdx=v.ux - v.uz*(-side)*0.95; p.bdz=v.uz + v.ux*(-side)*0.95; const l=hyp(p.bdx,p.bdz); p.bdx/=l; p.bdz/=l;
@@ -1547,7 +1547,9 @@ function movePlayer(M,p,dt){
   else if(ground && locked){ p.vx=approach(p.vx,0,ACC*dt); p.vz=approach(p.vz,0,ACC*dt); }
   // facing: defenders square up to the ball handler, everyone else faces where they run
   const hb = b.st==='held' ? findP(M,b.holder) : null;
-  if(!locked){
+  if(p.stepFaceT>0) p.stepFaceT-=dt;
+  if(p.stepFaceT>0 && has){ const hh=attackHoop(p.team); if(Math.abs(hh.cx-p.x)>6) p.face=Math.sign(hh.cx-p.x); }
+  else if(!locked){
     if(hb && hb.team!==p.team && hyp(hb.x-p.x,hb.z-p.z)<260) { if(Math.abs(hb.x-p.x)>6) p.face=Math.sign(hb.x-p.x); }
     else if(Math.abs(ix)>0.2) p.face=Math.sign(ix);
   }
@@ -5007,6 +5009,11 @@ function drawPlayer(q, hasBall, S, B, refl){
   const shoe=LK.shoe, hairStyle=LK.hairStyle, band=LK.band;
   const A = refl ? .13 : 1, s=DS(z);
   const st=V.ps[id]||(V.ps[id]={ly:0,sq:0,down:-1});
+  // smooth visuals: turning around, leaning and flapping ease in instead of snapping (big wings/capes made the snaps obvious)
+  if(!refl){ const dtv=Math.min(.05,Math.max(0,clock-(st.lt===undefined?clock:st.lt))); st.lt=clock; st.dt=dtv||.016;
+    if(st.fv===undefined) st.fv=face; st.fv+=clamp(face-st.fv,-dtv*12,dtv*12);
+    st.fp=(st.fp||0)+dtv*(running?9:3); st.wa=lerp(st.wa===undefined?3:st.wa,running?8:3,Math.min(1,dtv*5)); }
+  const turnSq=Math.abs(st.fv===undefined?1:st.fv); if(turnSq<.999) face=st.fv>=0?1:-1;
   // spin move: the body turns all the way around (squash + flip so it reads as a 360 in 2.5D)
   const spinK = st.spinAt!==undefined && clock-st.spinAt<SPIN_T ? (clock-st.spinAt)/SPIN_T : -1;
   if(spinK>=0 && Math.cos(spinK*TAU)<0) face=-face;
@@ -5022,21 +5029,21 @@ function drawPlayer(q, hasBall, S, B, refl){
   if(sp && sp.flip) ctx.scale(-1,1);
   if(sp && sp.rot) ctx.rotate(sp.rot);
   if(spinK>=0) ctx.scale(Math.max(0.25,Math.abs(Math.cos(spinK*TAU))),1);
+  else if(turnSq<.999) ctx.scale(Math.max(.18,turnSq),1);          // turning around: a quick squash-turn, not a one-frame flip
   if(ck==='bow') ctx.rotate(face*0.75*Math.min(1,cel.t*3));
   if(!refl){
     if(st.ly>6 && y<=1) st.sq=1; st.ly=y; st.sq=Math.max(0,st.sq-1/60*5);
-    if(st.sq>0) ctx.scale(1+.2*st.sq,1-.18*st.sq); else if(y>2 && !cel && act!==7) ctx.scale(.96,1.04);
+    st.as=lerp(st.as||0,(y>2&&!cel&&act!==7)?1:0,Math.min(1,st.dt*12));
+    if(st.sq>0) ctx.scale(1+.2*st.sq,1-.18*st.sq); else if(st.as>.01) ctx.scale(1-.04*st.as,1+.04*st.as);
     if(stum===2){ if(st.down<0) st.down=clock; } else st.down=-1;
   }
   // whole-body moves
   const downK = stum===2 && st.down>=0 ? Math.min(1,(clock-st.down)*5) : stum===2 ? 1 : 0;
   if(stum===2) ctx.rotate(-face*1.5*downK);                 // knocked flat on their back
-  else if(stum===1) ctx.rotate(-face*0.4);
   if(ck==='sleep') ctx.rotate(-face*1.45*Math.min(1,cel.t*4));
   if(ck==='cold') ctx.translate(Math.sin(clock*70)*2.2,0);
   if(ck==='clown') ctx.rotate(Math.sin(clock*18)*0.08);
-  if(act===6) ctx.rotate(face*0.24);
-  if(running && !cel && !stum) ctx.rotate(face*0.08);
+  { const tl=(stum===1?-face*0.4:0)+(act===6?face*0.24:0)+(running&&!cel&&!stum?face*0.08:0); if(!refl) st.ln=lerp(st.ln||0,tl,Math.min(1,(st.dt||.016)*11)); if(stum!==2) ctx.rotate(st.ln||0); }   // leans ease in/out
   { const t=tkState(q), c=TK_COL[t.kind]; if(t.on && c && !refl){ const pu=.75+.25*Math.sin(clock*9);
       const g=ctx.createRadialGradient(0,-80,10,0,-80,105); g.addColorStop(0,`rgba(${c},${.5*pu})`); g.addColorStop(1,`rgba(${c},0)`); ctx.fillStyle=g; ctx.fillRect(-105,-190,210,200);
       const pg=ctx.createLinearGradient(0,-260,0,0); pg.addColorStop(0,`rgba(${c},0)`); pg.addColorStop(1,`rgba(${c},${.3*pu})`); ctx.fillStyle=pg; ctx.fillRect(-26,-260,52,260); } }
@@ -5131,7 +5138,7 @@ function drawPlayer(q, hasBall, S, B, refl){
   const fS=[face*8,-101], bS=[-face*8,-101];
   const flex = ck==='flex';
   const TP=LK.top||{}, topB=TP.base==='light'?'#f4f4f8':TP.base==='dark'?dark:col, BT=LK.bot||{}, pantC=BT.pants?(BT.c==='team'?col:BT.c):null;
-  if(LK.back) backWear(LK.back,face,col,dark,trim,hipY,running);
+  if(LK.back) backWear(LK.back,face,col,dark,trim,hipY,running,st);
   // ---------- back arm, legs
   const bArm=ik(bS[0],bS[1],bH[0],bH[1],28,28,flex?-face:face); limb(bS[0],bS[1],bArm,9,8,skinD); if(TP.sh) topSleeve(TP,bS,bArm,shadeCol(topB,.8)); hand(bArm[2],bArm[3],skinD);
   const sockC = !LK.sock ? null : LK.sock==='team' ? col : LK.sock==='rainbow' ? rainbowCol(120) : LK.sock;
@@ -5606,12 +5613,12 @@ function wingShape(x0,y0,dir,s){ ctx.beginPath(); ctx.moveTo(x0,y0);
   ctx.quadraticCurveTo(x0+dir*30*s,y0-24*s, x0+dir*34*s,y0-12*s);
   ctx.quadraticCurveTo(x0+dir*20*s,y0-8*s, x0+dir*22*s,y0+6*s);
   ctx.quadraticCurveTo(x0+dir*10*s,y0+4*s, x0,y0+10*s); ctx.closePath(); }
-function backWear(b,face,col,dark,trim,hipY,running){
-  const d=-face, bx=d*19, flap=Math.sin(clock*(running?9:3))*.1;
+function backWear(b,face,col,dark,trim,hipY,running,st){
+  const ph=st&&st.fp!==undefined?st.fp:clock*3, amp=st&&st.wa!==undefined?st.wa:3, d=-face, bx=d*19, flap=Math.sin(ph)*.1;
   const wings=(fill,stroke,glow,feather)=>{ for(const [s,sh] of [[.88,.75],[1,1]]){ ctx.save(); ctx.translate(d*6,-96); ctx.rotate(d*(flap-(1-s)*1.2)); if(glow){ ctx.shadowColor=glow; ctx.shadowBlur=14; }
       wingShape(0,0,d,s); ctx.fillStyle=typeof fill==='function'?fill(sh):fill; ctx.fill(); ctx.shadowBlur=0; ctx.strokeStyle=stroke||INK; ctx.lineWidth=2; ctx.stroke();
       if(feather){ ctx.strokeStyle=feather; ctx.lineWidth=1.2; ctx.beginPath(); for(const [a,b2] of [[34,-12],[42,-34],[46,-66]]){ ctx.moveTo(d*4*s,-2*s); ctx.lineTo(d*a*s*.8,b2*s*.8); } ctx.stroke(); } ctx.restore(); } };
-  const cape=(c,edge)=>{ const w=Math.sin(clock*(running?10:3))*(running?8:3); ctx.fillStyle=c; ctx.beginPath(); ctx.moveTo(face*5,-112); ctx.quadraticCurveTo(d*14,-100,d*(30+w),-30); ctx.lineTo(d*(10+w*.4),-26); ctx.quadraticCurveTo(d*4,-70,-face*-0,-108); ctx.closePath(); ctx.fill(); inkS(2); if(edge){ ctx.strokeStyle=edge; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(d*(30+w),-30); ctx.lineTo(d*(10+w*.4),-26); ctx.stroke(); } };
+  const cape=(c,edge)=>{ const w=Math.sin(ph*1.1)*amp; ctx.fillStyle=c; ctx.beginPath(); ctx.moveTo(face*5,-112); ctx.quadraticCurveTo(d*14,-100,d*(30+w),-30); ctx.lineTo(d*(10+w*.4),-26); ctx.quadraticCurveTo(d*4,-70,-face*-0,-108); ctx.closePath(); ctx.fill(); inkS(2); if(edge){ ctx.strokeStyle=edge; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(d*(30+w),-30); ctx.lineTo(d*(10+w*.4),-26); ctx.stroke(); } };
   switch(b){
     case 1: ctx.fillStyle=dark; rrect(bx-9,-108,18,42,6); ctx.fill(); inkS(2); ctx.fillStyle=col; rrect(bx-7,-84,14,14,4); ctx.fill(); inkS(1.4); ctx.fillStyle=trim; ctx.fillRect(bx-1,-80,2,6); break;
     case 2: ctx.strokeStyle='#22242b'; ctx.lineWidth=1.2; ctx.fillStyle='rgba(30,30,40,.35)'; ctx.beginPath(); ctx.ellipse(bx,-86,12,22,0,0,TAU); ctx.fill(); for(const y of [-96,-76]){ ctx.fillStyle='#e8762d'; ctx.beginPath(); ctx.arc(bx,y,9,0,TAU); ctx.fill(); inkS(1.6); ctx.strokeStyle=INK; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(bx-9,y); ctx.lineTo(bx+9,y); ctx.moveTo(bx,y-9); ctx.lineTo(bx,y+9); ctx.stroke(); }

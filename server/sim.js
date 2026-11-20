@@ -282,7 +282,7 @@ function dribbleMove(M,p){
   } else if(toward<-0.5){                                // STEPBACK: hop back for space, shoot in rhythm
     m='stepback'; const lat=-(p.inX*v.uz-p.inZ*v.ux)/il*0.35;
     p.bdx=-v.ux - v.uz*lat; p.bdz=-v.uz + v.ux*lat; const l=hyp(p.bdx,p.bdz); p.bdx/=l; p.bdz/=l;
-    p.burstT=STEP_T; p.moveKind='step'; p.rhythmT=STEP_T+0.75;
+    p.burstT=STEP_T; p.moveKind='step'; p.rhythmT=STEP_T+0.75; p.face=Math.sign(v.ux)||p.face; p.stepFaceT=STEP_T+0.45;   // a stepback faces the rim (it used to turn and look like running away)
   } else if(toward>0.5 && def && dd<100){                // SPIN: whirl around a close defender toward the rim
     m='spin'; const side=Math.sign(-(def.x-p.x)*v.uz+(def.z-p.z)*v.ux)||1;     // spin away from the defender's side
     p.bdx=v.ux - v.uz*(-side)*0.95; p.bdz=v.uz + v.ux*(-side)*0.95; const l=hyp(p.bdx,p.bdz); p.bdx/=l; p.bdz/=l;
@@ -444,7 +444,9 @@ function movePlayer(M,p,dt){
   else if(ground && locked){ p.vx=approach(p.vx,0,ACC*dt); p.vz=approach(p.vz,0,ACC*dt); }
   // facing: defenders square up to the ball handler, everyone else faces where they run
   const hb = b.st==='held' ? findP(M,b.holder) : null;
-  if(!locked){
+  if(p.stepFaceT>0) p.stepFaceT-=dt;
+  if(p.stepFaceT>0 && has){ const hh=attackHoop(p.team); if(Math.abs(hh.cx-p.x)>6) p.face=Math.sign(hh.cx-p.x); }
+  else if(!locked){
     if(hb && hb.team!==p.team && hyp(hb.x-p.x,hb.z-p.z)<260) { if(Math.abs(hb.x-p.x)>6) p.face=Math.sign(hb.x-p.x); }
     else if(Math.abs(ix)>0.2) p.face=Math.sign(ix);
   }
