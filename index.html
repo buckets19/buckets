@@ -1114,7 +1114,7 @@ const PREFIX = 'buckets-v2-';
 const TEAM_COL = ['#ff5a4f','#3d8bff'], TEAM_DARK = ['#a8291f','#1d4fa8'], TEAM_NAME = ['RED','BLUE'];
 const SKINS = ['#f1c27d','#c68642','#8d5524','#e0ac69','#ffdbac','#a0612d','#5c3a1e'];
 const HAIR = ['#1b1530','#3b2314','#6b3e1f','#d9a441','#1b1530','#7a1f1f'];
-const EMOTES = ['EZ','L','🤫','🧱','🤡','🥱','COOKED','GG'];   // keep 8 (the server checks 0-7)
+const EMOTES = ['EZ','L','🤫','🧱','🤡','🥱','???','GG'];   // keep 8 (the server checks 0-7)
 const BOT_NAMES = ['Bench Ben','Practice Pat','JV Jay','Walk-On Will','Gym Class Gabe','Sub Sully','Waterboy Wes','Cone Carl','Scrimmage Sam','Rookie Rob'];
 const MAX_PER_TEAM = 3;
 
@@ -5745,7 +5745,7 @@ function drawLabel(q){
   if(me){ const ty=y-20+Math.sin(clock*5)*2; ctx.beginPath(); ctx.moveTo(x-7,ty-6); ctx.lineTo(x+7,ty-6); ctx.lineTo(x,ty+2); ctx.closePath(); ctx.fillStyle='#ffd23f'; ctx.fill(); ctx.strokeStyle='#1b1530'; ctx.lineWidth=2; ctx.stroke(); }
   const em=V.emotes[q[0]];
   if(em){ ctx.save(); ctx.translate(x,y-(me?48:30)); const pop=Math.min(1,(2.2-em.t)*6); ctx.scale(pop,pop);
-    const txtE=/^[A-Z]+$/.test(em.e); ctx.font=txtE?`italic 800 19px ${FONT}`:`700 22px ${FONT}`; const bw=Math.max(48, ctx.measureText(em.e).width+20);
+    const txtE=/^[A-Z?!]+$/.test(em.e); ctx.font=txtE?`italic 800 19px ${FONT}`:`700 22px ${FONT}`; const bw=Math.max(48, ctx.measureText(em.e).width+20);
     rrect(-bw/2,-20,bw,36,8); ctx.fillStyle=txtE?'#15171c':'#fff6e5'; ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle=txtE?'#ff5b1f':'#1b1530'; ctx.stroke();
     if(txtE){ ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(em.e,0,-1); ctx.restore(); return; }
     ctx.font=`700 22px ${FONT}`; ctx.fillStyle='#1b1530'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(em.e,0,-1); ctx.restore(); }

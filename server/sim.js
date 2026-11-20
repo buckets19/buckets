@@ -11,7 +11,7 @@ const PREFIX = 'buckets-v2-';
 const TEAM_COL = ['#ff5a4f','#3d8bff'], TEAM_DARK = ['#a8291f','#1d4fa8'], TEAM_NAME = ['RED','BLUE'];
 const SKINS = ['#f1c27d','#c68642','#8d5524','#e0ac69','#ffdbac','#a0612d','#5c3a1e'];
 const HAIR = ['#1b1530','#3b2314','#6b3e1f','#d9a441','#1b1530','#7a1f1f'];
-const EMOTES = ['EZ','L','🤫','🧱','🤡','🥱','COOKED','GG'];   // keep 8 (the server checks 0-7)
+const EMOTES = ['EZ','L','🤫','🧱','🤡','🥱','???','GG'];   // keep 8 (the server checks 0-7)
 const BOT_NAMES = ['Bench Ben','Practice Pat','JV Jay','Walk-On Will','Gym Class Gabe','Sub Sully','Waterboy Wes','Cone Carl','Scrimmage Sam','Rookie Rob'];
 const MAX_PER_TEAM = 3;
 
