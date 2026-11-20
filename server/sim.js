@@ -177,7 +177,7 @@ function hoopVec(p, h){ const dx=h.cx-p.x, dz=-p.z, d=hyp(dx,dz)||1; return {dx,
 //  • Create space the right way (stepback / hesi) and you shoot "in rhythm" = a bigger green.
 const HEAVE_D = COURT_W/2 - HOOPS[0].cx + 40;                       // past half court
 // coverage -> share of the open green you keep, by defender distance
-const CONTEST_PTS=[[34,0],[42,0.16],[45,0.25],[60,0.40],[80,0.55],[100,0.70],[130,0.87],[150,1]];
+const CONTEST_PTS=[[44,0],[52,0.18],[58,0.28],[68,0.40],[84,0.55],[102,0.70],[130,0.87],[150,1]];   // 44 = bodies touching = smothered
 function contestAt(d){ if(d<=CONTEST_PTS[0][0]) return 0; for(let i=1;i<CONTEST_PTS.length;i++){ const [d1,v1]=CONTEST_PTS[i]; if(d<=d1){ const [d0,v0]=CONTEST_PTS[i-1]; return v0+(v1-v0)*(d-d0)/(d1-d0); } } return 1; }
 function shotWindow(M,p){
   const h=attackHoop(p.team), v=hoopVec(p,h), dist=v.d;
@@ -195,7 +195,8 @@ function shotWindow(M,p){
     if(o.team===p.team) continue;
     let ox=o.x-p.x, oz=o.z-p.z;
     if(!o.bot && o.authAt){ const age=(performance.now()-o.authAt)/1000; if(age<0.3){ const ax=o.authX+o.vx*Math.min(age,0.08)-p.x, az=o.authZ+o.vz*Math.min(age,0.08)-p.z; if(hyp(ax,az)<hyp(ox,oz)){ ox=ax; oz=az; } } }
-    const d=hyp(ox,oz), ahead=ox*v.ux+oz*v.uz;
+    let d=hyp(ox,oz); const ahead=ox*v.ux+oz*v.uz;
+    if(!o.bot && d>1){ const closing=-(o.vx*ox+o.vz*oz)/d; if(closing>0) d=Math.max(0, d-Math.min(closing,450)*0.1); }
     if(d<150){
       // how much green you keep vs. this defender (1 = wide open): in your body = none, tight 25%, covered 40%, light ~70%
       let f=contestAt(d);
@@ -219,8 +220,8 @@ function shotFormAt(p, v){
   const sp=hyp(p.vx,p.vz), away=sp>1 ? -(p.vx*v.ux+p.vz*v.uz)/sp : 0, k=clamp((sp-60)/(RUN-60),0,1);
   if(p.rhythmT>0) return [1.25,'IN RHYTHM'];
   if(sp<=60) return [1,''];
-  if(away>0.45) return [lerp(1,0.42,k), k>0.35?'FADING':''];
-  return [lerp(1,0.66,k), k>0.5?'ON THE RUN':''];
+  if(away>0.45) return [lerp(1,0.5,k), k>0.35?'FADING':''];
+  return [lerp(1,0.84,k), k>0.6?'ON THE RUN':''];
 }
 
 function handleActions(M,p){
@@ -723,7 +724,7 @@ function botOffense(M,p,hoop,opps,mates,tick){
     for(const q of mates){ let o2=999; for(const o of opps) o2=Math.min(o2,hyp(o.x-q.x,o.z-q.z)); if(o2>140 && hyp(hoop.cx-q.x,q.z)<dist-80){ p.inX=p.inZ=0; p.wantB=true; return; } }
   }
   p.stuckT = lane && laneAlong<75 ? (p.stuckT||0)+tick : Math.max(0,(p.stuckT||0)-tick*0.5);
-  const needOpen=(dist>THREE_D?75:100)+35*clamp(mv-0.5,0,1);           // good bots wait for real space
+  const needOpen=(dist>THREE_D?88:112)+30*clamp(mv-0.5,0,1);           // good bots wait for real space
   if(dist<=p.shotRange && (open>needOpen || Math.random()<0.03/Math.max(1,mv))){ shoot(); return; }
   // planted defender in the lane: don't bulldoze into a charge — pull up or kick it out
   if(lane && lane.o.setT>0.3 && laneAlong<95){
