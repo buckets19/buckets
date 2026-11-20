@@ -737,6 +737,20 @@
   .lbTag.p50{background:#15171c;color:#ffc21a;box-shadow:inset 0 0 0 1.5px #ffc21a}
   .lbTag.p1::after,.lbTag.p2::after,.lbTag.p3::after{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.7) 45%,transparent 60%);transform:translateX(-120%);animation:shine 2.6s ease-in-out infinite}
   #vsCard .lbTag{font-size:17px;padding:3px 12px}
+  #home .hFoot{position:relative;align-items:center} @media (max-width:600px){ #home .hFoot{flex-wrap:wrap} .tutBtn{position:static!important;transform:none!important;order:9;margin:6px auto 0} } .tutBtn{position:absolute;left:0;top:50%;transform:translateY(-50%);border:0;border-radius:4px;background:rgba(255,255,255,.08);color:#c9c6bf;font-family:"Barlow Condensed",sans-serif;font-weight:800;font-style:italic;font-size:15px;letter-spacing:.5px;padding:6px 12px;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+  .tutBtn:hover{background:rgba(255,255,255,.14);color:#fff}
+  #tutBox{position:fixed;z-index:12;left:50%;top:84px;transform:translateX(-50%);width:min(620px,calc(100vw - 24px));text-align:center;color:#fff;background:rgba(15,18,24,.86);border-radius:8px;padding:12px 16px 10px;box-shadow:0 12px 30px rgba(0,0,0,.45),inset 0 -4px 0 #ff5b1f;pointer-events:auto}
+  #tutBox.pass{box-shadow:0 12px 30px rgba(0,0,0,.45),inset 0 -4px 0 #47e27a} #tutBox.done{box-shadow:0 12px 30px rgba(0,0,0,.45),inset 0 -4px 0 #ffc21a}
+  .tuStep{font-family:"Barlow Condensed",sans-serif;font-weight:800;letter-spacing:2px;font-size:12px;color:#ff8a5c}
+  .tuTitle{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:22px;letter-spacing:1px;color:#ffc21a}
+  .tuTxt{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:clamp(24px,4vw,36px);line-height:1.05;margin:2px 0;text-transform:uppercase}
+  #tutBox.pass .tuTxt{color:#47e27a}
+  .tuSub{font-size:14px;font-weight:600;color:#c9c6bf;min-height:18px}
+  .tuDots{display:flex;gap:6px;justify-content:center;margin:8px 0 6px} .tuDots i{width:22px;height:5px;border-radius:2px;background:rgba(255,255,255,.18)} .tuDots i.done{background:#47e27a} .tuDots i.on{background:#ff5b1f}
+  .tuBtns{display:flex;gap:8px;justify-content:center}
+  .tb.tuHi{animation:tuPulse 1s ease-in-out infinite;z-index:3}
+  @keyframes tuPulse{0%,100%{box-shadow:0 5px 0 var(--ink),0 0 0 0 rgba(255,194,26,.9)}50%{box-shadow:0 5px 0 var(--ink),0 0 0 14px rgba(255,194,26,0)}}
+  @media (max-height:520px){ #tutBox{top:52px;padding:6px 10px 6px;width:min(520px,calc(100vw - 180px))} .tuTxt{font-size:19px} .tuTitle{font-size:15px} .tuSub{font-size:11.5px} .tuDots{margin:4px 0} .tuStep{display:none} } .tuBtns .btn{background:#2b2e36;color:#fff}
   .protBar{display:block;width:100%;margin:0 0 10px;border:0;border-radius:4px;background:#e2342d;color:#fff;font:inherit;font-size:14px;padding:9px 12px;text-align:left;cursor:pointer;animation:pulse 1.8s ease-in-out infinite}
   .protBar b{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:17px;letter-spacing:.5px;text-transform:uppercase}
   .protBox{border-radius:6px;padding:10px 12px;margin:0 0 10px;background:#fff1ef;box-shadow:inset 4px 0 0 #e2342d;display:flex;flex-direction:column;gap:6px}
@@ -797,7 +811,7 @@
   </div>
   <p class="how hHow">Hold <b>SHOOT</b>, let go in the <b style="color:#47e27a">green</b>. Smother shooters to take their green away. <b>CROSS</b> + stick = crossover · spin · stepback · hesi.</p>
   <p id="homeMsg" class="msg"></p>
-  <div class="hFoot"><button id="acctBtn" class="acctBig">🔐 <b>SAVE YOUR PROGRESS</b><small>Account &amp; backup · log in on any iPad</small></button><button id="netTestBtn" class="btn tiny ghost hidden">📶 Test connection</button><button id="adminBtn" class="btn tiny ghost hidden">🛠️ Admin</button></div>
+  <div class="hFoot"><button id="tutBtn" class="tutBtn">🎓 Tutorial</button><button id="acctBtn" class="acctBig">🔐 <b>SAVE YOUR PROGRESS</b><small>Account &amp; backup · log in on any iPad</small></button><button id="netTestBtn" class="btn tiny ghost hidden">📶 Test connection</button><button id="adminBtn" class="btn tiny ghost hidden">🛠️ Admin</button></div>
 </div>
 
 <div id="lobby" class="panel center hidden">
@@ -824,7 +838,7 @@
     <li><b>STEAL is a reach</b> — the ball handler can CROSS during it to dodge and leave you shook.</li>
     <li><b>Hit 3 in a row and you're ON FIRE 🔥</b> — bigger green until you miss.</li>
     <li><b>16-second shot clock.</b> Ball out of bounds = other team's ball.</li>
-    <li>Keyboard: J/Space shoot·block, K pass·steal, L cross·slide, 1–8 emotes.</li>
+    <li>Keyboard: WASD move · hold Space shoot·block · K pass·steal · L cross·slide · 1–8 emotes.</li>
   </ul></details>
   <div class="walletRow"><span class="coinPill gemPill">💎 <span class="gemCount">0</span></span><span class="coinPill">💰 <span class="coinCount">0</span></span><button class="btn tiny shopBtn openShop">🛒 Shop</button><button class="btn tiny openLocker" style="background:#7b5cff;color:#fff">🎒 Locker</button><button id="leaveBtn" class="btn tiny ghost">Leave room</button></div>
 </div>
@@ -905,6 +919,7 @@
   </div>
   <button id="pfClose" class="btn big">Back</button>
 </div>
+<div id="tutBox" class="hidden"><div class="tuStep" id="tuStep"></div><div class="tuTitle" id="tuTitle"></div><div class="tuTxt" id="tuTxt"></div><div class="tuSub" id="tuSub"></div><div class="tuDots" id="tuDots"></div><div class="tuBtns"><button id="tuSkip" class="btn tiny">Skip step ›</button><button id="tuQuit" class="btn tiny">Quit</button></div></div>
 <div id="packOpen" class="hidden">
   <div id="poStage"></div>
   <p id="poHint"></p>
@@ -930,7 +945,7 @@
 
 <button id="emoteToggle" class="iconbtn hidden" title="Emotes">😀</button>
 <div id="emotes" class="hidden"></div>
-<div id="hint" class="hidden">WASD move · hold J/Space shoot·block · K pass·steal · L cross·slide</div>
+<div id="hint" class="hidden">WASD move · hold SPACE shoot·block · K pass·steal · L cross·slide</div>
 <button id="muteBtn" class="iconbtn" title="Sound">🔊</button>
 
 <div id="over" class="panel center hidden">
@@ -1213,7 +1228,7 @@ function handleActions(M,p){
         p.vx=clamp((h.cx-v.ux*8-p.x)/T,-520,520); p.vz=clamp((0-p.z)/T,-400,400); p.face=Math.sign(v.ux)||p.face; p.burstT=0;
         pushEv(M,{k:'dunkgo', id:p.id});
       } else {
-        [p.shotForm, p.formTag]=shotFormAt(p,v); if(v.d<220) p.formTag=""; if(v.d>THREE_D+110 && v.d<HEAVE_D) p.formTag = v.d>THREE_D+230 ? 'WAY DOWNTOWN' : 'LONG RANGE'; p.rhythmT=0;
+        [p.shotForm, p.formTag]=shotFormAt(p,v); if(v.d<220) p.formTag=""; if(v.d>THREE_D+110 && v.d<HEAVE_D && p.formTag!=='IN RHYTHM') p.formTag = v.d>THREE_D+230 ? 'WAY DOWNTOWN' : 'LONG RANGE'; p.rhythmT=0;
         p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.4; p.vz*=0.4; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.hesiT=0; p.meterWin=shotWindow(M,p); p.cMin=p.contest;
         p.reqW=null;
       }
@@ -1630,6 +1645,7 @@ function scored(M,h){
 // ---------------------------------------------------------------- bots
 const SPOTS=[[150,165],[150,-165],[390,135],[390,-135],[470,0],[250,CORNER_Z+25],[250,-CORNER_Z-25]];   // incl. the corners   // [distance from hoop, depth]
 function botThink(M,p,dt){
+  if(p.frozen){ p.inX=p.inZ=0; p.wantA=p.wantB=p.wantC=false; return; }
   p.think-=dt; if(p.think>0) return; const tick=rnd(0.05,0.11); p.think=tick;
   const b=M.ball, hoop=attackHoop(p.team), myHoop=defendHoop(p.team);
   const opps=M.players.filter(o=>o.team!==p.team), mates=M.players.filter(o=>o.team===p.team&&o!==p);
@@ -3899,6 +3915,7 @@ function boxMVP(win){ let best=null, bs=-1; for(const id in BOX.p){ const r=BOX.
   const sc=r.pts+1.5*r.ast+2*r.stl+2*r.blk+0.7*r.reb+(t===win?2:0); if(sc>bs){ bs=sc; best=id; } } return best; }
 function handleEvent(e, demo){
   if(!demo) boxEvent(e);
+  if(TUT && !demo) try{ tutEvent(e); }catch(x){}
   const loud=!demo && V.inRoom;
   const p = e.id ? posOf(e.id) : null;
   const mine = id => !demo && id && id===net.myId;
@@ -4044,6 +4061,7 @@ function handleEvent(e, demo){
 let touchMode = ('ontouchstart' in window) || navigator.maxTouchPoints>1;
 addEventListener('touchstart', ()=>{ if(!touchMode){ touchMode=true; updateControlsVisibility(); } }, {passive:true, capture:true});
 const keys=new Set();
+const SHOOT_K=new Set([' ','j']);   // hold to shoot / jump to block
 const ctl = {
   aDown:false, aT:0, sx:0, sz:0,
   axis(){ let x=0,z=0;
@@ -4062,14 +4080,14 @@ addEventListener('keydown', e=>{
   if(e.target.tagName==='INPUT'){ if(e.key==='Enter') (e.target.id==='code'?$('#joinBtn'):$('#hostBtn')).click(); return; }
   const k=e.key.toLowerCase(); keys.add(k);
   if(!e.repeat){
-    if(k==='j'||k===' ') pressA();
+    if(SHOOT_K.has(k)) pressA();
     if(k==='k') sendAct({t:'b'});
     if(k==='l'||k==='shift'){ predictLocalMove('c'); sendAct({t:'c'}); }
     if(/^[1-8]$/.test(k)) sendAct({t:'emote', e:+k-1});
   }
   if(k===' '||k.startsWith('arrow')) e.preventDefault();
 });
-addEventListener('keyup', e=>{ const k=e.key.toLowerCase(); keys.delete(k); if(k==='j'||k===' ') releaseA(); });
+addEventListener('keyup', e=>{ const k=e.key.toLowerCase(); keys.delete(k); if(SHOOT_K.has(k) && ![...SHOOT_K].some(x=>keys.has(x))) releaseA(); });
 addEventListener('blur', ()=>{ keys.clear(); releaseA(); });
 
 // floating joystick
@@ -6012,6 +6030,72 @@ function drawProfile(){
   try{ pc.translate(c.width/2,c.height*.9); pc.scale(1.65,1.65); drawPlayer(q,false,{ph:'lobby',p:[q],b:[0,0,0,4,null,0,null]},null,false); }
   catch(e){ console.warn(e); } finally{ ctx=main; }
 }
+// ---------------------------------------------------------------- 🎓 TUTORIAL: a guided 1-on-1 vs an AI defender
+var TUT=null;
+const BTN=n=>touchMode ? n : ({SHOOT:'SPACE', CROSS:'L', PASS:'K', STEAL:'K', BLOCK:'SPACE'})[n]+' ('+n+')';
+const TUT_STEPS=[
+  {t:'MOVE',      hi:[],          txt:()=>touchMode?'Drag the joystick (bottom left) to move':'Move with W A S D', sub:'Run around a little', check:'move', setup:'open'},
+  {t:'SHOOT',     hi:['#bA'],     txt:()=>touchMode?'Hold SHOOT, let go in the GREEN':'Hold SPACE, let go in the GREEN', sub:'Watch the bar next to you. Green = guaranteed bucket. He won\'t guard you yet.', check:'green', setup:'open'},
+  {t:'CROSSOVER', hi:['#bC'],     txt:()=>touchMode?'Push the joystick SIDEWAYS + tap CROSS':'Hold A or D sideways + tap L', sub:'A crossover: quick burst to the side', check:'cross', setup:'drive'},
+  {t:'HESI',      hi:['#bC'],     txt:()=>touchMode?'Let go of the joystick + tap CROSS':'Let go of WASD + tap L', sub:'A hesitation: it freezes a defender who\'s moving', check:'hesi', setup:'drive'},
+  {t:'HESI → GO', hi:['#bC'],     txt:()=>touchMode?'Tap CROSS standing still, then PUSH TO THE RIM':'Tap L standing still, then hold toward the rim', sub:'Push the joystick toward the hoop right as the hesi ends: you explode past him', check:'go', setup:'drive'},
+  {t:'STEPBACK',  hi:['#bC','#bA'], txt:()=>touchMode?'Pull the joystick AWAY from the rim + tap CROSS, then SHOOT':'Hold away from the rim + tap L, then SPACE to shoot', sub:'Stepbacks shoot IN RHYTHM: a bigger green', check:'stepback', setup:'drive'},
+  {t:'DEFENSE',   hi:['#bB','#bA'], txt:()=>touchMode?'Stay in front of him. Tap STEAL, hold BLOCK to jump':'Stay in front. K = steal, hold SPACE = block', sub:'Get a steal or a block, or stay on him so his shot misses. Tight D = no green for him.', check:'stop', setup:'defense'},
+];
+function tutStart(){
+  initAudio(); goFull();
+  net.role='host'; net.myId='host'; net.code='SOLO'; V.practice=true;
+  const me=addRosterPlayer('host', getName(), false, 0); Object.assign(me, myGear());
+  addBot(1); enterRoom(); broadcastRoster();
+  RM=newMatch([...G.players.values()], 99, false, 'rookie', false); G.phase='game'; broadcastRoster();
+  TUT={i:0, ok:false, x0:null, resetAt:0, tries:0}; $('#tutBox').classList.remove('hidden'); tutShow(); setTimeout(tutSetup, 400);
+}
+function tutMe(){ return RM && findP(RM,'host'); } function tutBot(){ return RM && RM.players.find(p=>p.id!=='host'); }
+function tutSetup(){
+  if(!TUT || !RM) return; const st=TUT_STEPS[TUT.i]; if(!st) return; const me=tutMe(), b=tutBot(); if(!me||!b) return;
+  const h=attackHoop(me.team), bh=attackHoop(b.team), B=RM.ball;
+  RM.phase='play'; RM.phaseT=0; RM.scOn=false; RM.scT=99; resetP(me); resetP(b);
+  if(st.setup==='defense'){ b.x=bh.cx-bh.dir*470; b.z=0; me.x=bh.cx-bh.dir*390; me.z=0; b.frozen=false; Object.assign(B,{st:'held', holder:b.id, t:0}); RM.poss=b.team; }
+  else { me.x=h.cx-h.dir*(st.setup==='open'?360:470); me.z=st.setup==='open'?60:0; b.frozen = st.setup==='open';
+    if(st.setup==='open'){ b.x=COURT_W/2-h.dir*200; b.z=150; } else { b.x=h.cx-h.dir*380; b.z=0; }
+    Object.assign(B,{st:'held', holder:me.id, t:0}); RM.poss=me.team; }
+  TUT.x0=null; TUT.resetAt=0;
+}
+function tutShow(){ const st=TUT_STEPS[TUT.i];
+  $('#tuStep').textContent = st ? 'STEP '+(TUT.i+1)+' / '+TUT_STEPS.length : '';
+  $('#tuTitle').textContent = st ? st.t : '🎓 TUTORIAL COMPLETE';
+  $('#tuTxt').textContent = st ? st.txt() : 'You know the moves. Go win some games.';
+  $('#tuSub').textContent = st ? st.sub : (SAVE.tutDone ? '' : '+100 💎 for finishing!');
+  const d=$('#tuDots'); d.innerHTML=''; TUT_STEPS.forEach((_,i)=>d.append(el('i', i<TUT.i?'done':i===TUT.i?'on':'')));
+  document.querySelectorAll('.tuHi').forEach(b=>b.classList.remove('tuHi')); if(st) for(const sel of st.hi||[]){ const b=document.querySelector(sel); if(b) b.classList.add('tuHi'); }
+  $('#tuSkip').textContent = st ? 'Skip step ›' : '🏆 Play ranked'; $('#tutBox').classList.toggle('done', !st); $('#tutBox').classList.remove('pass'); }
+function tutPass(){ if(!TUT || TUT.ok) return; TUT.ok=true; $('#tutBox').classList.add('pass'); $('#tuTxt').textContent='✓ NICE!'; sfx('swish'); V.flash=.25;
+  setTimeout(()=>{ if(!TUT) return; TUT.ok=false; TUT.i++; TUT.tries=0; tutShow();
+    if(TUT.i>=TUT_STEPS.length){ if(!SAVE.tutDone){ SAVE.tutDone=true; SAVE.gems=(SAVE.gems||0)+100; persist(); toast('🎓 Tutorial complete: +100 💎'); } confetti(0); const b=tutBot(); if(b) b.frozen=true; return; }
+    tutSetup(); }, 1300); }
+function tutEvent(e){ if(!TUT || TUT.ok) return; const st=TUT_STEPS[TUT.i]; if(!st) return; const me=tutMe();
+  if(st.check==='green' && e.k==='shot' && e.id==='host'){ if(e.q==='perfect') tutPass(); else { TUT.tries++; $('#tuSub').textContent='Not quite ('+e.q+'). Let go right when the bar is in the green.'; } }
+  if(st.check==='cross' && e.k==='burst' && e.id==='host') setTimeout(()=>{ if(me && me.hesiT<=0 && !me.moveKind) tutPass(); }, 30);
+  if(st.check==='hesi' && e.k==='move' && e.id==='host' && e.m==='hesi') tutPass();
+  if(st.check==='stepback' && e.k==='move' && e.id==='host' && e.m==='stepback'){ TUT.sb=true; TUT.sbAt=performance.now(); }
+  if(st.check==='stepback' && e.k==='shot' && e.id==='host'){ if(TUT.sb && (e.f==='IN RHYTHM' || performance.now()-TUT.sbAt<1600)) tutPass(); else $('#tuSub').textContent='Stepback FIRST (away from the rim + '+BTN('CROSS')+'), then shoot right out of it'; TUT.sb=false; }
+  if(st.check==='stop' && (e.k==='steal' || e.k==='block' || e.k==='pick') && e.id==='host') tutPass();
+  if(st.check==='stop' && e.k==='charge' && e.id==='host') tutPass();
+  if(st.check==='stop' && e.k==='shot' && e.id!=='host'){ if((e.c??1)<0.6) TUT.cAt=performance.now(); else $('#tuSub').textContent='He was open. Get right up on him before he shoots.'; }
+  if(st.check==='stop' && e.k==='score' && e.by && e.by!=='host'){ if(TUT.cAt) $('#tuSub').textContent='He still hit it. Stay closer so he gets no green.'; TUT.cAt=0; }
+}
+// per frame: movement check, the hesi-go, and putting the ball back after every play
+setInterval(()=>{ if(!TUT || !RM) return; const st=TUT_STEPS[TUT.i], me=tutMe(); if(!st || !me) return;
+  if(st.check==='move' && !TUT.ok){ if(!TUT.x0) TUT.x0={x:me.x,z:me.z}; else if(hyp(me.x-TUT.x0.x, me.z-TUT.x0.z)>260) tutPass(); }
+  if(st.check==='go' && !TUT.ok && me.moveKind==='go') tutPass();
+  if(st.check==='stop' && !TUT.ok && TUT.cAt && performance.now()-TUT.cAt>2600){ TUT.cAt=0; tutPass(); }   // you contested and he missed
+  const B=RM.ball, wantMine=st.setup!=='defense';
+  const off = RM.phase!=='play' || (B.st==='held' && (B.holder==='host')!==wantMine) || (B.st==='loose' && B.t>2.5);
+  if(off && !TUT.ok){ if(!TUT.resetAt) TUT.resetAt=performance.now()+1100; else if(performance.now()>TUT.resetAt) tutSetup(); } else if(!off) TUT.resetAt=0;
+}, 100);
+$('#tutBtn').onclick=tutStart;
+$('#tuSkip').onclick=()=>{ if(!TUT) return; if(TUT.i>=TUT_STEPS.length){ location.href=location.pathname+'#ranked'; location.reload(); return; } TUT.ok=false; TUT.i++; tutShow(); if(TUT.i<TUT_STEPS.length) tutSetup(); };
+$('#tuQuit').onclick=()=>{ document.querySelectorAll('.tuHi').forEach(b=>b.classList.remove('tuHi')); location.href=location.pathname; };
 // ----- ranked panel
 function openRanked(){ V.rankedOpen=true; $('#home').classList.add('hidden'); $('#rankedPanel').classList.remove('hidden'); renderRanked(); }
 function closeRanked(){ V.rankedOpen=false; $('#rankedPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); }

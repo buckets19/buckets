@@ -235,7 +235,7 @@ function handleActions(M,p){
         p.vx=clamp((h.cx-v.ux*8-p.x)/T,-520,520); p.vz=clamp((0-p.z)/T,-400,400); p.face=Math.sign(v.ux)||p.face; p.burstT=0;
         pushEv(M,{k:'dunkgo', id:p.id});
       } else {
-        [p.shotForm, p.formTag]=shotFormAt(p,v); if(v.d<220) p.formTag=""; if(v.d>THREE_D+110 && v.d<HEAVE_D) p.formTag = v.d>THREE_D+230 ? 'WAY DOWNTOWN' : 'LONG RANGE'; p.rhythmT=0;
+        [p.shotForm, p.formTag]=shotFormAt(p,v); if(v.d<220) p.formTag=""; if(v.d>THREE_D+110 && v.d<HEAVE_D && p.formTag!=='IN RHYTHM') p.formTag = v.d>THREE_D+230 ? 'WAY DOWNTOWN' : 'LONG RANGE'; p.rhythmT=0;
         p.act='shoot'; p.shootT=0; p.vy=SHOT_JUMP; p.vx*=0.4; p.vz*=0.4; p.face=Math.sign(v.ux)||p.face; p.burstT=0; p.hesiT=0; p.meterWin=shotWindow(M,p); p.cMin=p.contest;
         p.reqW=null;
       }
@@ -652,6 +652,7 @@ function scored(M,h){
 // ---------------------------------------------------------------- bots
 const SPOTS=[[150,165],[150,-165],[390,135],[390,-135],[470,0],[250,CORNER_Z+25],[250,-CORNER_Z-25]];   // incl. the corners   // [distance from hoop, depth]
 function botThink(M,p,dt){
+  if(p.frozen){ p.inX=p.inZ=0; p.wantA=p.wantB=p.wantC=false; return; }
   p.think-=dt; if(p.think>0) return; const tick=rnd(0.05,0.11); p.think=tick;
   const b=M.ball, hoop=attackHoop(p.team), myHoop=defendHoop(p.team);
   const opps=M.players.filter(o=>o.team!==p.team), mates=M.players.filter(o=>o.team===p.team&&o!==p);
