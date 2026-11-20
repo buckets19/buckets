@@ -7676,7 +7676,7 @@ function renderCrates(box){
   { const g=el('div','shardBar'); g.append(el('b','','💎 '+(SAVE.gems||0)+' Gems'), el('small','',' · earn them playing online + ranked (~25-40 a game), +60 daily quests, +30 per pass level, +250 per trophy, and from codes + events.')); box.append(g); }
   // free packs you've been given (Season Pass, admin gifts, codes)
   for(const [id,n] of Object.entries(SAVE.freeCrates||{})) if(n>0 && packOf(id)) box.append(packCard(packOf(id), n));
-  if(XMAS) box.append(packCard(XMAS_PACK, 0, '🎄 BEST PACK · UNTIL JAN 6'));
+  if(XMAS) box.append(packCard(XMAS_PACK, 0, '🎄 CHRISTMAS ONLY · UNTIL JAN 6'));
   const fp=featuredPack(), left=Math.ceil((featWeek()+1)*7 - (Date.now()/864e5+3)); box.append(packCard(fp, 0, '🔥 FEATURED · '+left+(left===1?' day':' days')+' left'));
   for(const pk of PACKS) box.append(packCard(pk, 0));
   box.append(cc);
