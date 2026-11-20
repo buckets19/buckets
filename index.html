@@ -64,9 +64,7 @@
   .adBtns{display:flex;flex-wrap:wrap;gap:8px}
   .adSec .row{flex-wrap:wrap} .adSec .row input{min-width:0;flex:1 1 140px} .adSec input{min-width:0} .adSec select{font:inherit;border:2px solid var(--ink);border-radius:10px;padding:6px}
   .adStat{display:flex;flex-wrap:wrap;gap:12px;align-items:baseline;font-size:15px} .adStat b{font-size:22px}
-  .adSel{background:#fff;color:#15171c;border:2px solid #15171c;border-radius:4px;padding:8px;font:inherit;font-weight:700}
-  .adTbl{width:100%;border-collapse:collapse;font-size:13px;margin-top:6px} .adTbl th{text-align:left;font-size:11px;letter-spacing:1px;opacity:.6;padding:4px 6px;border-bottom:2px solid rgba(0,0,0,.15)} .adTbl td{padding:5px 6px;border-bottom:1px solid rgba(0,0,0,.08)} .adTbl td.up{color:#13a35a;font-weight:800} .adTbl td.down{color:#d62828;font-weight:800}
-  .adDet{margin-top:8px} .adDet summary{cursor:pointer;font-weight:800;font-size:13px;color:#c46a00;padding:4px 0}
+  .pfAdm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#15171c;color:#c9c6bf;border-radius:5px;padding:7px 10px;font-size:13px;font-weight:700;box-shadow:inset 3px 0 0 #8d99a6;margin-bottom:6px} .pfAdm b{color:#ffc21a;font-size:11px;letter-spacing:1px} .pfAdm.on{box-shadow:inset 3px 0 0 #47e27a;color:#fff}
   .adList{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;font-size:13px}
   .adPick li{border:2px solid var(--ink);border-radius:10px;padding:5px 8px;cursor:pointer;background:#fffdf7}
   .adPick li.on{background:#ffd23f}
@@ -2564,6 +2562,11 @@ function diagSend(){
   fetch(u+'/rooms/_diag'+diagDay()+'/'+DIAG.id+'.json',{method:'PUT', body:JSON.stringify(rec)}).catch(()=>{});
 }
 setInterval(diagSend, 30000);
+function presencePing(){ try{ if(document.visibilityState!=='visible' || store('buckets-nolb')) return; const u=fbURL(), pk=lbMe(); if(!u || !pk || !SAVE.rank || !SAVE.rank.games) return;
+  const w = V.inRoom ? (V.phase==='game' ? (V.queueMatch||G.ranked2||V.ranked2 ? 'playing ranked' : 'playing a game') : 'in a lobby') : V.practice ? 'practicing' : 'on the menu';
+  fetch(u+'/rooms/_on/'+pk.slice(0,16)+'.json',{method:'PUT', body:JSON.stringify({n:getName(), w, t:{'.sv':'timestamp'}})}).catch(()=>{}); }catch(e){} }
+setInterval(presencePing, 120000); setTimeout(presencePing, 8000);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') presencePing(); });
 addEventListener('pagehide', diagSend);
 // =====================================================================
 //  🏟️ PLAYING ON THE GAME SERVER (live.bucketsonline.site). The server runs every online game; every
@@ -6433,7 +6436,6 @@ function applyRanked(win, myScore, oppScore, oppRR){
   eventGame(win);                                                                  // 🎪 event challenge
   persist();
   if(win && ev && ev.kind==='rr2' && !promo) promo='⚡ 2x RR EVENT';
-  rkLog({n:getName(), dv:devId().slice(0,10), a:R.rr-d, b:R.rr, d, w:win?1:0, s:myScore+'-'+oppScore, t:Date.now()});
   return {d, rr:R.rr, before, after, coins, promo, win};
 }
 
@@ -6574,7 +6576,7 @@ function openCardFor(id){
   const row=(LB.rows||[]).find(r=>inf.pk && r.pk===inf.pk);
   const gr={}; for(const k of ['cel','gfx','js','dunk','trail','ball']) if(inf[k]) gr[k]=inf[k];
   const live={lk:inf.lk||'', gr, lv:inf.lv||'11', ct:inf.ct||''};
-  openProfile({n:inf.name, rr:inf.rr||(row?row.rr:0), pk:inf.pk, bdg:inf.bdg, g:row?row.g:0, w:row?row.w:0, b:row?row.b:0, bot:!!inf.bot, place:row?((LB.rows||[]).slice().sort((a,b)=>b.rr-a.rr).indexOf(row)+1):0, card:{...(row&&row.card||{}), ...live}});
+  openProfile({n:inf.name, rr:inf.rr||(row?row.rr:0), pk:inf.pk, t:row?row.t:0, bdg:inf.bdg, g:row?row.g:0, w:row?row.w:0, b:row?row.b:0, bot:!!inf.bot, place:row?((LB.rows||[]).slice().sort((a,b)=>b.rr-a.rr).indexOf(row)+1):0, card:{...(row&&row.card||{}), ...live}});
 }
 // Your card: look, rank, season, stats, equipped gear with levels, trophies. Tap anyone on the leaderboard for theirs.
 let PF=null;
@@ -6622,6 +6624,11 @@ function openProfile(other){
     const owned=Object.values(SAVE.owned).reduce((a,b)=>a+b.length,0);
     I.append(el('p','how','Collection '+owned+'/'+ITEMS.length+' · ICONs '+ITEMS.filter(i=>i.r==='icon' && SAVE.owned[i.kind].includes(i.id)).length+' · Packs opened '+(S.crates||0)));
   }
+  if(!me && ADM.k && other.pk){ const box=el('div','pfAdm'); box.append(el('b','','🛠️ ADMIN'), el('span','','Checking…')); I.prepend(box);
+    const lastRanked = other.t ? 'Last ranked game '+ago(other.t*1000) : '';
+    (async()=>{ let on=null; try{ const r=await fetch(fbURL()+'/rooms/_on/'+String(other.pk).slice(0,16)+'.json',{cache:'no-store'}); if(r.ok) on=await r.json(); }catch(e){}
+      const sp=box.querySelector('span'); if(!sp) return; const fresh=on && Date.now()-(+on.t||0)<4*60000;
+      sp.textContent = (fresh ? '🟢 Online now · '+(on.w||'') : on ? '⚪ Offline · last seen '+ago(+on.t) : '⚪ Not seen yet') + (lastRanked?' · '+lastRanked:''); box.classList.toggle('on', !!fresh); })(); }
   if(!V.inRoom) $('#home').classList.add('hidden'); $('#rankedPanel').classList.add('hidden'); P.classList.remove('hidden');
   if(!V.pfLoop){ V.pfLoop=true; requestAnimationFrame(drawProfile); }
 }
@@ -7255,18 +7262,6 @@ function admItemSelect(){ const sel=el('select'); const o0=el('option','','No it
   for(const k in KINDS){ const g=document.createElement('optgroup'); g.label=KINDS[k].icon+' '+KINDS[k].label;
     for(const it of KINDS[k].list){ if(it.id===KINDS[k].def) continue; const o=el('option','', it.icon+' '+it.name+' ('+it.r+')'); o.value=k+':'+it.id; g.append(o); } sel.append(g); } return sel; }
 function admCrateSelect(){ const sel=el('select'); const o0=el('option','','No pack'); o0.value=''; sel.append(o0); for(const c of CRATES){ const o=el('option','', c.icon+' '+c.name); o.value=c.id; sel.append(o); } return sel; }
-// ---- 🕗 Eastern time helpers + the ranked game log (rooms/_rk<YYYYMMDD in New York>)
-function nyOffsetMs(){ const d=new Date(); const P=Object.fromEntries(new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(d).map(x=>[x.type,x.value]));
-  return Date.UTC(+P.year,+P.month-1,+P.day,+P.hour%24,+P.minute,+P.second)-Math.floor(d.getTime()/1000)*1000; }
-function nyDayKey(){ return new Date(Date.now()+nyOffsetMs()).toISOString().slice(0,10).replace(/-/g,''); }
-function nyTodayAt(h){ const off=nyOffsetMs(), n=new Date(Date.now()+off); return Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate(),h)-off; }
-function nyClock(t){ return new Date(t).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}); }
-function rkLog(rec){ try{ if(store('buckets-nolb')) return; const u=fbURL(); if(!u) return; fetch(u+'/rooms/_rk'+nyDayKey()+'.json',{method:'POST', body:JSON.stringify(rec)}).catch(()=>{}); }catch(e){} }
-async function admRankedSince(h){
-  const since=nyTodayAt(h), out={log:null, lb:[]};
-  try{ const u=fbURL(); if(u){ const r=await fetch(u+'/rooms/_rk'+nyDayKey()+'.json',{cache:'no-store'}); if(r.ok) out.log=Object.values(await r.json()||{}).filter(x=>x && +x.t>=since); } }catch(e){}
-  try{ await lbFetch(); out.lb=(LB.rows||[]).filter(r=>r.t*1000>=since).sort((a,b)=>b.t-a.t); }catch(e){}
-  return out; }
 function admSec(title, sub){ const s=el('section','adSec'); s.append(el('h4','',title)); if(sub) s.append(el('p','adSub',sub)); return s; }
 function admInput(ph, val, max){ const i=el('input'); i.placeholder=ph; if(val!==undefined) i.value=val; i.maxLength=max||80; i.setAttribute('autocomplete','off'); i.addEventListener('keydown',e=>e.stopPropagation()); return i; }
 function renderAdmin(){
@@ -7284,30 +7279,6 @@ function renderAdmin(){
     s.append(el('p','adSub', 'Settings checked '+(CTL_AT?ago(CTL_AT):'never')+' · 🏟️ Game server: '+(CTL.gsOff?'OFF (backup mode)':'ON')));
     const rf=el('button','btn tiny','🔄 Refresh'); rf.onclick=async()=>{ rf.disabled=true; await ctlFetch(); await admLive(); renderAdmin(); }; s.append(rf);
     B.append(s); }
-  // ---- 🏆 ranked since a time of day (Eastern)
-  { const s=admSec('🏆 RANKED SINCE', 'Everything ranked since the time you pick today (Eastern time).');
-    const row=el('div','row'), sel=el('select','adSel'); for(let h=0;h<24;h++){ const o=el('option','',(h%12||12)+':00 '+(h<12?'AM':'PM')+' EST'); o.value=h; sel.append(o); }
-    sel.value=String(ADM.rkH!==undefined?ADM.rkH:(+store('buckets-rkh')||8));
-    const go=el('button','btn yellow','Show'); row.append(sel,go); s.append(row);
-    const box=el('div','adRk'); s.append(box);
-    const draw=()=>{ const R=ADM.rk; box.innerHTML=''; if(!R) return; const h=+sel.value, lab=(h%12||12)+(h<12?' AM':' PM');
-      if(R.log && R.log.length){
-        const P=new Map(); for(const g of R.log.sort((a,b)=>a.t-b.t)){ const k=g.dv||g.n; const x=P.get(k)||{n:g.n, a:g.a, b:g.b, w:0, l:0, last:g.t}; x.n=g.n; x.b=g.b; x.last=g.t; if(g.w) x.w++; else x.l++; P.set(k,x); }
-        const rows=[...P.values()].sort((a,b)=>(b.b-b.a)-(a.b-a.a));
-        box.append(el('p','adSub', R.log.length+' ranked games · '+rows.length+' players since '+lab+' (biggest climb first)'));
-        const t=el('table','adTbl'); const hd=el('tr'); for(const c of ['Player','W-L','RR','Change','Last']) hd.append(el('th','',c)); t.append(hd);
-        for(const x of rows){ const tr=el('tr'), dl=x.b-x.a; tr.append(el('td','',x.n), el('td','',x.w+'-'+x.l), el('td','',x.a+' → '+x.b), el('td',dl>0?'up':dl<0?'down':'',(dl>0?'+':'')+dl), el('td','',nyClock(x.last))); t.append(tr); }
-        box.append(t);
-        const det=el('details','adDet'); det.append(el('summary','','Every game ('+R.log.length+')')); const ul=el('ul','adList');
-        R.log.slice().sort((a,b)=>b.t-a.t).forEach(g=>ul.append(el('li','', nyClock(g.t)+' · '+g.n+' '+(g.w?'WON':'lost')+' '+g.s+' · '+(g.d>0?'+':'')+g.d+' RR → '+g.b))); det.append(ul); box.append(det);
-      } else box.append(el('p','adSub', R.log ? 'No ranked games logged since '+lab+' yet (game-by-game logging started with this update).' : 'Could not load the game log.'));
-      if(R.lb.length){ const det=el('details','adDet'); det.open=!(R.log && R.log.length); det.append(el('summary','','From the leaderboard: '+R.lb.length+' players played ranked since '+lab));
-        const t=el('table','adTbl'); const hd=el('tr'); for(const c of ['Player','RR now','Games','Last played']) hd.append(el('th','',c)); t.append(hd);
-        for(const r of R.lb){ const tr=el('tr'); tr.append(el('td','',r.n), el('td','',String(r.rr)), el('td','',r.g+' ('+r.w+'W)'), el('td','',nyClock(r.t*1000))); t.append(tr); } det.append(t); box.append(det); }
-      else box.append(el('p','adSub','Leaderboard: nobody has posted a ranked game since '+lab+'.'));
-    };
-    go.onclick=async()=>{ ADM.rkH=+sel.value; store('buckets-rkh',String(sel.value)); go.disabled=true; go.textContent='Loading…'; ADM.rk=await admRankedSince(+sel.value); go.disabled=false; go.textContent='Show'; renderAdmin(); };
-    draw(); B.append(s); }
   // ---- 📶 connection report (today, from real iPads)
   { const s=admSec('📶 CONNECTION (TODAY)', 'Real numbers from iPads that played online today. Updates every 30s while people play.');
     const D=ADM.diag, recs=D?Object.values(D).filter(x=>x && typeof x==='object'):[];
