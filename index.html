@@ -3,11 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Buckets</title>
-<link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <meta name="theme-color" content="#1b1d22">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -124,6 +121,7 @@
   @keyframes glowp{50%{box-shadow:0 0 40px 8px var(--rc)}}
   .pcRar{font-size:11px;font-weight:900;letter-spacing:1px;background:rgba(0,0,0,.35);border-radius:6px;padding:0 6px}
   .pcIc{font-size:44px;line-height:1.1} .pcName{font-weight:900;font-size:14px;-webkit-text-stroke:.6px var(--ink)} .pcKind{font-size:11px;font-weight:700;opacity:.9}
+  .pcBtns{display:flex;gap:4px;margin-top:4px} .pcBtns .btn{padding:3px 7px;font-size:11px;transform:none}
   .pcNote{font-size:10.5px;font-weight:900;background:rgba(0,0,0,.4);border-radius:6px;padding:1px 5px} .pcNote.new{background:#47e27a;color:#1b1530}
   #poWalk{position:fixed;inset:0;z-index:61;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;background:radial-gradient(circle,color-mix(in srgb,var(--rc) 45%,#000) 0%,#000 75%);overflow:hidden}
   #poWalk .wkRays{position:absolute;inset:-50%;background:repeating-conic-gradient(from 0deg,color-mix(in srgb,var(--rc) 60%,transparent) 0 6deg,transparent 6deg 18deg);animation:spin 6s linear infinite;opacity:.55}
@@ -706,6 +704,31 @@
   .hCardBtn{font-family:"Barlow Condensed",sans-serif;font-weight:800;font-style:italic;letter-spacing:.5px;border:0;border-radius:3px;background:#2b2e36;color:#fff;padding:6px 10px;cursor:pointer;transform:skewX(-7deg);box-shadow:inset 0 -3px 0 rgba(0,0,0,.3)}
   #rankedPanel #ladder li:hover{background:rgba(255,255,255,.06)}
   @media (max-width:760px){ .pfWrap{grid-template-columns:1fr} .pfCard{max-width:300px;margin:0 auto} }
+  .acctBig{display:flex;flex-direction:column;align-items:center;gap:1px;border:0;border-radius:6px;cursor:pointer;padding:10px 26px;color:#15171c;background:linear-gradient(120deg,#ffc21a,#ffdb6e);box-shadow:inset 0 -4px 0 rgba(0,0,0,.25),0 0 0 3px rgba(255,194,26,.25);transform:skewX(-6deg);animation:pulse 2.2s ease-in-out infinite}
+  .acctBig b{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:22px;letter-spacing:.5px} .acctBig small{font-weight:700;font-size:12px;opacity:.8}
+  .center{max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px)}
+  #home.center{max-height:calc(100dvh - 12px);overflow-y:auto}
+  @media (max-height:800px){ #home.center{padding:12px 14px} #home .hTop{margin-bottom:6px} #home .hTop .logo{font-size:44px} #home .hubStore{min-height:112px} #home .hubArt{flex-basis:74px;height:92px;font-size:40px}
+    #home .hRankBtns .grandBtn{padding:10px 8px 8px} #home .grandBtn b{font-size:40px} #home .hubTxt b{font-size:24px} #home .hHub button{padding:10px} #home .hHow{display:none} .acctBig{padding:7px 20px} .acctBig b{font-size:19px} }
+  @media (max-height:660px){ #home .grandBtn .gi{display:none} #home .hubIc{font-size:30px;flex-basis:40px} #home .hfBox small{display:none} #home .protBar{padding:6px 10px} }
+  /* ===== Store + Locker in the dark striped style ===== */
+  #shop.dark{background:#1b1d22 repeating-linear-gradient(135deg,rgba(255,255,255,.028) 0 16px,transparent 16px 32px)}
+  #shop.dark .packCard,#shop.dark .setCard,#shop.dark .dailyCard,#shop.dark .item,#shop.dark .crate{background:#23262e!important;color:#f3f1ec;border:0!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07)!important}
+  #shop.dark .item{border-top:5px solid var(--rc)!important}
+  #shop.dark .item.eq{background:#18352a!important;box-shadow:inset 0 0 0 2px #47e27a!important}
+  #shop.dark .item.locked{opacity:.5;background:#1d2027!important}
+  #shop.dark .item.r-icon{background:linear-gradient(170deg,#3a2f12,#23262e)!important}
+  #shop.dark .item small,#shop.dark .item .stag,#shop.dark .pHave,#shop.dark .how,#shop.dark .stats,#shop.dark .featRw{color:#9a9ea8;opacity:1}
+  #shop.dark .packCard.feat{background:linear-gradient(120deg,#2a2e38,#23262e)!important}
+  #shop.dark .dailyCard.ready{background:linear-gradient(90deg,#3a2f12,#23262e)!important;box-shadow:inset 5px 0 0 #ffc21a!important}
+  #shop.dark .setCard{box-shadow:inset 8px 0 0 var(--sc)!important} #shop.dark .setCard.done{background:#18352a!important}
+  #shop.dark .setBar{background:#15171c} #shop.dark .shardBar{background:#15171c}
+  #shop.dark input{background:#262930;border-color:rgba(255,255,255,.12);color:#fff}
+  #shop.dark .btn{background:#2b2e36;color:#fff} #shop.dark .btn.yellow{background:var(--gold);color:#15171c} #shop.dark .btn.orange{background:var(--hot);color:#fff} #shop.dark .btn.gemb{background:#2fd3e8;color:#0b2a33}
+  #shop.dark .lkRow b{color:#c9c6bf} #shop.dark .lkVal{color:#f3f1ec}
+  #shop.dark #lookCv{border:0!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+  #shop.dark .lvStars{color:#ffc21a} #shop.dark .lvStars.max{color:#ff6b8a}
+  #shop.dark .coinPill{background:#0d0e11;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
   .protBar{display:block;width:100%;margin:0 0 10px;border:0;border-radius:4px;background:#e2342d;color:#fff;font:inherit;font-size:14px;padding:9px 12px;text-align:left;cursor:pointer;animation:pulse 1.8s ease-in-out infinite}
   .protBar b{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:17px;letter-spacing:.5px;text-transform:uppercase}
   .protBox{border-radius:6px;padding:10px 12px;margin:0 0 10px;background:#fff1ef;box-shadow:inset 4px 0 0 #e2342d;display:flex;flex-direction:column;gap:6px}
@@ -766,7 +789,7 @@
   </div>
   <p class="how hHow">Hold <b>SHOOT</b>, let go in the <b style="color:#47e27a">green</b>. Smother shooters to take their green away. <b>CROSS</b> + stick = crossover · spin · stepback · hesi.</p>
   <p id="homeMsg" class="msg"></p>
-  <div class="hFoot"><button id="installBtn" class="btn tiny ghost hidden">📲 Install the app</button><button id="acctBtn" class="btn tiny ghost">👤 Account &amp; backup</button><button id="netTestBtn" class="btn tiny ghost hidden">📶 Test connection</button><button id="adminBtn" class="btn tiny ghost hidden">🛠️ Admin</button></div>
+  <div class="hFoot"><button id="acctBtn" class="acctBig">🔐 <b>SAVE YOUR PROGRESS</b><small>Account &amp; backup · log in on any iPad</small></button><button id="netTestBtn" class="btn tiny ghost hidden">📶 Test connection</button><button id="adminBtn" class="btn tiny ghost hidden">🛠️ Admin</button></div>
 </div>
 
 <div id="lobby" class="panel center hidden">
@@ -798,7 +821,7 @@
   <div class="walletRow"><span class="coinPill gemPill">💎 <span class="gemCount">0</span></span><span class="coinPill">💰 <span class="coinCount">0</span></span><button class="btn tiny shopBtn openShop">🛒 Shop</button><button class="btn tiny openLocker" style="background:#7b5cff;color:#fff">🎒 Locker</button><button id="leaveBtn" class="btn tiny ghost">Leave room</button></div>
 </div>
 
-<div id="shop" class="panel hidden">
+<div id="shop" class="panel hidden dark">
   <div class="head"><h2 id="shopTitle">Store</h2><span class="wallet2"><span class="coinPill gemPill">💎 <span class="gemCount">0</span></span><span class="coinPill">💰 <span class="coinCount">0</span></span></span></div>
   <div class="tabs" id="mainTabs"><button data-main="crates" class="on">Store</button><button data-main="locker">Locker</button></div>
   <div class="tabs lockTabs" id="lockTabs"></div>
@@ -2348,9 +2371,9 @@ function ctlGifts(){
   SAVE.gifts=SAVE.gifts||[]; let any=false;
   for(const key of [...myKeys(), '*']){ const g=G0[key]; if(!g || typeof g!=='object') continue;
     for(const id in g){ if(SAVE.gifts.includes(id)) continue; const x=g[id]||{}; SAVE.gifts.push(id); any=true;
-      const coins=Math.round(+x.coins||0); rewGive({coins, item:x.item, crate:x.crate});
+      const coins=Math.round(+x.coins||0); rewGive({coins, item:x.item, crate:x.crate}); const gm=Math.round(+x.gems||0); if(gm) SAVE.gems=Math.max(0,(SAVE.gems||0)+gm);
       if(x.rr!==undefined && x.rr!==null && x.rr!=='' && Number.isFinite(+x.rr)){ SAVE.rank.rr=clamp(Math.round(+x.rr),0,9999); SAVE.rank.best=Math.max(SAVE.rank.best||0, SAVE.rank.rr); }
-      toast('🎁 '+(x.msg||'Gift from the Buckets admin!')+' '+(rewText({coins:Math.max(0,coins), item:x.item, crate:x.crate})||(coins<0?coins+' 💰':''))); try{ confetti(0); }catch(e){} } }
+      toast('🎁 '+(x.msg||'Gift from the Buckets admin!')+' '+(rewText({coins:Math.max(0,coins), item:x.item, crate:x.crate})||(coins<0?coins+' 💰':''))+(gm?' '+(gm>0?'+':'')+gm+' 💎':'')); try{ confetti(0); }catch(e){} } }
   if(SAVE.gifts.length>300) SAVE.gifts=SAVE.gifts.slice(-300);
   if(any){ persist(); updateCoinUI(); }
 }
@@ -2469,6 +2492,33 @@ async function srvHost(name){
   return false;
 }
 // 🏆 ranked queue on the server's matchmaker
+function rankedNow(){ return V.inRoom && V.phase==='game' && (V.ranked || V.queueMatch || V.ranked2 || (V.rankedRoom && typeof rankedRoomOk==='function' && rankedRoomOk())); }
+function rgMark(){ try{ if(!rankedNow() || V.overSeen) return; const S=V.lastSnap||currentSnap(); if(!S || S.ph==='over') return;
+  const me=V.rmap && V.rmap.get(net.myId); if(!me) return; const opps=(V.roster||[]).filter(p=>p.team!==me.team && p.rr!==undefined);
+  const m={srv:srvRoom(), code:net.code, id:net.myId, at:Date.now(), mode:V.ranked2?'2v2':'1v1', oppRR: opps.length ? opps.reduce((a,p)=>a+p.rr,0)/opps.length : SAVE.rank.rr, team:me.team};
+  store('buckets-rgame', JSON.stringify(m)); }catch(e){} }
+setInterval(rgMark, 3000);
+function rgClear(){ store('buckets-rgame',''); }
+function rgForfeit(m, why){
+  const res=applyRanked(false, 0, 11, m.oppRR||SAVE.rank.rr); try{ lbPublish(); }catch(e){}
+  const box=el('div','panel c2Box'); box.append(el('h3','','⚠️ Ranked game forfeited'), el('p','', (why||'You left a ranked game before it ended.')+' It counts as a loss: '+res.d+' RR (now '+res.after.short+', '+res.rr+' RR).'), el('p','how','Refreshing, closing the app or leaving mid-game = forfeit. If your game ever glitches, just reopen Buckets right away: it puts you back in the game.'));
+  const ok=el('button','btn orange','OK'); ok.onclick=()=>box.remove(); box.append(ok); document.body.append(box);
+}
+setTimeout(async()=>{ try{
+  let m=null; try{ m=JSON.parse(store('buckets-rgame')||'null'); }catch(e){}
+  if(!m || !m.at) return; rgClear();
+  if(Date.now()-m.at>30*60e3) return;                                 // ancient: ignore
+  if(m.srv && await srvUse()){
+    toast('🔁 Getting you back into your ranked game…');
+    const r=await SrvConn(m.code, helloOf(getName(), {id:m.id, rejoin:1}));
+    if(r.conn){ V.queueMatch = m.mode==='1v1'; if(m.mode==='2v2') V.ranked2=true; srvAdopt(r, m.code); store('buckets-rgame', JSON.stringify({...m, at:Date.now()}));
+      toast('✅ Back in your ranked game');
+      setTimeout(()=>{ const S=V.lastSnap; if(S && S.ph==='over' && !V.overSeen){ const me=V.rmap.get(net.myId); if(me){ V.overSeen=true; V.rankRes=applyRanked(me.team===S.w, S.sc[me.team], S.sc[1-me.team], m.oppRR); rgClear(); try{ lbPublish(); }catch(e){} showGameOver(S); } } }, 2500);
+      return; }
+  }
+  rgForfeit(m);
+}catch(e){ console.warn(e); } }, 1800);
+function devId(){ let d=store('buckets-dev'); if(!d || !/^[a-z0-9]{10,24}$/.test(d)){ d=('d'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2)).slice(0,16); store('buckets-dev',d); } return d; }
 function srvQueue(mode, solo){
   qState={cancel:false, t0:performance.now(), matched:false, srv:true}; $('#rankedPlay').disabled=true; $('#rankedPlay2').disabled=true; $('#rankedCancel').classList.remove('hidden');
   let n=1, done=false, ws;
@@ -2477,7 +2527,7 @@ function srvQueue(mode, solo){
     if(!qState.matched) qStatus((mode==='2v2'?'👥 Searching for a 2v2… '+(n>1?n+'/4 · ':''):'🔎 Searching for players… ')+Math.round((performance.now()-qState.t0)/1000)+'s'); },250);
   const noMatch=msg=>{ stop(); qEnd(); qStatus(''); toast(msg); solo(); };
   try{ ws=new WebSocket(srvWS()+'/mm'); }catch(e){ stop(); qEnd(); SRV.ok=false; findRankedMatch(mode); return; }
-  ws.onopen=()=>ws.send(JSON.stringify({t:'q', mode, rr:SAVE.rank.rr}));
+  ws.onopen=()=>ws.send(JSON.stringify({t:'q', mode, rr:SAVE.rank.rr, dev:devId()}));
   ws.onmessage=async ev=>{ let d; try{ d=JSON.parse(ev.data); }catch(e){ return; }
     if(d.t==='wait') n=d.n;
     else if(d.t==='none') noMatch(mode==='2v2' ? 'No other players in the 2v2 queue — Ranked Rivals filled the lobby' : 'No players in queue — a Ranked Rival picked up the game');
@@ -3862,7 +3912,7 @@ function handleEvent(e, demo){
       V.cheer=1.5;
       if(e.dunk){ V.shake=14; V.flash=Math.max(V.flash,.45); V.zoom=.09; V.rimShake[e.hx<900?0:1]=.7; camFlashes(30); }
       else if(e.three||e.pts===3){ V.zoom=.05; camFlashes(14); }
-      if(e.by){ const inf=infoOf(e.by); V.celly={id:e.by, kind:(inf&&inf.cel)||'flex', t:0}; }
+      if(e.by && !(V.pvUntil && V.pvNoCelly)){ const inf=infoOf(e.by); V.celly={id:e.by, kind:(inf&&inf.cel)||'flex', t:0}; }
       if(!demo){
         const n=nm(e.by);
         if(e.dunk) say(e.post?'post':'dunk',{n, v:nm(e.post)});
@@ -3967,7 +4017,7 @@ function handleEvent(e, demo){
           // rate against the average of the other team (1v1 or 2v2)
           const S0=currentSnap(), opps=V.roster.filter(p=>p.team!==me.team && p.rr!==undefined), mySc=S0?S0.sc[me.team]:0, opSc=S0?S0.sc[1-me.team]:0;
           const oppRR = opps.length ? opps.reduce((s,p)=>s+p.rr,0)/opps.length : SAVE.rank.rr;
-          V.rankRes=applyRanked(me.team===e.w, mySc, opSc, oppRR);
+          V.rankRes=applyRanked(me.team===e.w, mySc, opSc, oppRR); rgClear();
           if(V.ranked) recordRival(me.team===e.w);
           lbPublish(); questProgress('RANKED');
           if(V.rankRes.promo && V.rankRes.after.ti>V.rankRes.before.ti){ confetti(e.w); V.flash=.5; }
@@ -4232,8 +4282,9 @@ function frame(){
   const half=W/sc/2, lo=-60+half, hi=COURT_W+80-half;
   if(V.shopOpen && W>700) fx += (Math.min(440,W-32)+16)/2/sc;   // keep previews visible beside the shop
   const tx = lo>hi ? COURT_W/2 : clamp(fx,lo-400,hi+400);
-  camX += (tx-camX)*Math.min(1,dt*4.5);
-  V.shake*=Math.pow(.015,dt);
+  V.camTS = V.camTS===undefined ? tx : lerp(V.camTS, tx, Math.min(1,dt*7));
+  camX += clamp((V.camTS-camX)*Math.min(1,dt*4.5), -1500*dt, 1500*dt);
+  V.shake=Math.min(V.shake||0, 22); V.shake*=Math.pow(.015,dt);
   const shx=(Math.random()-.5)*V.shake, shy=(Math.random()-.5)*V.shake;
 
   ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -5385,7 +5436,8 @@ if(qp) $('#code').value=qp.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);
 $('#code').addEventListener('input', e=>{ e.target.value=e.target.value.toUpperCase().replace(/[^A-Z]/g,''); });
 $('#hostBtn').onclick=()=>{ if(nameBlocked()) return; initAudio(); goFull(); hostGame(getName()); };
 $('#joinBtn').onclick=()=>{ if(nameBlocked()) return; initAudio(); const c=$('#code').value.trim().toUpperCase(); if(c.length!==4){ homeMsg('Enter the 4-letter room code.'); return; } goFull(); joinGame(getName(), c); };
-$('#leaveBtn').onclick=()=>{ try{net.peer&&net.peer.destroy()}catch(e){} location.href=location.pathname; };
+$('#leaveBtn').onclick=()=>{ if(rankedNow() && !V.overSeen){ const S=V.lastSnap||currentSnap(); if(S && S.ph!=='over'){ if(!V.leaveSure){ V.leaveSure=true; toast('⚠️ Leaving a ranked game = forfeit (you lose RR). Tap Leave again to quit.'); setTimeout(()=>V.leaveSure=false, 3500); return; } rgClear(); let m=null; try{ m={oppRR:(V.roster||[]).filter(p=>p.team!==(V.rmap.get(net.myId)||{}).team && p.rr!==undefined).reduce((a,p,_,A)=>a+p.rr/A.length,0)||SAVE.rank.rr}; }catch(e){ m={}; } applyRanked(false,0,11,m.oppRR||SAVE.rank.rr); try{ lbPublish(); }catch(e){} } }
+  try{net.peer&&net.peer.destroy()}catch(e){} location.href=location.pathname; };
 $('#copyBtn').onclick=()=>{
   const link=location.origin+location.pathname+'?join='+net.code;
   if(navigator.clipboard && location.protocol!=='file:') navigator.clipboard.writeText(link).then(()=>toast('Invite link copied!'), ()=>toast('Code: '+net.code));
@@ -6368,11 +6420,7 @@ let shopMain='crates', lockTab='gfx', lastCrate=null, ubWin=null, shopTab='packs
 // offline or blocked. Installed to the home screen it launches full screen like a real app.
 if('serviceWorker' in navigator && location.protocol==='https:'){
   navigator.serviceWorker.register('sw.js').catch(()=>{});
-  navigator.serviceWorker.addEventListener('message', e=>{ if(e.data && e.data.t==='bk-updated') toast('⬆️ Buckets updated in the background. It loads next time you open the game.'); });
 }
-{ const standalone = (window.navigator.standalone===true) || (window.matchMedia && matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches);
-  if(!standalone){ const b=document.getElementById('installBtn'); if(b){ b.classList.remove('hidden');
-    b.onclick=()=>toast('📲 Tap the Share button (square with an arrow) → "Add to Home Screen". Buckets then opens like an app, even if the site gets slow or blocked.'); } } }
 function updateHub(){ try{
   if(!$('#hubStoreT')) return;
   { const pb=$('#protBar'); if(pb){ const need=!SAVE.prot && ((SAVE.stats&&SAVE.stats.games>0) || SAVE.coins>500); pb.classList.toggle('hidden', !need); pb.onclick=openAcct; } }
@@ -6420,6 +6468,7 @@ function renderShop(){
 // so nobody can read them out of the page source. Each one works once per device.
 const CODE_HASHES={
   '8469e29d6fc9436af0b39fa184be37339b83a9dcc809c1cf9c0470163cdddede':{id:'c8', coins:10000},
+  '28bc805ae573a67c405da74ab504d2f07e47f7fd852f3cf798022c1414cbff15':{id:'u1', gems:5000},
 };
 async function codeHash(s){ const b=await crypto.subtle.digest('SHA-256', new TextEncoder().encode('bk19|'+s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
 // older saves stored redeemed codes as plain text: swap them for ids
@@ -6434,6 +6483,7 @@ async function redeemCode(raw){
   if(SAVE.redeemed.includes(rw.id)){ toast('Already redeemed on this device'); return true; }
   SAVE.redeemed.push(rw.id);
   if(rw.coins){ SAVE.coins+=rw.coins; persist(); toast('🎟️ +'+rw.coins+' 💰 added!'); confetti(0); }
+  if(rw.gems){ SAVE.gems=(SAVE.gems||0)+rw.gems; persist(); toast('🎟️ +'+rw.gems+' 💎 Gems added!'); confetti(0); }
   if(rw.freeCrate){
     SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[rw.freeCrate]=(SAVE.freeCrates[rw.freeCrate]||0)+1;
     persist(); V.flash=.5; confetti(1); toast('🎁 FREE Secret Pack added — open it in the Shop!'); shopMain='crates'; shopTab='packs';
@@ -6601,13 +6651,15 @@ function renderAdmin(){
       gib.onclick=()=>{ if(!gi.value && !gc.value) return toast('Pick an item or a pack'); admSave({['gifts/'+k+'/'+gid()]:{item:gi.value||'', crate:gc.value||'', msg:'Gift from the Buckets admin!'}}, '🎁 Sent'); };
       const c=admInput('Coins (use - to take)', '', 7), cm=admInput('Message (optional)', '', 60), cb=el('button','btn yellow','🎁 Send coins'); c.inputMode='numeric';
       cb.onclick=()=>{ const n=Math.round(+c.value||0); if(!n) return toast('Type an amount'); admSave({['gifts/'+k+'/'+gid()]:{coins:n, msg:cm.value.trim()}}, '🎁 Sent'); };
+      const gmI=admInput('Gems (use - to take)', '', 7), gmB=el('button','btn yellow','💎 Send gems'); gmI.inputMode='numeric';
+      gmB.onclick=()=>{ const n=Math.round(+gmI.value||0); if(!n) return toast('Type an amount'); admSave({['gifts/'+k+'/'+gid()]:{gems:n, msg:cm.value.trim()}}, '💎 Sent'); };
       const rr=admInput('Set rank RR (0-9999)', '', 5), rb=el('button','btn','🏆 Set rank'); rr.inputMode='numeric';
       rb.onclick=()=>{ if(rr.value==='' || !Number.isFinite(+rr.value)) return toast('Type an RR number'); admSave({['gifts/'+k+'/'+gid()]:{rr:clamp(Math.round(+rr.value),0,9999), msg:'Your rank was set by the admin'}}, '🏆 Rank set'); };
       const tt=admInput('Title, e.g. 👑 OWNER or ⭐ VIP', '', 24), tc=el('select'); for(const [cc,n] of [['#ffd23f','Gold'],['#ff8a80','Red'],['#a0c4ff','Blue'],['#9bf6a1','Green'],['#d0b3ff','Purple'],['#1b1530','Black']]){ const o=el('option','',n); o.value=cc; tc.append(o); }
       const tb=el('button','btn','🏷️ Give title'); tb.onclick=()=>{ if(!tt.value.trim()) return toast('Type a title'); admSave({['titles/'+k]:{t:tt.value.trim().slice(0,24), c:tc.value}}, '🏷️ Title given'); };
       const banned=!!(CTL.banned||{})[k], bb=el('button','btn '+(banned?'':'red'), banned?'✅ Unban from online':'🚫 Ban from online');
       bb.onclick=()=>admSave({['banned/'+k]: banned?null:true}, banned?'Unbanned':'🚫 Banned from online');
-      for(const row of [[c,cm,cb],[gi,gc,gib],[rr,rb],[tt,tc,tb]]){ const r=el('div','row'); r.append(...row); box.append(r); }
+      for(const row of [[c,cm,cb],[gmI,gmB],[gi,gc,gib],[rr,rb],[tt,tc,tb]]){ const r=el('div','row'); r.append(...row); box.append(r); }
       if(k[0]==='p'){ const hid=!!(CTL.lbHide||{})[k], hb=el('button','btn tiny', hid?'👁 Show on leaderboard':'🙈 Hide from leaderboard'); hb.onclick=()=>admSave({['lbHide/'+k]: hid?null:true}, hid?'Shown again':'Hidden from the leaderboard'); box.append(hb); }
       box.append(bb); s.append(box); }
     // current titles / bans / gifts
@@ -6868,13 +6920,19 @@ function dealCards(){
     back.append(el('div','pcLogo','🏀'), el('div','pcQ','?'));
     front.append(el('div','pcRar', RAR[c.r].n.toUpperCase()), el('div','pcIc', c.icon), el('div','pcName', c.name), el('div','pcKind', KIND_ONE[c.kind]),
       el('div','pcNote'+(c.isNew?' new':''), c.isNew ? '✨ NEW' : 'DUPLICATE +'+c.refund+' 💰'));
+    const bt=el('div','pcBtns'), eq=el('button','btn tiny yellow','Equip'), pv=el('button','btn tiny','▶ Preview');
+    eq.onclick=ev=>{ ev.stopPropagation(); SAVE[c.kind]=c.id; persist(); syncGear(); eq.textContent='✓ On'; toast('Equipped '+c.icon+' '+c.name); };
+    pv.onclick=ev=>{ ev.stopPropagation(); previewFromPack(c.kind, c.id); };
+    bt.append(eq, pv); front.append(bt);
     inner.append(back, front); card.append(inner); row.append(card);
     card.onclick=()=>flipCard(card, c);
   });
   $('#poBtns').classList.remove('hidden'); $('#poAll').classList.remove('hidden'); updatePoBtns();
 }
+function previewFromPack(kind,id){ const po=$('#packOpen'), sh=$('#shop'), shopWas=!sh.classList.contains('hidden'); po.classList.add('hidden'); sh.classList.add('hidden'); previewItem(kind,id);
+  setTimeout(()=>{ po.classList.remove('hidden'); if(shopWas) sh.classList.remove('hidden'); }, 5200); }
 function flipCard(card, c){
-  if(card.classList.contains('flip')){ if(!c.isNew && !c.lvUp) return; SAVE[c.kind]=c.id; persist(); syncGear(); toast('Equipped '+c.icon+' '+c.name); return; }
+  if(card.classList.contains('flip')) return;
   card.classList.add('flip'); PK.flipped++; sfx(RORDER.indexOf(c.r)>=3?'slam':'swish');
   if(RORDER.indexOf(c.r)>=3) walkout(c); else if(RORDER.indexOf(c.r)>=2) V.flash=.25;
   updatePoBtns();
@@ -6892,7 +6950,7 @@ function updatePoBtns(){
   $('#poAgain').classList.toggle('hidden', !all); $('#poDone').classList.toggle('hidden', !all);
   $('#poAgain').textContent = fr ? 'Open another · FREE ('+fr+')' : pk.freeOnly ? 'None left' : pk.gems ? 'Open another · 💎 '+pk.gems : 'Open another · 💰 '+pk.price;
   $('#poAgain').disabled = !fr && (pk.freeOnly || (pk.gems ? (SAVE.gems||0)<pk.gems : SAVE.coins<pk.price));
-  $('#poHint').textContent = all ? 'Tap a NEW card to equip it' : 'Tap the cards to flip them';
+  $('#poHint').textContent = all ? 'Equip or preview anything you pulled' : 'Tap the cards to flip them';
 }
 $('#poAll').onclick=()=>{ const cards=[...document.querySelectorAll('#poStage .pcard')]; let t=0; cards.forEach((card,i)=>{ if(card.classList.contains('flip')) return; setTimeout(()=>flipCard(card, PK.cards[i]), t); t+=RORDER.indexOf(PK.cards[i].r)>=3?2600:260; }); };
 $('#poAgain').onclick=()=>{ $('#poWalk').classList.add('hidden'); openPack(PK.pk.id); };
@@ -6953,12 +7011,20 @@ $('#ubAgain').onclick=()=>{ if(lastCrate) openCrate(lastCrate.id); };
 $('#ubDone').onclick=()=>{ $('#unbox').classList.add('hidden'); ubWin=null; renderShop(); };
 
 // preview on the court behind the menu
+function soloPreview(){ if(V.inRoom && V.phase==='game') return false;
+  const ro=[{id:'pv0', name:getName(), team:0, bot:true}];
+  DMI=new Map([['pv0',{id:'pv0', name:getName(), team:0, num:23, ...myGear()}]]);
+  DM=newMatch(ro, 99, true); DM.phase='play'; DM.phaseT=0; V.parts.length=0; V.celly=null; V.emotes={};
+  V.pvUntil=clock+5.5; return true; }
+setInterval(()=>{ if(V.pvUntil && clock>V.pvUntil && !(V.inRoom && V.phase==='game')){ V.pvUntil=0; startDemo(); } }, 500);
 function previewItem(kind,id){
+  const solo=soloPreview();
+  if(solo){ const inf=DMI.get('pv0'); if(inf) inf[kind]=id; V.pvNoCelly = kind!=='cel'; }
   const S=currentSnap(); if(!S) return;
   let q=null; if(V.phase==='game' && V.inRoom) q=S.p.find(p=>p[0]===net.myId);
   if(!q){ const hid=S.b[3]===0?S.b[4]:null; q=S.p.find(p=>p[0]===hid)||S.p[0]; }
   if(!q) return;
-  if(kind==='gfx'){ greenFx(id,q[Q.x],q[Q.y],q[Q.z],attackHoop(q[Q.team]).cx); levelFx(q[Q.x],q[Q.y]+150,q[Q.z],lvOf('gfx',id)); floatText('GREEN!',q[Q.x],q[Q.y]+215,q[Q.z],'#47e27a',32); return; }
+  if(kind==='gfx'){ V.lastGreenId=q[0]; greenFx(id,q[Q.x],q[Q.y],q[Q.z],attackHoop(q[Q.team]).cx); levelFx(q[Q.x],q[Q.y]+150,q[Q.z],lvOf('gfx',id)); floatText('GREEN!',q[Q.x],q[Q.y]+215,q[Q.z],'#47e27a',32); return; }
   if(kind==='cel'){ V.celly={id:q[0],kind:id,t:0}; return; }
   if(kind==='ball'){ V.ballPrev={id, until:clock+4}; toast('🟠 Look at the ball on the court'); return; }
   // jumpshots / dunks / trails: make a demo player actually do it

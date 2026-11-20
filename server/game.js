@@ -80,6 +80,7 @@ export class GameRoom {
       const old = this.socks.get(d.id); if (old && old.ws !== ws) { try { old.ws.close(1000); } catch (e) {} }
       this.socks.set(d.id, { ws, away: 0 }); this.send(ws, { t: 'welcome', id: d.id, re: 1 }); this.send(ws, this.roster()); return d.id;
     }
+    if (d.rejoin) { this.send(ws, { t: 'none' }); ws.close(1000); return null; }                        // your spot in that game is gone
     if (empty && !d.create && !d.q) { this.send(ws, { t: 'none' }); ws.close(1000); return null; }       // no such room here
     if (!empty && d.create) { this.send(ws, { t: 'taken' }); ws.close(1000); return null; }               // code already in use
     if (empty) { const code = this.code; this.reset(); this.code = code; G = this.G; if (d.create) G.party = !!d.party; if (d.q) this.q = { mode: d.q === '2v2' ? '2v2' : '1v1', exp: Math.max(2, Math.min(4, +d.exp || 2)), t0: Date.now() }; }
@@ -250,9 +251,11 @@ export class Matchmaker {
   arm2() { if (this.q2.length && !this.t2) this.t2 = setTimeout(() => { this.t2 = null; this.timeout2(); }, 25000); if (!this.q2.length && this.t2) { clearTimeout(this.t2); this.t2 = null; } }
   wait2() { for (const e of this.q2) this.send(e, { t: 'wait', n: this.q2.length }); }
   join(e, d) {
-    this.drop(e); e.mode = d.mode; e.rr = +d.rr || 0; e.t = Date.now();
+    this.drop(e); e.mode = d.mode; e.rr = +d.rr || 0; e.t = Date.now(); e.dev = typeof d.dev === 'string' ? d.dev.slice(0, 24) : '';
+    // the same iPad queued twice (a second tab, a stale connection): forget the old one, never match it with itself
+    if (e.dev) for (const k of ['q1', 'q2']) for (const x of [...this[k]]) if (x !== e && x.dev === e.dev) { this.drop(x); try { x.ws.close(1000); } catch (err) {} }
     if (d.mode === '1v1') {
-      const other = this.q1.shift();
+      const oi = this.q1.findIndex(x => !e.dev || x.dev !== e.dev), other = oi >= 0 ? this.q1.splice(oi, 1)[0] : null;
       if (other) { clearTimeout(other.timer); const code = 'Q' + rid(7); for (const x of [other, e]) this.send(x, { t: 'go', code, mode: '1v1', exp: 2 }); return; }
       this.q1.push(e);
       e.timer = setTimeout(() => { const i = this.q1.indexOf(e); if (i >= 0) { this.q1.splice(i, 1); this.send(e, { t: 'none' }); } }, 25000);   // 25s for a real player before a Ranked Rival steps in

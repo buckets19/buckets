@@ -1,10 +1,10 @@
 // Buckets offline copy. Keeps the game saved on the iPad so it still opens if the website is slow,
 // offline, or a filter starts blocking the page. Online play still needs the game server to be reachable.
-//  - the game page: served from the saved copy instantly, and refreshed in the background when the real
-//    site answers with the real game (a filter's "blocked" page is never saved over it)
+//  - the game page: always loaded fresh from the internet first (so updates show up right away); the saved
+//    copy is only used when the site can't load or a filter answers with its own block page
 //  - game files (scripts, icons): same idea
 //  - control.json (admin emergency switch): always tries the network first
-const CACHE = 'buckets-v1';
+const CACHE = 'buckets-v2';
 const CORE = ['./', 'index.html', 'peerjs.min.js', 'nostr.bundle.js', 'firebase-app-compat.js', 'firebase-database-compat.js', 'firebase-config.txt', 'icon-192.png', 'manifest.webmanifest'];
 
 self.addEventListener('install', e => {
@@ -37,10 +37,13 @@ self.addEventListener('fetch', e => {
   // the game page
   if (req.mode === 'navigate' || (same && /\/(index\.html)?$/.test(url.pathname))) {
     e.respondWith((async () => {
-      const cache = await caches.open(CACHE), hit = await cache.match('index.html');
-      if (hit) { e.waitUntil(refreshPage(cache)); return hit; }
-      try { const res = await fetch(req); if (await realGame(res)) cache.put('index.html', res.clone()); return res; }
-      catch (err) { return new Response('Buckets can\'t load right now. Check your Wi-Fi.', { status: 503, headers: { 'Content-Type': 'text/plain' } }); }
+      const cache = await caches.open(CACHE);
+      try {
+        const res = await Promise.race([fetch(req.url, { cache: 'no-store' }), new Promise((_, rej) => setTimeout(() => rej(new Error('slow')), 6000))]);
+        if (await realGame(res)) { cache.put('index.html', res.clone()); return res; }
+      } catch (err) {}
+      const hit = await cache.match('index.html'); if (hit) return hit;
+      try { return await fetch(req); } catch (err) { return new Response("Buckets can't load right now. Check your Wi-Fi.", { status: 503, headers: { 'Content-Type': 'text/plain' } }); }
     })());
     return;
   }
