@@ -903,7 +903,7 @@
       <button id="practiceBtn" class="btn hPractice">🎯 Practice vs bots</button>
     </section>
     <section class="hHub">
-      <button class="hubItems" id="itemShopBtn"><canvas id="hubIsArt" width="300" height="320"></canvas>
+      <button class="hubItems" id="itemShopBtn"><i class="qBadge ncBadge">NEW CONTENT</i><canvas id="hubIsArt" width="300" height="320"></canvas>
         <div class="hubTxt"><small id="hubIsK">ITEM SHOP · NEW EVERY DAY</small><b id="hubIsT">Daily Items</b><span id="hubIsS">Spend your coins on new fits</span><em class="hubCta">SHOP NOW ›</em></div>
       </button>
       <button class="hubStore openShop"><i class="qBadge sBadge hidden">FREE</i>
@@ -7995,7 +7995,7 @@ function loginCheck(){
 setTimeout(()=>{ try{ loginCheck(); }catch(e){} }, 2500);
 // red FREE badge on the Shop when something's waiting
 function shopBadge(){ try{ const n=Object.values(SAVE.freeCrates||{}).reduce((a,b)=>a+(b>0?b:0),0) + (SAVE.dailyPack!==new Date().toDateString()?1:0);
-  document.querySelectorAll('.sBadge').forEach(b=>{ b.textContent=n>1?n+' FREE':'FREE'; b.classList.toggle('hidden', !n && !setsClaimable()); if(!n) b.textContent='!'; }); }catch(e){} }
+  document.querySelectorAll('.sBadge').forEach(b=>{ b.textContent=n>1?n+' FREE':n?'FREE':'NEW CONTENT'; b.classList.remove('hidden'); }); }catch(e){} }
 setInterval(shopBadge, 3000); setTimeout(shopBadge, 800);
 function packPool(pk){ return ITEMS.filter(i=>!i.noCrate && i.id!==KINDS[i.kind].def && (!pk.set || i.s===pk.set)); }
 function rollRarity(odds, items, minR){
@@ -8221,7 +8221,7 @@ function questProgress(k, amt=1){
 }
 function questClaimable(){ const Qs=questsToday(); let n=Qs.list.filter(q=>{ const D=QUEST_POOL.find(x=>x.id===q.id); return D && q.p>=D.n && !q.c; }).length;
   if(!Qs.bonus && Qs.list.every(q=>q.c)) n++; return n; }
-function updateQuestBadge(){ const n=questClaimable(); document.querySelectorAll('.qBadge').forEach(b=>{ b.textContent=n; b.classList.toggle('hidden',!n); }); }
+function updateQuestBadge(){ const n=questClaimable(); document.querySelectorAll('.qBadge:not(.sBadge):not(.ncBadge)').forEach(b=>{ b.textContent=n; b.classList.toggle('hidden',!n); }); }
 function renderQuests(){
   const Qs=questsToday(), box=$('#questList'); box.innerHTML=''; updateCoinUI();
   for(const q of Qs.list){ const D=QUEST_POOL.find(x=>x.id===q.id); if(!D) continue;
