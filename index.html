@@ -830,6 +830,9 @@
   @media (max-width:640px){ .cmCard.fnM{flex-direction:column} .cmCard.fnM canvas{width:100%;max-height:42vh} .fnMInfo{background:rgba(5,6,12,.75)} .fnTitle b{font-size:32px} }
   @media (max-height:520px){ .cmCard.fnM canvas{max-height:86vh} .fnMInfo h3{font-size:30px} .fnHead{padding:8px 12px} .fnTitle b{font-size:30px} }
   .lkMore{box-shadow:inset 0 0 0 2px dashed rgba(255,255,255,.2)!important;background:#1f2a3a!important}
+  #pvBar{position:fixed;z-index:65;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:rgba(12,13,18,.9);color:#fff;box-shadow:0 10px 26px rgba(0,0,0,.45),inset 0 -3px 0 #ff5b1f;max-width:calc(100vw - 20px)}
+  #pvBar.hidden{display:none} #pvBar .pvT{display:flex;flex-direction:column;min-width:0;margin-right:4px} #pvBar small{font-size:10px;font-weight:800;letter-spacing:1.5px;color:#9a9ea8} #pvBar b{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #pvBar .btn{background:#2b2e36;color:#fff;padding:8px 12px} #pvBar .btn.yellow{background:var(--gold);color:#15171c}
   #cosModal{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;padding:12px}
   #cosModal.hidden{display:none}
   .cmCard{background:#1b1d22;color:#f3f1ec;border-radius:8px;width:min(380px,100%);max-height:100%;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:6px;align-items:center;box-shadow:0 20px 50px rgba(0,0,0,.5),inset 0 5px 0 var(--rc)}
@@ -4120,7 +4123,7 @@ function handleEvent(e, demo){
       V.cheer=1.5;
       if(e.dunk){ V.shake=14; V.flash=Math.max(V.flash,.45); V.zoom=.09; V.rimShake[e.hx<900?0:1]=.7; camFlashes(30); }
       else if(e.three||e.pts===3){ V.zoom=.05; camFlashes(14); }
-      if(e.by && !(V.pvUntil && V.pvNoCelly)){ const inf=infoOf(e.by); V.celly={id:e.by, kind:(inf&&inf.cel)||'flex', t:0}; }
+      if(e.by && !(PV && V.pvNoCelly)){ const inf=infoOf(e.by); V.celly={id:e.by, kind:(inf&&inf.cel)||'flex', t:0}; }
       if(!demo){
         const n=nm(e.by);
         if(e.dunk) say(e.post?'post':'dunk',{n, v:nm(e.post)});
@@ -7781,8 +7784,7 @@ function dealCards(){
   });
   $('#poBtns').classList.remove('hidden'); $('#poAll').classList.remove('hidden'); updatePoBtns();
 }
-function previewFromPack(kind,id){ const po=$('#packOpen'), sh=$('#shop'), shopWas=!sh.classList.contains('hidden'); po.classList.add('hidden'); sh.classList.add('hidden'); previewItem(kind,id);
-  setTimeout(()=>{ po.classList.remove('hidden'); if(shopWas) sh.classList.remove('hidden'); }, 5200); }
+function previewFromPack(kind,id){ previewItem(kind,id); }
 function flipCard(card, c){
   if(card.classList.contains('flip')) return;
   card.classList.add('flip'); PK.flipped++; sfx(RORDER.indexOf(c.r)>=3?'slam':'swish');
@@ -7858,39 +7860,48 @@ function revealWin(){
   updateCoinUI(); renderShop();
 }
 $('#ubEquip').onclick=()=>{ if(!ubWin) return; SAVE[ubWin.kind]=ubWin.id; persist(); syncGear(); $('#ubEquip').textContent='Equipped ✓'; $('#ubEquip').disabled=true; renderShop(); };
-$('#ubPreview').onclick=()=>{ if(!ubWin) return; const w=ubWin; $('#unbox').classList.add('hidden'); previewItem(w.kind, w.id); setTimeout(()=>{ if(ubWin===w) $('#unbox').classList.remove('hidden'); }, 2800); };
+$('#ubPreview').onclick=()=>{ if(ubWin) previewItem(ubWin.kind, ubWin.id); };
 $('#ubAgain').onclick=()=>{ if(lastCrate) openCrate(lastCrate.id); };
 $('#ubDone').onclick=()=>{ $('#unbox').classList.add('hidden'); ubWin=null; renderShop(); };
 
 // preview on the court behind the menu
-function soloPreview(){ if(V.inRoom && V.phase==='game') return false;
-  const ro=[{id:'pv0', name:getName(), team:0, bot:true}];
-  DMI=new Map([['pv0',{id:'pv0', name:getName(), team:0, num:23, ...myGear()}]]);
-  DM=newMatch(ro, 99, true); DM.phase='play'; DM.phaseT=0; V.parts.length=0; V.celly=null; V.emotes={};
-  V.pvUntil=clock+5.5; return true; }
-setInterval(()=>{ if(V.pvUntil && clock>V.pvUntil && !(V.inRoom && V.phase==='game')){ V.pvUntil=0; startDemo(); } }, 500);
+// ---- 👀 PREVIEW MODE: every menu hides, the camera snaps to you, the item plays right away on an empty court,
+// then you're back where you were as soon as it's done (or tap Done / Replay)
+var PV=null;
+const PV_LEN={cel:3.4, gfx:2.4, dunk:3, js:2.8, trail:2.8, ball:3};
 function previewItem(kind,id){
-  const solo=soloPreview();
-  if(solo){ const inf=DMI.get('pv0'); if(inf) inf[kind]=id; V.pvNoCelly = kind!=='cel'; }
-  const S=currentSnap(); if(!S) return;
-  let q=null; if(V.phase==='game' && V.inRoom) q=S.p.find(p=>p[0]===net.myId);
-  if(!q){ const hid=S.b[3]===0?S.b[4]:null; q=S.p.find(p=>p[0]===hid)||S.p[0]; }
-  if(!q) return;
-  if(kind==='gfx'){ V.lastGreenId=q[0]; greenFx(id,q[Q.x],q[Q.y],q[Q.z],attackHoop(q[Q.team]).cx); levelFx(q[Q.x],q[Q.y]+150,q[Q.z],lvOf('gfx',id)); floatText('GREEN!',q[Q.x],q[Q.y]+215,q[Q.z],'#47e27a',32); return; }
-  if(kind==='cel'){ V.celly={id:q[0],kind:id,t:0}; return; }
-  if(kind==='ball'){ V.ballPrev={id, until:clock+4}; toast('🟠 Look at the ball on the court'); return; }
-  // jumpshots / dunks / trails: make a demo player actually do it
-  if(V.phase==='game'){ toast('Equipped styles show up on your next shot'); return; }
-  const p=DM.players.find(pp=>pp.id===q[0]); if(!p) return;
-  const inf=DMI.get(p.id); if(inf) inf[kind]=id;
-  const h=attackHoop(p.team);
-  DM.phase='play'; DM.phaseT=0; resetP(p); Object.assign(DM.ball,{st:'held',holder:p.id,t:0});
-  for(const o of DM.players) if(o.team!==p.team){ resetP(o); o.x=COURT_W/2; o.z=(o.idx-0.5)*150; }
-  p.bot=false;
-  if(kind==='dunk'){ p.x=h.cx-h.dir*175; p.z=0; p.vx=h.dir*420; p.vz=0; p.inX=h.dir; p.inZ=0; setTimeout(()=>{ p.wantA=true; }, 80); }
-  else { p.x=h.cx-h.dir*330; p.z=rnd(-50,50); p.inX=p.inZ=0; p.wantA=true; setTimeout(()=>{ p.relA=SWEET; }, SWEET*METER_T*1000); }
-  setTimeout(()=>{ p.bot=true; }, 2600);
+  if(V.inRoom && V.phase==='game'){                     // in a real game: only on-the-spot effects, on you
+    const S=currentSnap(), q=S && S.p.find(o=>o[0]===net.myId); if(!q) return;
+    if(kind==='gfx'){ V.lastGreenId=q[0]; greenFx(id,q[Q.x],q[Q.y],q[Q.z],attackHoop(q[Q.team]).cx); return; }
+    if(kind==='cel'){ V.celly={id:q[0],kind:id,t:0}; return; }
+    toast('Equipped styles show up on your next shot'); return; }
+  if(!PV){ const hid=[]; document.querySelectorAll('.panel:not(.hidden),#packOpen:not(.hidden),#unbox:not(.hidden),#cosModal:not(.hidden),#poWalk:not(.hidden),#tutBox:not(.hidden)').forEach(e=>{ e.classList.add('hidden'); hid.push(e); }); PV={hid, shop:V.shopOpen}; }
+  V.shopOpen=false; PV.kind=kind; PV.id=id; pvStage(); pvBar();
 }
+function pvStage(){
+  const kind=PV.kind, id=PV.id; PV.end=clock+(PV_LEN[kind]||3);
+  V.parts.length=0; V.scr.length=0; V.timers.length=0; V.celly=null; V.emotes={}; V.ballPrev=null; V.flash=0; V.shake=0; V.zoom=0; V.zoomHold=0;
+  const g={id:'pv0', name:getName(), team:0, num:23, ...myGear()}; g[kind]=id; DMI=new Map([['pv0',g]]);
+  DM=newMatch([{id:'pv0', name:getName(), team:0, bot:true}],99,true); DM.phase='play'; DM.phaseT=0; DM.scOn=false;
+  const p=DM.players[0], h=attackHoop(p.team); resetP(p); p.bot=false; p.inX=p.inZ=0;
+  Object.assign(DM.ball,{st:'held',holder:p.id,t:0}); DM.poss=p.team;
+  V.pvNoCelly = kind!=='cel';
+  const shoot=()=>{ p.wantA=true; const t0=PV; setTimeout(()=>{ if(PV===t0) p.relA=SWEET; }, SWEET*METER_T*1000+20); };
+  if(kind==='dunk'){ p.x=h.cx-h.dir*178; p.z=0; p.vx=h.dir*430; p.inX=h.dir; const t0=PV; setTimeout(()=>{ if(PV===t0) p.wantA=true; }, 70); }
+  else if(kind==='js'||kind==='trail'){ p.x=h.cx-h.dir*300; p.z=30; p.face=h.dir; setTimeout(shoot, 120); }
+  else if(kind==='gfx'){ p.x=h.cx-h.dir*300; p.z=30; p.face=h.dir; V.lastGreenId='pv0'; greenFx(id,p.x,p.y,p.z,h.cx); levelFx(p.x,p.y+150,p.z,lvOf('gfx',id)); floatText('GREEN!',p.x,p.y+215,p.z,'#47e27a',32); }
+  else if(kind==='cel'){ p.x=h.cx-h.dir*260; p.z=20; p.face=-h.dir; V.celly={id:'pv0',kind:id,t:0}; }
+  else if(kind==='ball'){ p.x=COURT_W/2-h.dir*80; p.z=20; p.bot=true; }
+  camX=PX(p.x,p.z); V.camTS=camX;                          // no slow camera pan
+}
+function pvBar(){ let b=$('#pvBar'); if(!b){ b=el('div'); b.id='pvBar'; document.body.append(b); }
+  const it=itemOf(PV.kind,PV.id)||{icon:'👀',name:'Preview'}; b.innerHTML=''; b.classList.remove('hidden');
+  const re=el('button','btn','↻ Replay'), ok=el('button','btn yellow','✓ Done'); re.onclick=()=>{ if(PV) pvStage(); }; ok.onclick=pvClose;
+  const t=el('div','pvT'); t.append(el('small','','PREVIEW · '+KIND_ONE[PV.kind]), el('b','',it.icon+' '+it.name)); b.append(t,re,ok); }
+function pvClose(){ if(!PV) return; const P0=PV; PV=null; V.pvNoCelly=false; V.celly=null; V.parts.length=0; V.scr.length=0; V.timers.length=0;
+  const b=$('#pvBar'); if(b) b.classList.add('hidden');
+  P0.hid.forEach(e=>e.classList.remove('hidden')); V.shopOpen=P0.shop; startDemo(); if(V.shopOpen) renderShop(); }
+setInterval(()=>{ if(PV && clock>PV.end+.4) pvClose(); }, 150);
 function syncGear(){ if(V.inRoom) sendAct({t:'gear', ...myGear()}); }
 document.querySelectorAll('.openShop').forEach(b=>b.onclick=()=>openShop('crates'));
 document.querySelectorAll('.openLocker').forEach(b=>b.onclick=()=>openShop('locker'));
