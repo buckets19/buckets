@@ -729,6 +729,14 @@
   #shop.dark #lookCv{border:0!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
   #shop.dark .lvStars{color:#ffc21a} #shop.dark .lvStars.max{color:#ff6b8a}
   #shop.dark .coinPill{background:#0d0e11;box-shadow:0 0 0 1px rgba(255,255,255,.12)}
+  .lbTag{display:inline-flex;align-items:center;gap:2px;font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:13px;letter-spacing:.5px;border-radius:3px;padding:1px 8px;margin:0 3px;position:relative;overflow:hidden;vertical-align:middle;white-space:nowrap}
+  .lbTag.p1{background:linear-gradient(135deg,#fff3b0,#ffc21a 45%,#b8860b);color:#3a2a00;box-shadow:0 0 12px rgba(255,194,26,.7)}
+  .lbTag.p2{background:linear-gradient(135deg,#ffffff,#c9d3df 50%,#7d8897);color:#1f2530;box-shadow:0 0 10px rgba(200,215,230,.6)}
+  .lbTag.p3{background:linear-gradient(135deg,#ffd3a8,#cd7f32 50%,#7a4318);color:#2a1300;box-shadow:0 0 10px rgba(205,127,50,.55)}
+  .lbTag.p10{background:linear-gradient(135deg,#c79bff,#7b3fe4);color:#fff}
+  .lbTag.p50{background:#15171c;color:#ffc21a;box-shadow:inset 0 0 0 1.5px #ffc21a}
+  .lbTag.p1::after,.lbTag.p2::after,.lbTag.p3::after{content:'';position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.7) 45%,transparent 60%);transform:translateX(-120%);animation:shine 2.6s ease-in-out infinite}
+  #vsCard .lbTag{font-size:17px;padding:3px 12px}
   .protBar{display:block;width:100%;margin:0 0 10px;border:0;border-radius:4px;background:#e2342d;color:#fff;font:inherit;font-size:14px;padding:9px 12px;text-align:left;cursor:pointer;animation:pulse 1.8s ease-in-out infinite}
   .protBar b{font-family:"Barlow Condensed",sans-serif;font-style:italic;font-weight:800;font-size:17px;letter-spacing:.5px;text-transform:uppercase}
   .protBox{border-radius:6px;padding:10px 12px;margin:0 0 10px;background:#fff1ef;box-shadow:inset 4px 0 0 #e2342d;display:flex;flex-direction:column;gap:6px}
@@ -3789,7 +3797,7 @@ function renderLobby(){
     const ul=$('#team'+t); ul.innerHTML='';
     for(const p of V.roster.filter(p=>p.team===t)){
       const li=document.createElement('li');
-      const nmS=document.createElement('span'); nmS.textContent='#'+p.num+' '+p.name; li.append(nmS); { const bg=badgeEl(p); if(bg) li.append(bg); const tt=titleEl(p); if(tt) li.append(tt); }
+      const nmS=document.createElement('span'); nmS.textContent='#'+p.num+' '+p.name; li.append(nmS); { const lt=lbTag(p); if(lt) li.append(lt); const bg=badgeEl(p); if(bg) li.append(bg); const tt=titleEl(p); if(tt) li.append(tt); }
       if(!p.bot && p.rr!==undefined) li.append(rankBadge(p.rr));
       li.style.cursor='pointer'; li.title='View player card'; { const pid=p.id; li.addEventListener('click', ev=>{ if(ev.target.closest('button')) return; openCardFor(pid); }); }
       const gear=document.createElement('span'); gear.title='Celly / Green FX'; gear.textContent=((CELLYS.find(c=>c.id===p.cel)||{}).icon||'')+((GFX.find(c=>c.id===p.gfx)||{}).icon||''); li.append(gear);
@@ -5942,7 +5950,7 @@ function openProfile(other){
   $('#pfNum').textContent = me ? '#'+((SAVE.num)||23) : (other.place?'#'+other.place:'');
   $('#pfOvr').innerHTML=''; $('#pfOvr').append(el('b','',rk.t.icon), el('span','',rk.short.toUpperCase()));
   const head=el('div','pfHead'); head.append(el('h2','',name));
-  const tags=el('div','pfTags'); const who=me?meWho():{...other, ct:(other.card&&other.card.ct)||other.ct}; const bg=badgeEl(who), tt=titleEl(who); if(tt) tags.append(tt); if(bg) tags.append(bg); head.append(tags); I.append(head);
+  const tags=el('div','pfTags'); const who=me?meWho():{...other, ct:(other.card&&other.card.ct)||other.ct}; const bg=badgeEl(who), tt=titleEl(who), lt=lbTag(who); if(lt) tags.append(lt); if(tt) tags.append(tt); if(bg) tags.append(bg); head.append(tags); I.append(head);
   const rkRow=el('div','pfRank'); rkRow.append(rankBadge(rr,true));
   if(me) rkRow.append(el('small','', 'Best '+(SAVE.rank.best||rr)+' RR'+(SAVE.season?' · Season '+SAVE.season.n+' peak '+(SAVE.season.peak||rr):'')));
   else rkRow.append(el('small','', (other.place?'#'+other.place+' on the leaderboard · ':'')+(other.g||0)+' ranked games'));
@@ -6039,7 +6047,17 @@ function setupRankedRoster(){
 }
 // the "match found" card: who you're about to play
 function meWho(){ return {pk:lbMe()||'', name:getName(), bdg:SAVE.badge?'S'+SAVE.badge.s+':'+SAVE.badge.ti:''}; }
-function vsTags(who){ if(!who) return null; const d=el('div','vsTags'), bg=badgeEl(who), t=titleEl(who); if(bg) d.append(bg); if(t) d.append(t); return d.children.length ? d : null; }
+// 🏅 leaderboard place (top 50) as a tag: #1 gold, #2 silver, #3 bronze, top 10 purple, top 50 dark with a gold edge
+let LBP={at:-1, map:new Map()};
+function lbPlace(pk){ if(!pk || !LB.rows) return 0;
+  if(LBP.at!==LB.at){ const hide=CTL.lbHide||{}, me=lbMe(), rows=LB.rows.filter(r=>!hide['p'+String(r.pk).slice(0,16)] || r.pk===me).slice();
+    if(SAVE.rank && SAVE.rank.games && me && !rows.some(r=>r.pk===me)) rows.push({pk:me, rr:SAVE.rank.rr, g:SAVE.rank.games});
+    rows.sort((a,b)=>b.rr-a.rr || (b.g||0)-(a.g||0)); LBP={at:LB.at, map:new Map(rows.slice(0,50).map((r,i)=>[r.pk,i+1]))}; }
+  return LBP.map.get(pk)||0; }
+function lbTag(who){ const n=who && lbPlace(who.pk); if(!n) return null;
+  const t=el('span','lbTag '+(n===1?'p1':n===2?'p2':n===3?'p3':n<=10?'p10':'p50'), (n<=3?['','🥇','🥈','🥉'][n]+' ':'')+'#'+n+(n<=10?' IN THE WORLD':' RANKED')); t.title='#'+n+' on the ranked leaderboard'; return t; }
+setTimeout(()=>{ try{ if(!LB.rows && !LB.loading) lbFetch(); }catch(e){} }, 6000);
+function vsTags(who){ if(!who) return null; const d=el('div','vsTags'), lt=lbTag(who), bg=badgeEl(who), t=titleEl(who); if(lt) d.append(lt); if(bg) d.append(bg); if(t) d.append(t); return d.children.length ? d : null; }
 // ranked 2v2: both teams with ranks, titles and badges
 function showVsCard2(){
   const c=$('#vsCard'), R=V.roster||[]; if(!R.length) return; c.innerHTML='';
