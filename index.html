@@ -4243,8 +4243,12 @@ function handleEvent(e, demo){
       if(ds==='glassdunk'){ const hb=HOOPS.find(h=>Math.abs(h.cx-dx)<300)||HOOPS[0], bx=hb.bb||dx; later(.12,()=>{ V.flash=1; V.shake=Math.max(V.shake,30); screenFx('crack',1.8,{wx:bx,wy:RIM_Y+60,wz:0});
           for(let i=0;i<70;i++) P(bx+rnd(-20,20),RIM_Y+rnd(10,120),rnd(-60,60),{vx:rnd(-420,420),vy:rnd(-80,420),vz:rnd(-160,160),g:1000,life:rnd(.9,1.5),max:1.5,c:pick(['#e8fbff','#bfe9ff','#fff','#9fd8f0']),s:rnd(4,10),sq:1});
           floatText('GLASS!',dx,RIM_Y+180,0,'#e8fbff',60,1.3); camFlashes(36); V.cheer=2.5; }); }
-      if(ds==='eclipsed'){ screenFx('eclipse',2,{wx:dx,wy:RIM_Y+170,wz:0}); V.shake=Math.max(V.shake,18); floatText('ECLIPSE',dx,RIM_Y+200,0,'#ffb347',54,1.3); }
-      if(ds==='ftline'){ V.flash=Math.max(V.flash,.6); spray(dx,RIM_Y,0,50,['#ffd23f','#fff','#e8b730'],440,{s:6}); camFlashes(36); ring(dx,RIM_Y,0,'#ffd23f',220,.7,12); V.cheer=2.5; }
+      if(ds==='eclipsed'){ screenFx('eclipse',2.2,{wx:dx,wy:RIM_Y+170,wz:0}); screenFx('darken',2); V.zoom=Math.max(V.zoom,.12); V.shake=Math.max(V.shake,18);
+        later(.25,()=>{ V.flash=Math.max(V.flash,.7); for(let i=0;i<4;i++) later(i*.1,()=>ring3d(dx,RIM_Y+170,0,60+i*35,i%2?'#ffb347':'#fff3d0',{t:1,w:5})); sphereBurst(dx,RIM_Y+170,0,110,['#ffb347','#fff3d0','#ff7a1a'],620);
+          for(let i=0;i<24;i++){ const a=i/24*TAU; P(dx,RIM_Y+170,0,{vx:Math.cos(a)*520,vy:Math.sin(a)*520,g:0,life:.7,max:.7,c:'#fff3d0',s:4}); } floatText('ECLIPSE',dx,RIM_Y+230,0,'#ffb347',68,1.6); }); }
+      if(ds==='ftline'){ V.flash=Math.max(V.flash,.6); spray(dx,RIM_Y,0,60,['#ffd23f','#fff','#e8b730'],480,{s:7}); camFlashes(50); ring(dx,RIM_Y,0,'#ffd23f',240,.7,12); ring(dx,4,0,'#ffd23f',320,.8,10); V.cheer=3; V.shake=Math.max(V.shake,16);
+        floatText('FROM THE LINE',dx,RIM_Y+210,0,'#ffd23f',62,1.6); for(let i=0;i<3;i++) later(.3+i*.25,()=>firework3d(dx+rnd(-300,300),rnd(440,540),-60));
+        for(let i=0;i<40;i++) later(i*.03,()=>P(dx+rnd(-500,500),560,rnd(-120,60),{vy:-rnd(80,180),vx:rnd(-40,40),g:60,life:2,max:2,c:pick(['#ffd23f','#e8b730','#ffffff']),s:rnd(4,7),sq:1})); }
       if(ds==='thundergod'){ for(let i=0;i<7;i++) later(i*.06,()=>bolt(dx+rnd(-280,280),rnd(-140,140),0)); V.shake=Math.max(V.shake,24); screenFx('tint',.6,{c:'160,210,255'}); floatText('THUNDER',dx,RIM_Y+200,0,'#bfe9ff',54,1.2); }
       if(ds==='windmill') ring(dx,RIM_Y,0,'#a55eea',140,.5,8);
       else if(ds==='three60'){ ring(dx,RIM_Y,0,'#ffb400',170,.6,10); spray(dx,RIM_Y,0,24,['#ffd23f','#fff'],300); }
@@ -4269,7 +4273,8 @@ function handleEvent(e, demo){
       else if(ds==='sleighdunk'){ emo(dx-800,RIM_Y+200,-60,'🛷',{vx:1400,g:0,life:1.2,max:1.2,s:56,vr:0}); for(let k=1;k<=3;k++) emo(dx-800+k*55,RIM_Y+200,-60,'🦌',{vx:1400,g:0,life:1.2,max:1.2,s:44,vr:0});
         later(.55,()=>{ for(let i=0;i<8;i++) emo(dx+rnd(-200,200),RIM_Y+220,rnd(-40,40),'🎁',{vy:-rnd(50,150),g:600,life:1.2,max:1.2,s:rnd(24,34)}); floatText('SPECIAL DELIVERY',dx,RIM_Y+170,0,'#ffd23f',38,1.4); V.shake=Math.max(V.shake,10); }); }
       else if(ds==='pixeldunk'){ later(.15,()=>{ for(let i=0;i<50;i++) P(dx,RIM_Y,0,{vx:rnd(-400,400),vy:rnd(0,500),g:700,life:1,max:1,c:pick(['#00c2a8','#ffd23f','#ff5a4f','#fff']),s:9,sq:1}); floatText('COMBO!',dx,RIM_Y+150,0,'#00c2a8',42,1.2); }); }
-      else if(ds==='koslam'){ later(.15,()=>{ screenFx('bflash',.6); V.flash=1; V.shake=Math.max(V.shake,26); floatText('FINISHED',dx,RIM_Y+170,0,'#ff1a3c',58,1.5); sphereBurst(dx,RIM_Y,0,100,['#ff1a3c','#fff','#ffd23f'],640); }); }
+      else if(ds==='koslam'){ screenFx('gray',.35); later(.15,()=>{ screenFx('bflash',.6); screenFx('bloodred',1.4); V.flash=1; V.shake=Math.max(V.shake,28); floatText('FATALITY',dx,RIM_Y+200,0,'#ff1a3c',74,1.6); sphereBurst(dx,RIM_Y,0,120,['#ff1a3c','#ffffff','#ffd23f'],680);
+          emo(dx,RIM_Y+60,0,'💀',{s:90,g:0,life:1.3,max:1.3,vr:0}); ring(dx,RIM_Y,0,'#ff1a3c',260,.6,12); later(.8,()=>floatText('FLAWLESS',dx,RIM_Y+140,0,'#ffd23f',40,1)); }); }
       else if(ds==='gravedunk'){ later(.2,()=>{ for(let i=0;i<5;i++) emo(dx+(i-2)*70,-20,rnd(-60,60),'🪦',{vy:300,g:600,life:1.2,max:1.2,s:36,vr:0}); spray(dx,5,0,30,['#5a4a3a','#3a2a1a'],260,{g:700}); V.shake=Math.max(V.shake,14); }); }
       else if(ds==='reaperdunk'){ later(.15,()=>{ screenFx('darken',1.2); screenFx('slash',.7,{n:1}); for(let i=0;i<10;i++) emo(dx+rnd(-200,200),0,rnd(-60,60),'💀',{vy:rnd(200,400),g:300,life:1.2,max:1.2,s:26}); V.shake=Math.max(V.shake,18); floatText('REAPED',dx,RIM_Y+160,0,'#ccc',46,1.3); }); }
       else if(ds==='meteor'){ later(.35,()=>{ ring(dx,0,0,'#ff8a1f',260,.8,16); spray(dx,10,0,50,['#ff5a00','#ffb347','#7a5a3a'],420,{g:800}); V.shake=Math.max(V.shake,18); V.flash=Math.max(V.flash,.4); floatText('CRATER',dx,140,0,'#ff8a1f',40,1.4); }); }
