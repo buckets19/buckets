@@ -2514,7 +2514,7 @@ function ctlGifts(){
   for(const key of [...myKeys(), '*']){ const g=G0[key]; if(!g || typeof g!=='object') continue;
     for(const id in g){ if(SAVE.gifts.includes(id)) continue; const x=g[id]||{}; SAVE.gifts.push(id); any=true;
       const coins=Math.round(+x.coins||0); rewGive({coins, item:x.item, crate:x.crate}); const gm=Math.round(+x.gems||0); if(gm) SAVE.gems=Math.max(0,(SAVE.gems||0)+gm);
-      if(x.rr!==undefined && x.rr!==null && x.rr!=='' && Number.isFinite(+x.rr)){ SAVE.rank.rr=clamp(Math.round(+x.rr),0,9999); SAVE.rank.best=Math.max(SAVE.rank.best||0, SAVE.rank.rr); }
+
       toast('🎁 '+(x.msg||'Gift from the Buckets admin!')+' '+(rewText({coins:Math.max(0,coins), item:x.item, crate:x.crate})||(coins<0?coins+' 💰':''))+(gm?' '+(gm>0?'+':'')+gm+' 💎':'')); try{ confetti(0); }catch(e){} } }
   if(SAVE.gifts.length>300) SAVE.gifts=SAVE.gifts.slice(-300);
   if(any){ persist(); updateCoinUI(); }
@@ -2587,7 +2587,23 @@ const srvRoom=()=>!!(net.hostConn && net.hostConn.isServerRoom);
 function amHost(){ return net.role==='host' || (srvRoom() && V.owner===net.myId); }      // room owner: start, bots, settings
 function srvCmd(c, x){ if(srvRoom()) net.hostConn.send({t:'cmd', c, ...(x||{})}); }
 const srvId=()=>('u'+Math.random().toString(36).slice(2,11)).padEnd(10,'0');
-function helloOf(name, extra){ return {name:cleanName(name), ...myGear(), rr:SAVE.rank.rr, pk:lbMe()||'', ...(extra||{})}; }
+// 🔑 a secret token per player (kept in the save, so account backups carry it). The game server uses it to
+// keep YOUR rank on the server: an iPad can't give itself RR, and the leaderboard only shows server ranks.
+function ptok(){ if(!SAVE.ptok || !/^[0-9a-f]{40}$/.test(SAVE.ptok)){ SAVE.ptok=[...crypto.getRandomValues(new Uint8Array(20))].map(b=>b.toString(16).padStart(2,'0')).join(''); persist(); } return SAVE.ptok; }
+function helloOf(name, extra){ return {name:cleanName(name), ...myGear(), rr:SAVE.rank.rr, pk:lbMe()||'', ...(store('buckets-nolb')?{}:{tok:ptok()}), ...(extra||{})}; }
+async function rkSync(){ try{ if(!OFFICIAL || store('buckets-nolb')) return null;
+    const r=await fetch(GAME_SERVER+'/api/rk/me',{method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({tok:ptok(), name:getName(), pk:lbMe()||'', card:myCardData(), claim:{rr:SAVE.rank.rr, g:SAVE.rank.games|0, w:SAVE.rank.wins|0, b:SAVE.rank.best|0}})});
+    if(!r.ok) return null; const d=await r.json(); if(!d || !d.ok) return null;
+    const R=SAVE.rank; R.rr=d.rr; R.games=d.g; R.wins=d.w; R.streak=d.st; R.best=Math.max(R.best||0, d.b||0); persist(); try{ updateCoinUI(); }catch(e){} return d; }catch(e){ return null; } }
+setTimeout(()=>{ rkSync(); }, 2500);
+// nobody in the queue: a Ranked Rival game ON THE SERVER (so it counts). No server = an unranked practice game.
+async function srvSolo(mode){
+  if(OFFICIAL && await srvUse()){ const code='R'+Math.random().toString(36).slice(2,9).toUpperCase();
+    const r=await SrvConn(code, helloOf(getName(), {id:srvId(), q: mode==='2v2'?'2v2solo':'rival'}));
+    if(r.conn){ initAudio(); goFull(); closeRanked(); V.queueMatch=true; V.rivalSrv=true; if(mode==='2v2') V.ranked2=true; srvAdopt(r, code);
+      if(mode!=='2v2') setTimeout(()=>{ const meT=((V.roster||[]).find(q=>q.id===net.myId)||{}).team, opp=(V.roster||[]).find(q=>q.bot && q.team!==meT); if(opp) showVsCard({n:opp.name, rr:opp.rr||0, who:opp}); }, 1400);
+      return; } }
+  V.unrankedLocal=true; toast('⚠️ Can\'t reach the game server: this game won\'t count for rank'); mode==='2v2' ? startRanked2Solo() : startRanked(); }
 // one live connection to a server room. Quietly reconnects (same spot in the game) if the Wi-Fi drops.
 function SrvConn(code, hello){
   return new Promise(res=>{
@@ -2646,8 +2662,8 @@ function rgMark(){ try{ if(!rankedNow() || V.overSeen) return; const S=V.lastSna
   store('buckets-rgame', JSON.stringify(m)); }catch(e){} }
 setInterval(rgMark, 3000);
 function rgClear(){ store('buckets-rgame',''); }
-function rgForfeit(m, why){
-  const res=applyRanked(false, 0, 11, m.oppRR||SAVE.rank.rr); try{ lbPublish(); }catch(e){}
+async function rgForfeit(m, why){
+  const before=SAVE.rank.rr; await rkSync(); const res={d:SAVE.rank.rr-before, rr:SAVE.rank.rr, after:rankOf(SAVE.rank.rr)};
   const box=el('div','panel c2Box'); box.append(el('h3','','⚠️ Ranked game forfeited'), el('p','', (why||'You left a ranked game before it ended.')+' It counts as a loss: '+res.d+' RR (now '+res.after.short+', '+res.rr+' RR).'), el('p','how','Refreshing, closing the app or leaving mid-game = forfeit. If your game ever glitches, just reopen Buckets right away: it puts you back in the game.'));
   const ok=el('button','btn orange','OK'); ok.onclick=()=>box.remove(); box.append(ok); document.body.append(box);
 }
@@ -2660,7 +2676,7 @@ setTimeout(async()=>{ try{
     const r=await SrvConn(m.code, helloOf(getName(), {id:m.id, rejoin:1}));
     if(r.conn){ V.queueMatch = m.mode==='1v1'; if(m.mode==='2v2') V.ranked2=true; srvAdopt(r, m.code); store('buckets-rgame', JSON.stringify({...m, at:Date.now()}));
       toast('✅ Back in your ranked game');
-      setTimeout(()=>{ const S=V.lastSnap; if(S && S.ph==='over' && !V.overSeen){ const me=V.rmap.get(net.myId); if(me){ V.overSeen=true; V.rankRes=applyRanked(me.team===S.w, S.sc[me.team], S.sc[1-me.team], m.oppRR); rgClear(); try{ lbPublish(); }catch(e){} showGameOver(S); } } }, 2500);
+      setTimeout(()=>{ const S=V.lastSnap; if(S && S.ph==='over' && !V.overSeen){ const me=V.rmap.get(net.myId); if(me){ V.overSeen=true; rkSync(); rgClear(); showGameOver(S); } } }, 2500);
       return; }
   }
   rgForfeit(m);
@@ -2896,6 +2912,7 @@ function onClientData(d){
   else if(d.t==='adminend'){ V.migrating=true; fatal(String(d.m||'⛔ The Buckets admin ended all online games for now.').slice(0,160)); }
   else if(d.t==='banned') fatal('🚫 This name can\'t play online right now.');
   else if(d.t==='roster') applyRoster(d);
+  else if(d.t==='rk'){ V.rkMsg=d; if(V.overSeen && !V.rankRes){ V.rankRes=applyRanked(d.win,0,0,0,d); V.rkMsg=null; const S=currentSnap(); if(S && S.ph==='over') showGameOver(S); } }
   else if(d.t==='ev') handleEvent(d.e,false);
   else if(d.t==='pong'){ const r=performance.now()-(+d.ts||0); if(r>0 && r<5000){ V.rtt=V.rtt?lerp(V.rtt,r,.3):r; V.pingNow=V.pingNow?lerp(V.pingNow,r,.6):r; diagAdd('ping', r); } }
   else if(d.t==='migrate') migrateTo(String(d.code||'').slice(0,8), d.tag);
@@ -4224,7 +4241,8 @@ function showGameOver(S){
   $('#rematchBtn').textContent = (V.ranked||V.queueMatch) ? '▶ Find next match' : '🔁 Rematch';
   $('#toLobbyBtn').textContent = (V.ranked||V.queueMatch) ? '🏆 Ranked menu' : 'Lobby';
   if(V.queueMatch) $('#overNote').textContent='Ranked vs a real player.';
-  if(V.ranked) $('#overNote').textContent='Played vs a bot — no players were in the queue.';
+  if(V.ranked) $('#overNote').textContent='Practice vs a bot (didn\'t count for rank).';
+  if(V.rivalSrv) $('#overNote').textContent='Ranked vs a Ranked Rival (no players were in the queue).';
   $('#over').classList.remove('hidden');
 }
 
@@ -4402,10 +4420,12 @@ function handleEvent(e, demo){
           // rate against the average of the other team (1v1 or 2v2)
           const S0=currentSnap(), opps=V.roster.filter(p=>p.team!==me.team && p.rr!==undefined), mySc=S0?S0.sc[me.team]:0, opSc=S0?S0.sc[1-me.team]:0;
           const oppRR = opps.length ? opps.reduce((s,p)=>s+p.rr,0)/opps.length : SAVE.rank.rr;
-          V.rankRes=applyRanked(me.team===e.w, mySc, opSc, oppRR); rgClear();
+          if(srvRoom()){ if(V.rkMsg){ V.rankRes=applyRanked(V.rkMsg.win,0,0,0,V.rkMsg); V.rkMsg=null; } }   // the server sends the result (it may land a moment after this)
+          else if(!V.rkLocalNote){ V.rkLocalNote=true; toast('This game didn\'t count for rank (ranked is decided on the game server)'); }
+          rgClear();
           if(V.ranked) recordRival(me.team===e.w);
-          lbPublish(); questProgress('RANKED');
-          if(V.rankRes.promo && V.rankRes.after.ti>V.rankRes.before.ti){ confetti(e.w); V.flash=.5; }
+          questProgress('RANKED');
+          if(V.rankRes && V.rankRes.promo && V.rankRes.after.ti>V.rankRes.before.ti){ confetti(e.w); V.flash=.5; }
           if(net.role==='host' && RM && (V.ranked||V.queueMatch)) RM.phaseT=1e6;        // stay on the results until you pick
         }
         setTimeout(()=>{ const S=currentSnap(); if(S && V.phase==='game' && S.ph==='over') showGameOver(S); }, 1200);
@@ -6582,7 +6602,7 @@ const bytesOf=h=>new Uint8Array(h.match(/../g).map(x=>parseInt(x,16)));
 function lbKey(){ let h=store('buckets-lbkey'); if(!h || !/^[0-9a-f]{64}$/.test(h)){ h=hexOf(NT.generateSecretKey()); store('buckets-lbkey',h); } return bytesOf(h); }
 function lbMe(){ try{ const h=store('buckets-lbkey'); return NT && h ? NT.getPublicKey(bytesOf(h)) : null; }catch(e){ return null; } }
 const LB={rows:null, at:0, loading:null, posted:false};
-async function lbPublish(){
+async function lbPublish(){ return rkSync();   // (the old public-relay posting below is retired: anyone could fake it)
   if(!SAVE.rank.games || store('buckets-nolb')) return;          // (test devices never post)
   const nt=await loadNostr(); if(!nt) return;
   const sk=lbKey(), R=SAVE.rank;
@@ -6594,7 +6614,10 @@ async function lbPublish(){
 }
 function lbFetch(){
   if(LB.loading) return LB.loading;
-  return LB.loading=loadNostr().then(nt=>new Promise(res=>{
+  return LB.loading=fetch(GAME_SERVER+'/api/rk/lb',{cache:'no-store'}).then(r=>r.json()).then(d=>{ if(d && d.ok) LB.rows=d.rows.map(r=>({...r, n:cleanName(r.n), card:cardClean(r.card)})); }).catch(()=>{}).finally(()=>{ LB.loading=null; LB.at=Date.now(); });
+}
+function lbFetchNostrOld(){
+  return loadNostr().then(nt=>new Promise(res=>{
     const best=new Map(); let open=LB_RELAYS.length, any=false, finished=false;
     const finish=()=>{ if(finished) return; finished=true; LB.loading=null; LB.at=Date.now(); if(any) LB.rows=[...best.values()]; res(); };
     if(!nt) return finish();
@@ -6665,10 +6688,11 @@ function rrPerf(win){
     return win ? Math.round(clamp((ratio-1)*8, -2, 6)) : Math.round(clamp((ratio-1)*6, -2, 4));
   }catch(e){ return 0; }
 }
-function applyRanked(win, myScore, oppScore, oppRR){
-  const R=SAVE.rank, before=rankOf(R.rr), ev=eventNow(); let d=rrDelta(win, R.rr, oppRR, Math.abs(myScore-oppScore));
-  if(win && ev && ev.kind==='rr2') d*=2;                                        // 🎪 2x RR event
-  R.rr=Math.max(0,R.rr+d); R.games++; if(win){ R.wins++; R.streak++; } else R.streak=0; R.best=Math.max(R.best,R.rr);
+function applyRanked(win, myScore, oppScore, oppRR, srv){
+  const R=SAVE.rank, before=rankOf(R.rr), ev=eventNow(); let d=srv ? srv.d : rrDelta(win, R.rr, oppRR, Math.abs(myScore-oppScore));
+  if(!srv && win && ev && ev.kind==='rr2') d*=2;                                        // 🎪 2x RR event
+  if(srv){ R.rr=srv.rr; R.games=srv.g; R.wins=srv.w; R.streak=srv.st; R.best=Math.max(R.best||0, srv.b||0, R.rr); }   // the server decided this
+  else { R.rr=Math.max(0,R.rr+d); R.games++; if(win){ R.wins++; R.streak++; } else R.streak=0; R.best=Math.max(R.best,R.rr); }
   const after=rankOf(R.rr);
   let coins = win ? 25+after.ti*10 : 5, promo=null;
   if(after.ti>before.ti){ coins+=300; promo='PROMOTED TO '+after.t.n.toUpperCase()+' '+after.t.icon; }
@@ -7045,7 +7069,7 @@ function startRanked(){
   setupRankedRoster(); enterRoom(); startRankedMatch();
 }
 // a 1v1 room with exactly two humans can be played for rank
-function rankedRoomOk(){ const h=V.roster.filter(p=>!p.bot); return !V.practice && V.roster.length===2 && h.length===2 && h[0].team!==h[1].team; }
+function rankedRoomOk(){ return false; }   // private rooms don't count for rank any more (friends could farm it)
 
 // ---------------------------------------------------------------- matchmaking slots
 // Claim a public matchmaking slot. With Firebase on, Firebase decides who owns a slot, which works on
@@ -7153,7 +7177,7 @@ async function qTryHost(i){
 }
 async function findRankedMatch(mode){
   if(qState) return; initAudio(); qMode = mode==='2v2' ? '2v2' : '1v1';
-  const solo=()=> qMode==='2v2' ? startRanked2Solo() : startRanked();
+  const solo=()=> srvSolo(qMode);
   if(ctlOnlineBlock() || CTL.ranked===false){ toast(ctlOnlineBlock() || '🏆 Ranked is vs Ranked Rivals right now'); solo(); return; }   // 🎛️ admin switch
   if(await srvUse()) return srvQueue(qMode, solo);        // 🏟️ the server's matchmaker
   if(typeof Peer==='undefined' && !FB_CONFIG){ solo(); return; }

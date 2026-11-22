@@ -10,6 +10,7 @@
 // Server-only notices: {"t":"_hosthere"} {"t":"_nohost"} {"t":"_hostgone"} {"t":"_taken"} {"t":"_left"}
 
 export { GameRoom, Matchmaker } from './game.js';
+export { Profiles } from './profiles.js';
 
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, GET, OPTIONS', 'access-control-allow-headers': 'content-type', 'cache-control': 'no-store' };
 
@@ -27,6 +28,7 @@ export default {
     // accounts: unique names + cloud saves (one Durable Object holds them all)
     if (url.pathname.startsWith('/api/')) {
       if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
+      if (url.pathname.startsWith('/api/rk/')) { const res = await env.PROFILES.get(env.PROFILES.idFromName('global')).fetch(req); const h = new Headers(res.headers); for (const k in CORS) h.set(k, CORS[k]); return new Response(res.body, { status: res.status, headers: h }); }
       const stub = env.ACCOUNTS.get(env.ACCOUNTS.idFromName('global'));
       const res = await stub.fetch(req);
       const h = new Headers(res.headers); for (const k in CORS) h.set(k, CORS[k]);

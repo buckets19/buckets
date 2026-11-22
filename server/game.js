@@ -9,9 +9,10 @@ import { makeSim } from './sim.js';
 const S = makeSim();
 const TICK_MS = 1000 / 60;                 // 60 updates a second = one game step each (smoothest, smallest buffer)                 // 50 updates a second to every player (less waiting, smaller buffer on iPads)
 const GRACE_MS = 15000;                    // a player whose Wi-Fi drops keeps their spot this long
-const NO_GEAR = new Set(['t','name','pk','duo','r2','q','exp','create','party','rr','id','rejoin','c']);
+const NO_GEAR = new Set(['t','name','pk','duo','r2','q','exp','create','party','rr','id','rejoin','c','tok']);
 const FB = 'https://buckets-37d04-default-rtdb.firebaseio.com';   // cheat reports land here (admin panel shows them)
 const nyDay = () => new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10).replace(/-/g, '');
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const rid = n => { const A = 'abcdefghjkmnpqrstuvwxyz23456789'; let s = ''; for (let i = 0; i < n; i++) s += A[Math.floor(Math.random() * A.length)]; return s; };
 
 export class GameRoom {
@@ -19,7 +20,7 @@ export class GameRoom {
   reset() {
     this.G = { phase: 'lobby', players: new Map(), toWin: 11, diff: 'pro', winBy2: false, ranked: false, ranked2: false, party: false, srch: false };
     this.socks = new Map();      // id -> { ws, away }
-    this.owner = null; this.RM = null; this.q = null; this.code = ''; this.emAt = new Map(); this.prAt = new Map(); this.ac = this.ac || new Map();
+    this.owner = null; this.RM = null; this.q = null; this.code = ''; this.emAt = new Map(); this.prAt = new Map(); this.ac = this.ac || new Map(); this.tok = new Map(); this.rk = null;
     if (this.loop) clearInterval(this.loop); this.loop = null;
     if (this.qTimer) clearTimeout(this.qTimer); this.qTimer = null;
   }
@@ -85,7 +86,7 @@ export class GameRoom {
     if (d.rejoin) { this.send(ws, { t: 'none' }); ws.close(1000); return null; }                        // your spot in that game is gone
     if (empty && !d.create && !d.q) { this.send(ws, { t: 'none' }); ws.close(1000); return null; }       // no such room here
     if (!empty && d.create) { this.send(ws, { t: 'taken' }); ws.close(1000); return null; }               // code already in use
-    if (empty) { const code = this.code; this.reset(); this.code = code; G = this.G; if (d.create) G.party = !!d.party; if (d.q) this.q = { mode: d.q === '2v2' ? '2v2' : '1v1', exp: Math.max(2, Math.min(4, +d.exp || 2)), t0: Date.now() }; }
+    if (empty) { const code = this.code; this.reset(); this.code = code; G = this.G; if (d.create) G.party = !!d.party; if (d.q) this.q = { mode: d.q === 'rival' ? 'rival' : d.q === '2v2solo' ? '2v2solo' : d.q === '2v2' ? '2v2' : '1v1', exp: d.q === 'rival' || d.q === '2v2solo' ? 1 : Math.max(2, Math.min(4, +d.exp || 2)), t0: Date.now() }; }
     // who may join
     if ((d.duo || d.r2) && !(G.party && G.phase === 'lobby' && this.humans(1) < 2)) { this.send(ws, { t: 'busy' }); ws.close(1000); return null; }
     if (G.players.size >= S.MAX_PER_TEAM * 2) {
@@ -98,6 +99,7 @@ export class GameRoom {
     else if (G.party) team = this.count(0) < 2 ? 0 : 1;
     const r = this.addPlayer(id, d.name, false, team);
     this.setGear(r, d); r.rr = Math.max(0, Math.min(9999, Math.round(+d.rr || 0))); if (typeof d.pk === 'string' && d.pk) r.pk = d.pk.slice(0, 80);
+    if (typeof d.tok === 'string' && /^[0-9a-f]{32,64}$/.test(d.tok)) { this.tok.set(id, d.tok); this.loadRR(id); }
     this.socks.set(id, { ws, away: 0 });
     if (!this.owner || !G.players.has(this.owner)) this.owner = id;
     this.send(ws, { t: 'welcome', id });
@@ -111,6 +113,7 @@ export class GameRoom {
     if (G.party && G.phase === 'lobby' && this.humans(1) >= 2 && this.humans(0) >= 1) { G.srch = false; this.startRanked2(Math.max(0, ...[...G.players.values()].filter(p => !p.bot).map(p => p.rr || 0)), 'pro'); return; }
     // queue rooms: start when everyone's here, or after a short wait with whoever made it
     if (this.q && G.phase === 'lobby') {
+      if (this.q.exp === 1) { if (!this.qTimer) this.qTimer = setTimeout(() => { this.qTimer = null; if (G.phase === 'lobby' && this.humans()) this.startQueue(); }, 900); return; }
       if (this.humans() >= this.q.exp) return this.startQueue();
       if (!this.qTimer) this.qTimer = setTimeout(() => { this.qTimer = null; if (G.phase !== 'lobby' || !this.q) return;
         if (this.humans() >= 2) this.startQueue();
@@ -120,6 +123,14 @@ export class GameRoom {
   startQueue() {
     const G = this.G; if (this.qTimer) { clearTimeout(this.qTimer); this.qTimer = null; }
     this.clearBots();
+    if (this.q.mode === 'rival') {   // nobody in the queue: a Ranked Rival near your (server) rating, played on the server so it counts for real
+      const me = [...G.players.values()][0]; me.team = 0; const my = me.rr || 0;
+      const pool = S.RIVALS.map(R => ({ R, rr: S.rivalRR(R) })).sort((a, b) => Math.abs(a.rr - my) - Math.abs(b.rr - my)).slice(0, 4);
+      const o = Math.random() < 0.7 ? pool[0] : pool[Math.floor(Math.random() * pool.length)]; this.addRival(o.R, 1);
+      G.ranked = true; G.toWin = 11; G.winBy2 = true; G.diff = S.diffForRR(o.rr);
+      return this.startMatch(3.6);
+    }
+    if (this.q.mode === '2v2solo') { const me = [...G.players.values()][0]; me.team = 0; return this.startRanked2(me.rr || 0, S.diffForRR(me.rr || 0)); }
     if (this.q.mode === '1v1') {
       const hum = [...G.players.values()]; hum.forEach((p, i) => p.team = i % 2);
       G.ranked = true; G.toWin = 11; G.winBy2 = true; G.diff = 'pro';
@@ -144,6 +155,9 @@ export class GameRoom {
     const ro = [...G.players.values()]; if (!ro.some(p => p.team === 0) || !ro.some(p => p.team === 1)) return;
     this.RM = S.newMatch(ro, G.toWin, false, G.diff, G.winBy2); if (wait) this.RM.phaseT = Math.max(this.RM.phaseT, wait);
     this.RM.hum0 = this.humans(0) > 0; this.RM.hum1 = this.humans(1) > 0; this.overSeen = false;
+    // ranked results are decided here: matchmade games, Ranked Rival games and ranked 2v2s (not private 1v1 rooms: no farming)
+    this.rk = (this.q || G.ranked2) ? new Map([...G.players.values()].filter(p => !p.bot && this.tok.has(p.id)).map(p => [p.id, { tok: this.tok.get(p.id), team: p.team, name: p.name, claim: p.rr || 0 }])) : null; this.rkDone = false;
+    this.calcRR();
     G.phase = 'game'; this.pushRoster();
     if (this.loop) clearInterval(this.loop);
     this.last = Date.now(); this.acc = 0;
@@ -153,7 +167,7 @@ export class GameRoom {
     const RM = this.RM; if (!RM) { clearInterval(this.loop); this.loop = null; return; }
     const now = Date.now(); this.acc += Math.min(250, now - this.last) / 1000; this.last = now;
     try { while (this.acc >= 1 / 60) { this.acc -= 1 / 60; S.stepMatch(RM, 1 / 60); this.simT += 1000 / 60; } } catch (e) { console.log('sim error', e && e.stack); }
-    if (RM.phase === 'over' && !this.overSeen) { this.overSeen = true; if (this.q) RM.phaseT = 1e6; }    // ranked queue games stay on the results
+    if (RM.phase === 'over' && !this.overSeen) { this.overSeen = true; if (this.q) RM.phaseT = 1e6; this.rankResults(); }    // ranked queue games stay on the results
     const snap = S.makeSnap(RM, true); snap.st = Math.round(this.simT); if (!snap.ev.length) delete snap.ev;   // st: game time of this update (60 steps/s vs 50 updates/s, so wall time would wobble)
     this.all(snap); RM.events = [];
     if (RM.phase === 'over' && RM.phaseT <= 0) this.toLobby();
@@ -176,6 +190,7 @@ export class GameRoom {
       if ((G.ranked || G.ranked2 || this.q) && RM.phase !== 'over') {
         const left0 = RM.hum0 && this.humans(0) === 0, left1 = RM.hum1 && this.humans(1) === 0;
         if ((left0 || left1) && this.humans() > 0) { const w = left0 ? 1 : 0; RM.winner = w; RM.phase = 'over'; RM.phaseT = this.q ? 1e6 : 15; RM.events.push({ k: 'over', w, forfeit: 1 }); this.overSeen = true; }
+        if (left0 || left1) this.rankResults(left0 ? 1 : 0);   // quitting a ranked game is a loss, decided here (refreshing can't dodge it)
       }
     }
     if (this.owner === id) { const h = [...G.players.values()].find(p => !p.bot); this.owner = h ? h.id : null; }
@@ -224,6 +239,22 @@ export class GameRoom {
     }
     else if (d.t === 'b') p.wantB = true;
     else if (d.t === 'c') p.wantC = true;
+  }
+  // ---- server RR
+  calcRR() { this.rkRR = [0, 1].map(t => { const o = [...this.G.players.values()].filter(p => p.team === t); return o.length ? o.reduce((s, p) => s + (p.rr || 0), 0) / o.length : 0; }); }
+  prof() { return this.env && this.env.PROFILES ? this.env.PROFILES.get(this.env.PROFILES.idFromName('global')) : null; }
+  async loadRR(id) { const P = this.prof(), t = this.tok.get(id); if (!P || !t) return;
+    try { const r = await P.fetch('https://x/rk/get', { method: 'POST', body: JSON.stringify({ toks: [t] }) }).then(r => r.json()); const pl = this.G.players.get(id); if (pl && r.rr && r.rr[t] !== undefined) { pl.rr = r.rr[t]; if (this.rk && !this.rkDone) this.calcRR(); this.pushRoster(); } } catch (e) {} }
+  async rankResults(winner) {
+    if (!this.rk || this.rkDone || !this.RM) return; this.rkDone = true;
+    const RM = this.RM, w = winner !== undefined ? winner : RM.winner, sc = RM.score || [0, 0], all = [...this.G.players.values()];
+    const avgRR = team => (this.rkRR || [0, 0])[team] || 0;
+    const pts = RM.players.map(p => p.pts || 0), avgP = pts.reduce((a, b) => a + b, 0) / Math.max(1, pts.length);
+    const list = [...this.rk].map(([id, x]) => { const win = x.team === w, mp = (RM.players.find(p => p.id === id) || {}).pts || 0, ratio = avgP > 0 ? clamp(mp / avgP, 0.4, 1.8) : 1;
+      return { id, tok: x.tok, name: x.name, claim: x.claim, win, opp: avgRR(1 - x.team), margin: Math.abs(sc[0] - sc[1]), perf: win ? Math.round(clamp((ratio - 1) * 8, -2, 6)) : Math.round(clamp((ratio - 1) * 6, -2, 4)) }; });
+    const P = this.prof(); if (!P || !list.length) return;
+    try { const r = await P.fetch('https://x/rk/res', { method: 'POST', body: JSON.stringify({ list }) }).then(r => r.json());
+      for (const x of list) { const res = r.res && r.res[x.tok]; if (!res) continue; this.to(x.id, { t: 'rk', win: x.win, ...res }); const pl = this.G.players.get(x.id); if (pl) pl.rr = res.rr; } } catch (e) { console.log('rank error', e && e.stack); }
   }
   // 🛡️ auto-green watch. People are never pixel-perfect: even great shooters land within ±9ms of dead centre
   // only about 1 shot in 4. A script lands there every time. 8 in a row = flagged: their green stops being

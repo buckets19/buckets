@@ -32,3 +32,11 @@ class_name = "Matchmaker"
 [[migrations]]
 tag = "v3"
 new_sqlite_classes = ["GameRoom", "Matchmaker"]
+
+[[durable_objects.bindings]]
+name = "PROFILES"
+class_name = "Profiles"
+
+[[migrations]]
+tag = "v4"
+new_sqlite_classes = ["Profiles"]
