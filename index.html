@@ -7778,7 +7778,8 @@ const STYLE_SETS=[
   {n:'Reindeer',ic:'🦌',x:1,it:[['hat','Reindeer Antlers'],['face','Red Nose'],['neck','Jingle Bell'],['arm','Wrist Warmer'],['back','Wreath']]},
   {n:'Gingerbread',ic:'🍪',x:1,it:[['shoe','Gingerbread'],['acc','Gingerbread Cookie'],['hat','Mistletoe'],['neck','Ornaments'],['top','Candy Cane Tank']]},
 ];
-STYLE_SETS.forEach(S=>{ S.list=S.it.map(([k,n])=>cosFind(k,n)).filter(([i,j])=>i>=0&&j>=0); if(S.list.length!==S.it.length) console.warn('set item missing', S.n); });
+STYLE_SETS.forEach(S=>{ S.list=S.it.map(([k,n])=>cosFind(k,n)).filter(([i,j])=>i>=0&&j>=0 && cosPrice(cosOpt(i,j))>0);   // free pieces everyone has don't belong in a bundle
+  S.it=S.it.filter(([k,n])=>{ const [i,j]=cosFind(k,n); return i>=0&&j>=0&&cosPrice(cosOpt(i,j))>0; }); if(S.list.length!==S.it.length) console.warn('set item missing', S.n); });
 // ---- daily rotation (resets at local midnight; same shop for everyone on the same day; nothing from yesterday comes back the next day)
 function shopDay(){ const d=new Date(); return Math.floor((d.getTime()-d.getTimezoneOffset()*60000)/86400000); }
 function untilReset(){ const d=new Date(), n=new Date(d); n.setHours(24,0,0,0); const t=Math.max(0,(n-d)/1000|0); return Math.floor(t/3600)+'h '+String(Math.floor(t%3600/60)).padStart(2,'0')+'m'; }
@@ -7866,7 +7867,7 @@ function fnTile(size, art, name, sub, price, was, rc, badge, own, onclick){
   const pr=el('div','fnPrice'); if(own) pr.append(el('span','fnOwn','OWNED ✓')); else { pr.append(el('span','fnCoin','💰'), el('span','',price.toLocaleString())); if(was) pr.append(el('s','',was.toLocaleString())); }
   inf.append(pr); d.append(inf, el('i','fnBar')); d.onclick=onclick; return d; }
 function itemTile(x, size){ const [pi,oi]=x, P=LOOK_PARTS[pi], o=P.opts[oi], [w,h]=FN_SIZE[size], own=cosOwned(pi,oi);
-  return fnTile(size, cosThumb(pi,oi,w,h,.5,size==='n'?.75:size==='tall'?.62:.8), o.n, RAR[o.r].n+' · '+P.n, cosPrice(o), 0, FN_RC[o.r], o.x?'🎄':(!own && o.r==='legendary'?'HOT':''), own, ()=>cosDetail(pi,oi)); }
+  return fnTile(size, cosThumb(pi,oi,w,h,.5,size==='n'?.75:size==='tall'?.62:.8), o.n, (RAR[o.r]||{n:'Free'}).n+' · '+P.n, cosPrice(o), 0, FN_RC[o.r]||'#4a4f5a', o.x?'🎄':(!own && o.r==='legendary'?'HOT':''), own, ()=>cosDetail(pi,oi)); }
 function setTile(S, size, off){ const [w,h]=FN_SIZE[size], [pr,full]=bundlePrice(S.list,off||.3), own=full===0;
   return fnTile(size, setThumb(S.list,w,h), S.ic+' '+S.n+(S.fit?'':' Set'), S.list.length+' items · bundle '+Math.round((off||.3)*100)+'% off', pr, full, S.x?'#c62828':'#e0a21a', S.x?'🎄 SET':'SET', own, ()=>cosSetDetail(S,off||.3)); }
 function renderItemShop(box){
@@ -7889,7 +7890,7 @@ function fnModal(rc){ let m=$('#cosModal'); if(!m){ m=el('div'); m.id='cosModal'
   if(!V.cmLoop){ V.cmLoop=true; requestAnimationFrame(drawCmPreview); } return {card,info,close}; }
 function cosDetail(pi,oi){ const P=LOOK_PARTS[pi], o=P.opts[oi], own=cosOwned(pi,oi), pr=cosPrice(o), shop=cosInShop(pi,oi);
   const {info,close}=fnModal(FN_RC[o.r]||'#4a4f5a'); V.cmLook=cosLook([[pi,oi]]).join('.');
-  info.append(el('div','fnMRar',RAR[o.r].n+' · '+P.ic+' '+P.n+(o.x?' · 🎄 Christmas':'')), el('h3','',o.n), el('div','fnTry','👀 Trying it on you'));
+  info.append(el('div','fnMRar',(RAR[o.r]||{n:'Free'}).n+' · '+P.ic+' '+P.n+(o.x?' · 🎄 Christmas':'')), el('h3','',o.n), el('div','fnTry','👀 Trying it on you'));
   const S=STYLE_SETS.find(S=>S.list.some(([a,b])=>a===pi&&b===oi)); if(S) info.append(el('div','fnMSet','Part of the '+S.ic+' '+S.n+' Set'));
   const row=el('div','row');
   if(own){ const eq=lookArr()[pi]===oi, b=el('button','btn yellow', eq?'Wearing it ✓':'👕 Wear it'); b.disabled=eq; b.onclick=()=>{ cosEquip(pi,oi); toast('👕 '+o.n+' on!'); close(); }; row.append(b); }
