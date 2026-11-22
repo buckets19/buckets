@@ -10,6 +10,12 @@ const S = makeSim();
 const TICK_MS = 1000 / 60;                 // 60 updates a second = one game step each (smoothest, smallest buffer)                 // 50 updates a second to every player (less waiting, smaller buffer on iPads)
 const GRACE_MS = 15000;                    // a player whose Wi-Fi drops keeps their spot this long
 const NO_GEAR = new Set(['t','name','pk','duo','r2','q','exp','create','party','rr','id','rejoin','c','tok']);
+import CAT from './catalog.js';
+import { walGear } from './wallet.js';
+// what each play pays (the same numbers the iPads show): [coins, gems, trophy counter]
+const PAY = { green: [3, 1, 'greens'], block: [4, 1, 'lock'], steal: [4, 1, 'lock'], pick: [4, 1, 'lock'], tip: [2, 0, ''], charge: [5, 1, 'lock'], shook: [5, 1, 'ankles'], froze: [4, 1, 'ankles'] };
+const tierOf = rr => { let ti = 0; CAT.tiers.forEach((m, i) => { if (rr >= m) ti = i; }); const T = CAT.tiers; let div = 0;
+  if (ti < T.length - 3) { const step = (T[ti + 1] - T[ti]) / 3; div = Math.min(2, Math.floor((rr - T[ti]) / step)); } return { ti, div }; };
 const FB = 'https://buckets-37d04-default-rtdb.firebaseio.com';   // cheat reports land here (admin panel shows them)
 const nyDay = () => new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10).replace(/-/g, '');
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -58,7 +64,20 @@ export class GameRoom {
     const r = { id, name: S.cleanName(name), team, bot: !!bot, num: this.newNum() };
     this.G.players.set(id, r); return r;
   }
-  setGear(r, d) { for (const k in d) if (!NO_GEAR.has(k) && /^[a-z][a-zA-Z0-9]{0,11}$/.test(k) && typeof d[k] === 'string' && d[k].length <= 64) r[k] = d[k]; }
+  setGear(r, d) {
+    r.want = r.want || {}; for (const k in d) if (!NO_GEAR.has(k) && /^[a-z][a-zA-Z0-9]{0,11}$/.test(k) && typeof d[k] === 'string' && d[k].length <= 64) r.want[k] = d[k];
+    if (r.bot) { Object.assign(r, r.want); return; }
+    const tmp = walGear(null, r.want), C = r.conf; if (C) for (const k in tmp) if (C.ask[k] === r.want[k] && C.res[k] !== undefined) tmp[k] = C.res[k];
+    Object.assign(r, r.want, tmp);     // shown right away: only what's free (or what the wallet already confirmed)
+    this.checkGear(r);
+  }
+  // ask the wallet what this player may really wear online (a hacked iPad can claim anything)
+  async checkGear(r) {
+    const P = this.prof(), t = this.tok.get(r.id); if (!P || !t) return;
+    const ask = { ...r.want }; r.gq = (r.gq || 0) + 1; const q = r.gq;
+    try { const d = await P.fetch('https://x/w/gear', { method: 'POST', body: JSON.stringify({ list: [{ tok: t, gear: ask }] }) }).then(x => x.json());
+      const g = d.gear && d.gear[t]; if (!g || q !== r.gq || !this.G.players.has(r.id)) return;
+      r.conf = { ask, res: g }; Object.assign(r, r.want, g); this.pushRoster(); } catch (e) {} }
   addBot(team) {
     if (this.count(team) >= S.MAX_PER_TEAM) return;
     const used = new Set([...this.G.players.values()].map(p => p.name)); const nm = S.BOT_NAMES.find(n => !used.has(S.cleanName(n + ' 🤖'))) || 'Bot';
@@ -98,8 +117,8 @@ export class GameRoom {
     if (d.duo || d.r2) team = this.count(1) < S.MAX_PER_TEAM ? 1 : 0;
     else if (G.party) team = this.count(0) < 2 ? 0 : 1;
     const r = this.addPlayer(id, d.name, false, team);
-    this.setGear(r, d); r.rr = Math.max(0, Math.min(9999, Math.round(+d.rr || 0))); if (typeof d.pk === 'string' && d.pk) r.pk = d.pk.slice(0, 80);
     if (typeof d.tok === 'string' && /^[0-9a-f]{32,64}$/.test(d.tok)) { this.tok.set(id, d.tok); this.loadRR(id); }
+    this.setGear(r, d); r.rr = Math.max(0, Math.min(9999, Math.round(+d.rr || 0))); if (typeof d.pk === 'string' && d.pk) r.pk = d.pk.slice(0, 80);
     this.socks.set(id, { ws, away: 0 });
     if (!this.owner || !G.players.has(this.owner)) this.owner = id;
     this.send(ws, { t: 'welcome', id });
@@ -154,7 +173,7 @@ export class GameRoom {
     const G = this.G; if (G.phase !== 'lobby') return;
     const ro = [...G.players.values()]; if (!ro.some(p => p.team === 0) || !ro.some(p => p.team === 1)) return;
     this.RM = S.newMatch(ro, G.toWin, false, G.diff, G.winBy2); if (wait) this.RM.phaseT = Math.max(this.RM.phaseT, wait);
-    this.RM.hum0 = this.humans(0) > 0; this.RM.hum1 = this.humans(1) > 0; this.overSeen = false;
+    this.RM.hum0 = this.humans(0) > 0; this.RM.hum1 = this.humans(1) > 0; this.overSeen = false; this.tl = new Map(); this.credited = new Set(); this.rc = new Map(); this.finP = null;
     // ranked results are decided here: matchmade games, Ranked Rival games and ranked 2v2s (not private 1v1 rooms: no farming)
     this.rk = (this.q || G.ranked2) ? new Map([...G.players.values()].filter(p => !p.bot && this.tok.has(p.id)).map(p => [p.id, { tok: this.tok.get(p.id), team: p.team, name: p.name, claim: p.rr || 0 }])) : null; this.rkDone = false;
     this.calcRR();
@@ -167,9 +186,9 @@ export class GameRoom {
     const RM = this.RM; if (!RM) { clearInterval(this.loop); this.loop = null; return; }
     const now = Date.now(); this.acc += Math.min(250, now - this.last) / 1000; this.last = now;
     try { while (this.acc >= 1 / 60) { this.acc -= 1 / 60; S.stepMatch(RM, 1 / 60); this.simT += 1000 / 60; } } catch (e) { console.log('sim error', e && e.stack); }
-    if (RM.phase === 'over' && !this.overSeen) { this.overSeen = true; if (this.q) RM.phaseT = 1e6; this.rankResults(); }    // ranked queue games stay on the results
+    if (RM.phase === 'over' && !this.overSeen) { this.overSeen = true; if (this.q) RM.phaseT = 1e6; this.finish(RM.winner); }    // ranked queue games stay on the results
     const snap = S.makeSnap(RM, true); snap.st = Math.round(this.simT); if (!snap.ev.length) delete snap.ev;   // st: game time of this update (60 steps/s vs 50 updates/s, so wall time would wobble)
-    this.all(snap); RM.events = [];
+    this.all(snap); this.tally(RM.events); RM.events = [];
     if (RM.phase === 'over' && RM.phaseT <= 0) this.toLobby();
   }
   toLobby() {
@@ -184,13 +203,14 @@ export class GameRoom {
     G.players.delete(id); this.socks.delete(id);
     const RM = this.RM;
     if (RM) {
+      if (RM.phase !== 'over') this.credit([id], null, true);
       const i = RM.players.findIndex(p => p.id === id);
       if (i >= 0) { RM.players.splice(i, 1); if (RM.ball.holder === id) S.looseBall(RM, RM.ball.x, 80, RM.ball.z, 0, 100, 0, r.team); }
       // a whole side of real players left a ranked game: the other side wins (counts for rank)
       if ((G.ranked || G.ranked2 || this.q) && RM.phase !== 'over') {
         const left0 = RM.hum0 && this.humans(0) === 0, left1 = RM.hum1 && this.humans(1) === 0;
         if ((left0 || left1) && this.humans() > 0) { const w = left0 ? 1 : 0; RM.winner = w; RM.phase = 'over'; RM.phaseT = this.q ? 1e6 : 15; RM.events.push({ k: 'over', w, forfeit: 1 }); this.overSeen = true; }
-        if (left0 || left1) this.rankResults(left0 ? 1 : 0);   // quitting a ranked game is a loss, decided here (refreshing can't dodge it)
+        if (left0 || left1) this.finish(left0 ? 1 : 0);   // quitting a ranked game is a loss, decided here (refreshing can't dodge it)
       }
     }
     if (this.owner === id) { const h = [...G.players.values()].find(p => !p.bot); this.owner = h ? h.id : null; }
@@ -241,6 +261,29 @@ export class GameRoom {
     else if (d.t === 'b') p.wantB = true;
     else if (d.t === 'c') p.wantC = true;
   }
+  // ---- 💰 match rewards: the server counts what each player did and pays their wallet at the end
+  tally(evs) {
+    if (!evs || !evs.length || !this.tl) return;
+    const add = (id, c, g, f) => { if (!id || !this.tok.has(id)) return; const t = this.tl.get(id) || { c: 0, g: 0, feat: {} }; t.c += c; t.g += g; if (f) t.feat[f] = (t.feat[f] || 0) + 1; this.tl.set(id, t); };
+    for (const e of evs) {
+      if (e.k === 'shot' && e.q === 'perfect') add(e.id, ...PAY.green);
+      else if (e.k === 'score' && e.by) { const th = e.three || e.pts === 3; add(e.by, th ? 6 : 4, e.dunk || th ? 1 : 0, ''); }
+      else if (PAY[e.k]) add(e.k === 'shook' || e.k === 'froze' ? e.by : e.id, ...PAY[e.k]);
+    }
+  }
+  finish(w) { if (this.finP) return; const rp = this.rankResults(w); this.finP = Promise.resolve(rp).catch(() => {}).then(() => this.credit(null, w)); }
+  async credit(ids, w, left) {
+    const RM = this.RM, P = this.prof(); if (!RM || !P || !this.tl) return;
+    const sc = RM.score || [0, 0], list = [];
+    for (const p of RM.players) { if (p.bot || (ids && !ids.includes(p.id)) || this.credited.has(p.id) || !this.tok.has(p.id)) continue;
+      this.credited.add(p.id); const t = this.tl.get(p.id) || { c: 0, g: 0, feat: {} }, x = { id: p.id, tok: this.tok.get(p.id), c: t.c, g: t.g, feat: { ...t.feat }, rc: this.rc.get(p.id) || 0 };
+      if (!left) { const win = p.team === w; x.played = true; x.win = win; x.c += 10 + (win ? 25 : 0); x.g += CAT.gemFor.PLAYED + (win ? CAT.gemFor.WIN : 0);
+        if (win) { x.feat.wins = 1; if (sc[1 - p.team] === 0 && sc[p.team] >= 7) x.zero = 1; } }
+      list.push(x); }
+    if (!list.length) return;
+    try { const d = await P.fetch('https://x/w/game', { method: 'POST', body: JSON.stringify({ list }) }).then(r => r.json());
+      for (const x of list) { const r = d.res && d.res[x.tok]; if (r) this.to(x.id, { t: 'wal', w: r.w, got: { c: r.c, g: r.g, packs: r.packs } }); } } catch (e) { console.log('wallet error', e && e.stack); }
+  }
   // ---- server RR
   calcRR() { this.rkRR = [0, 1].map(t => { const o = [...this.G.players.values()].filter(p => p.team === t); return o.length ? o.reduce((s, p) => s + (p.rr || 0), 0) / o.length : 0; }); }
   prof() { return this.env && this.env.PROFILES ? this.env.PROFILES.get(this.env.PROFILES.idFromName('global')) : null; }
@@ -255,7 +298,8 @@ export class GameRoom {
       return { id, tok: x.tok, name: x.name, claim: x.claim, win, opp: avgRR(1 - x.team), margin: Math.abs(sc[0] - sc[1]), perf: win ? Math.round(clamp((ratio - 1) * 8, -2, 6)) : Math.round(clamp((ratio - 1) * 6, -2, 4)) }; });
     const P = this.prof(); if (!P || !list.length) return;
     try { const r = await P.fetch('https://x/rk/res', { method: 'POST', body: JSON.stringify({ list }) }).then(r => r.json());
-      for (const x of list) { const res = r.res && r.res[x.tok]; if (!res) continue; this.to(x.id, { t: 'rk', win: x.win, ...res }); const pl = this.G.players.get(x.id); if (pl) pl.rr = res.rr; } } catch (e) { console.log('rank error', e && e.stack); }
+      for (const x of list) { const res = r.res && r.res[x.tok]; if (!res) continue; this.to(x.id, { t: 'rk', win: x.win, ...res });
+        { const a = tierOf(res.rr), b4 = tierOf(Math.max(0, res.rr - res.d)); this.rc && this.rc.set(x.id, (x.win ? 25 + a.ti * 10 : 5) + (a.ti > b4.ti ? 300 : a.ti === b4.ti && a.div > b4.div ? 50 : 0)); } const pl = this.G.players.get(x.id); if (pl) pl.rr = res.rr; } } catch (e) { console.log('rank error', e && e.stack); }
   }
   // 🛡️ auto-green watch. People are never pixel-perfect: even great shooters land within ±9ms of dead centre
   // only about 1 shot in 4. A script lands there every time. 8 in a row = flagged: their green stops being

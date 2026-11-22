@@ -2513,7 +2513,7 @@ function ctlGifts(){
   const G0=CTL.gifts; if(!G0 || typeof G0!=='object') return;
   SAVE.gifts=SAVE.gifts||[]; let any=false;
   for(const key of [...myKeys(), '*']){ const g=G0[key]; if(!g || typeof g!=='object') continue;
-    for(const id in g){ if(SAVE.gifts.includes(id)) continue; const x=g[id]||{}; SAVE.gifts.push(id); any=true;
+    for(const id in g){ if(SAVE.gifts.includes(id)) continue; const x=g[id]||{}; SAVE.gifts.push(id); any=true; walQ({k:'gift', key, id});
       const coins=Math.round(+x.coins||0); rewGive({coins, item:x.item, crate:x.crate}); const gm=Math.round(+x.gems||0); if(gm) SAVE.gems=Math.max(0,(SAVE.gems||0)+gm);
 
       toast('🎁 '+(x.msg||'Gift from the Buckets admin!')+' '+(rewText({coins:Math.max(0,coins), item:x.item, crate:x.crate})||(coins<0?coins+' 💰':''))+(gm?' '+(gm>0?'+':'')+gm+' 💎':'')); try{ confetti(0); }catch(e){} } }
@@ -2599,6 +2599,44 @@ async function rkSync(){ try{ if(!OFFICIAL || store('buckets-nolb')) return null
     if(!r.ok) return null; const d=await r.json(); if(!d || !d.ok) return null;
     const R=SAVE.rank; R.rr=d.rr; R.games=d.g; R.wins=d.w; R.streak=d.st; R.best=Math.max(R.best||0, d.b||0); persist(); try{ updateCoinUI(); }catch(e){} return d; }catch(e){ return null; } }
 loadNostr(); setTimeout(()=>{ rkSync().then(()=>{ LB.at=0; }); }, 2500);
+// =====================================================================
+//  💰 WALLET. Your coins, gems, packs and items are kept on the game server (an edited copy of the game
+//  can't give itself anything that counts). This iPad shows a copy. Rewards you earn here are sent to
+//  the server to be checked; packs are opened and shop items are bought on the server.
+//  If the server can't be reached, the game still plays: rewards wait in a queue and go up later.
+// =====================================================================
+const WAL={ok:false, fl:false, ft:0, at:0};
+async function walApi(path, body){ if(!OFFICIAL) return null;
+  try{ const r=await fetch(GAME_SERVER+'/api/w/'+path,{method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({tok:ptok(), ...(body||{})})});
+    if(!r.ok) return null; const d=await r.json(); if(d && d.w) walMirror(d.w); return d; }catch(e){ return null; } }
+// copy the server's wallet onto this iPad (it's the real one)
+function walMirror(w){ if(!w || typeof w.c!=='number' || !w.own) return;
+  try{ if(!store('buckets-prewallet')) store('buckets-prewallet', JSON.stringify({coins:SAVE.coins, gems:SAVE.gems, owned:SAVE.owned, cos:SAVE.cos, freeCrates:SAVE.freeCrates, t:Date.now()})); }catch(e){}   // a safety copy of the old save, just in case
+  SAVE.coins=Math.max(0,Math.round(w.c)); SAVE.gems=Math.max(0,Math.round(w.g));
+  for(const k in KINDS){ const list=KINDS[k].list, a=(w.own[k]||[]).filter(id=>list.some(i=>i.id===id)); if(!a.includes(KINDS[k].def)) a.unshift(KINDS[k].def); SAVE.owned[k]=a; if(!a.includes(SAVE[k])) SAVE[k]=KINDS[k].def; }
+  SAVE.cos={}; for(const key of (w.cos||[])) SAVE.cos[key]=1;
+  SAVE.freeCrates={}; for(const id in (w.fc||{})) if(w.fc[id]>0) SAVE.freeCrates[id]=w.fc[id];
+  SAVE.tkUnl=(w.tk||[]).slice();
+  const a=parseLook(SAVE.look); if(a){ let ch=false; a.forEach((v,i)=>{ if(v && !cosOwned(i,v)){ a[i]=0; ch=true; } }); if(ch) SAVE.look=a.join('.'); }   // wearing something that isn't yours: back to the free one
+  WAL.ok=true; WAL.at=Date.now(); persist();
+  try{ updateCoinUI(); }catch(e){} try{ syncGear(); }catch(e){} try{ shopBadge(); }catch(e){} }
+async function walSync(){
+  const L=SAVE.login||{}, td=new Date().toDateString();
+  const imp = SAVE.walMade ? null : {coins:SAVE.coins, gems:SAVE.gems, owned:SAVE.owned, cos:SAVE.cos, freeCrates:SAVE.freeCrates, feat:SAVE.feat, pass:SAVE.pass, tkUnl:SAVE.tkUnl,
+    loginToday:L.last===td, loginStreak:L.streak, fwToday:SAVE.fwDay===td, wstreak:SAVE.wstreak, redeemed:SAVE.redeemed, setClaim:SAVE.setClaim, tutDone:SAVE.tutDone,
+    gifts:SAVE.gifts, evp:SAVE.evp, season:(SAVE.season||{}).n, games:(SAVE.stats||{}).games};
+  const d=await walApi('sync', imp?{imp}:{});
+  if(d && d.ok){ if(!SAVE.walMade){ SAVE.walMade=1; if(d.made===2) SAVE.wq=[]; persist(); } walFlush(); }   // (an imported save already holds everything earned so far)
+  return d; }
+// a reward earned on this iPad: shown right away, then checked by the server
+function walQ(x){ try{ SAVE.wq=SAVE.wq||[]; x.id=Math.random().toString(36).slice(2,12); SAVE.wq.push(x); if(SAVE.wq.length>80) SAVE.wq=SAVE.wq.slice(-80); persist(); clearTimeout(WAL.ft); WAL.ft=setTimeout(walFlush, 900); }catch(e){} }
+async function walFlush(){ if(WAL.fl || !SAVE.walMade || !(SAVE.wq||[]).length) return; WAL.fl=true;
+  try{ const list=SAVE.wq.slice(0,40), d=await walApi('claim',{list});
+    if(d && Array.isArray(d.res)){ const done=new Set(d.res.map(r=>r.id)); SAVE.wq=SAVE.wq.filter(x=>!done.has(x.id)); persist(); if(SAVE.wq.length) setTimeout(walFlush, 600); } }
+  catch(e){} finally{ WAL.fl=false; } }
+setTimeout(()=>{ walSync(); }, 1800);
+setInterval(()=>{ if(!V.inRoom && document.visibilityState==='visible') walSync(); }, 150000);
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !V.inRoom && Date.now()-WAL.at>30000) walSync(); });
 // nobody in the queue: a Ranked Rival game ON THE SERVER (so it counts). No server = an unranked practice game.
 async function srvSolo(mode){
   if(OFFICIAL && await srvUse()){ const code='R'+Math.random().toString(36).slice(2,9).toUpperCase();
@@ -2915,6 +2953,7 @@ function onClientData(d){
   else if(d.t==='adminend'){ V.migrating=true; fatal(String(d.m||'⛔ The Buckets admin ended all online games for now.').slice(0,160)); }
   else if(d.t==='banned') fatal('🚫 This name can\'t play online right now.');
   else if(d.t==='roster') applyRoster(d);
+  else if(d.t==='wal'){ walMirror(d.w); }
   else if(d.t==='rk'){ V.rkMsg=d; if(V.overSeen && !V.rankRes){ V.rankRes=applyRanked(d.win,0,0,0,d); V.rkMsg=null; const S=currentSnap(); if(S && S.ph==='over') showGameOver(S); } }
   else if(d.t==='ev') handleEvent(d.e,false);
   else if(d.t==='pong'){ const r=performance.now()-(+d.ts||0); if(r>0 && r<5000){ V.rtt=V.rtt?lerp(V.rtt,r,.3):r; V.pingNow=V.pingNow?lerp(V.pingNow,r,.6):r; diagAdd('ping', r); } }
@@ -6810,7 +6849,7 @@ function seasonTrack(){
 }
 function seasonEnd(S){
   const old=SAVE.season, ti=rankOf(old.peak||0).ti; let won=null;
-  if((old.games||0)>=3){ const rw=seasonRewardsFor(ti); SAVE.coins+=rw.coins;
+  if((old.games||0)>=3){ const rw=seasonRewardsFor(ti); SAVE.coins+=rw.coins; walQ({k:'season', n:old.n});
     for(const id of rw.items) if(!SAVE.owned.trail.includes(id)) SAVE.owned.trail.push(id);
     SAVE.badges=SAVE.badges||[]; SAVE.badges.push({s:old.n, ti}); SAVE.badge={s:old.n, ti};   // your latest season finish shows next to your name
     won={n:old.n, ti, rw}; }
@@ -6851,7 +6890,7 @@ function passNow(){ const n=seasonNow().n; if(!SAVE.pass || SAVE.pass.s!==n) SAV
 function passLevel(xp){ return Math.min(PASS_MAX, 1+Math.floor(xp/PASS_XP)); }
 function passXP(n, why){
   const P=passNow(), before=passLevel(P.xp); P.xp+=Math.round(n); const after=passLevel(P.xp); const got=[];
-  for(let L=before+1; L<=after; L++){ const r=passRew(L);
+  for(let L=before+1; L<=after; L++){ const r=passRew(L); walQ({k:'pass', L});
     if(r.tk){ SAVE.tkUnl=SAVE.tkUnl||[]; if(!SAVE.tkUnl.includes(r.tk)) SAVE.tkUnl.push(r.tk); if(!SAVE.tk) SAVE.tk=r.tk; }
     if(r.coins) SAVE.coins+=r.coins; SAVE.gems=(SAVE.gems||0)+30;                // every pass level also pays 30 💎
     if(r.crate){ const id=packId(r.crate); SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[id]=(SAVE.freeCrates[id]||0)+1; }
@@ -6906,7 +6945,7 @@ function rewGive(rw){ rw=rw||{}; if(+rw.coins) SAVE.coins=Math.max(0, SAVE.coins
   const r=rewItem(rw.item); if(r && !SAVE.owned[r.kind].includes(r.id)) SAVE.owned[r.kind].push(r.id);
   if(rw.crate && packOf(rw.crate)){ const id=packId(rw.crate); SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[id]=(SAVE.freeCrates[id]||0)+1; } }
 function eventClaim(){ const e=eventNow(), pr=evProg(); if(!e || !pr || pr.claimed || !e.goal || pr.n<e.goal.n) return;
-  pr.claimed=true; const rw=e.reward||{}; rewGive(rw);
+  pr.claimed=true; const rw=e.reward||{}; rewGive(rw); walQ({k:'event', id:e.id});
   persist(); passXP(150); try{ confetti(0); }catch(x){} toast('🎁 Event reward: '+rewText(rw)); ctlBanner(); }
 setInterval(()=>{ if(eventNow() || $('#ctlBanner').querySelector('.evBox')) ctlBanner(); }, 30000);
 
@@ -6982,7 +7021,9 @@ function openProfile(other){
     const lastRanked = other.t ? 'Last ranked game '+ago(other.t*1000) : '';
     (async()=>{ let on=null; try{ const r=await fetch(fbURL()+'/rooms/_on/'+String(other.pk).slice(0,16)+'.json',{cache:'no-store'}); if(r.ok) on=await r.json(); }catch(e){}
       const sp=box.querySelector('span'); if(!sp) return; const fresh=on && Date.now()-(+on.t||0)<4*60000;
-      sp.textContent = (fresh ? '🟢 Online now · '+(on.w||'') : on ? '⚪ Offline · last seen '+ago(+on.t) : '⚪ Not seen yet') + (lastRanked?' · '+lastRanked:''); box.classList.toggle('on', !!fresh); })(); }
+      sp.textContent = (fresh ? '🟢 Online now · '+(on.w||'') : on ? '⚪ Offline · last seen '+ago(+on.t) : '⚪ Not seen yet') + (lastRanked?' · '+lastRanked:''); box.classList.toggle('on', !!fresh);
+      const wd=await admWal({wal:'get', pk:other.pk}); if(wd && wd.ok && wd.w){ const w=wd.w; box.append(el('span','', '💰'+w.c.toLocaleString()+' · 💎'+w.g.toLocaleString()+' · '+w.items+' items'+(w.reset?' · (reset)':'')));
+        const b=el('button','btn tiny','Reset wallet'); b.onclick=async()=>{ if(!confirm('Reset this player\'s wallet to a brand-new player? Removes ALL their coins, gems and items. Can\'t be undone.')) return; const r=await admWal({wal:'reset', pk:other.pk}); toast(r&&r.ok?'✅ Wallet reset':'❌ Couldn\'t reset'); }; box.append(b); } })(); }
   if(!V.inRoom) $('#home').classList.add('hidden'); $('#rankedPanel').classList.add('hidden'); P.classList.remove('hidden');
   if(!V.pfLoop){ V.pfLoop=true; requestAnimationFrame(drawProfile); }
 }
@@ -7046,7 +7087,7 @@ function tutShow(){ const st=TUT_STEPS[TUT.i];
   $('#tuSkip').textContent = st ? 'Skip step ›' : '🏆 Play ranked'; $('#tutBox').classList.toggle('done', !st); $('#tutBox').classList.remove('pass'); }
 function tutPass(){ if(!TUT || TUT.ok) return; TUT.ok=true; $('#tutBox').classList.add('pass'); $('#tuTxt').textContent='✓ NICE!'; sfx('swish'); V.flash=.25;
   setTimeout(()=>{ if(!TUT) return; TUT.ok=false; TUT.i++; TUT.tries=0; tutShow();
-    if(TUT.i>=TUT_STEPS.length){ if(!SAVE.tutDone){ SAVE.tutDone=true; SAVE.gems=(SAVE.gems||0)+100; persist(); toast('🎓 Tutorial complete: +100 💎'); } confetti(0); const b=tutBot(); if(b) b.frozen=true; return; }
+    if(TUT.i>=TUT_STEPS.length){ if(!SAVE.tutDone){ SAVE.tutDone=true; SAVE.gems=(SAVE.gems||0)+100; walQ({k:'tut'}); persist(); toast('🎓 Tutorial complete: +100 💎'); } confetti(0); const b=tutBot(); if(b) b.frozen=true; return; }
     tutSetup(); }, 1300); }
 function tutEvent(e){ if(!TUT || TUT.ok) return; const st=TUT_STEPS[TUT.i]; if(!st) return; const me=tutMe();
   if(st.check==='green' && e.k==='shot' && e.id==='host'){ if(e.q==='perfect') tutPass(); else { TUT.tries++; $('#tuSub').textContent='Not quite ('+e.q+'). Let go right when the bar is in the green.'; } }
@@ -7562,13 +7603,13 @@ async function codeHash(s){ const b=await crypto.subtle.digest('SHA-256', new Te
 (async()=>{ try{ if(!SAVE.redeemed) return; let ch=false; for(let i=0;i<SAVE.redeemed.length;i++){ const r=SAVE.redeemed[i]; if(/^c\d+$/.test(r)) continue; const rw=CODE_HASHES[await codeHash(r)]; if(rw){ SAVE.redeemed[i]=rw.id; ch=true; } } if(ch) persist(); }catch(e){} })();
 async function redeemCode(raw){
   const c=String(raw||'').trim().toLowerCase(); if(!c) return false;
-  let rw; try{ rw=CODE_HASHES[await codeHash(c)]; }catch(e){ toast('Codes need the https version of the site'); return false; }
+  let rw, ch=''; try{ ch=await codeHash(c); rw=CODE_HASHES[ch]; }catch(e){ toast('Codes need the https version of the site'); return false; }
   if(!rw){ const raw0=String(raw||'').trim(); if(raw0.length>=8){ toast('Checking…'); if(await admTry(raw0)){ toast('🛠️ Admin unlocked'); openAdmin(); return true; } }   // admin code: checked by Google, not stored here
     toast('That code is not valid'); return false; }
   SAVE.redeemed=SAVE.redeemed||[];
   if(rw.vault){ if(SAVE.vault){ toast('Vault is already unlocked'); return true; } SAVE.vault=true; persist(); toast('🔓 Buckets Vault unlocked!'); renderShop(); return true; }
   if(SAVE.redeemed.includes(rw.id)){ toast('Already redeemed on this device'); return true; }
-  SAVE.redeemed.push(rw.id);
+  SAVE.redeemed.push(rw.id); walQ({k:'code', h:ch});
   if(rw.coins){ SAVE.coins+=rw.coins; persist(); toast('🎟️ +'+rw.coins+' 💰 added!'); confetti(0); }
   if(rw.gems){ SAVE.gems=(SAVE.gems||0)+rw.gems; persist(); toast('🎟️ +'+rw.gems+' 💎 Gems added!'); confetti(0); }
   if(rw.freeCrate){
@@ -7602,6 +7643,8 @@ async function admSave(patch, okMsg){
   await ctlFetch(); renderAdmin(); return true;
 }
 async function admDiag(){ const u=fbURL(); if(!u) return; try{ const r=await fetch(u+'/rooms/_diag'+diagDay()+'.json',{cache:'no-store'}); if(r.ok) ADM.diag=await r.json()||{}; }catch(e){} }
+async function admWal(body){ try{ const r=await fetch(GAME_SERVER+'/api/rk/admin',{method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({akey:ADM.k, ...body})}); return r.ok ? await r.json() : null; }catch(e){ return null; } }
+async function admWalList(){ const d=await admWal({wal:'list'}); ADM.wal = d && d.ok ? d : {list:[], total:0}; }
 async function admCheats(){ const u=fbURL(); if(!u) return; try{ const d=new Date(Date.now()-5*3600e3).toISOString().slice(0,10).replace(/-/g,''); const r=await fetch(u+'/rooms/_cheat'+d+'.json',{cache:'no-store'}); if(r.ok) ADM.cheats=Object.values(await r.json()||{}); }catch(e){} }
 async function admLive(){ const u=fbURL(); if(!u) return; try{ const r=await fetch(u+'/live.json',{cache:'no-store'}); if(r.ok){ ADM.live=await r.json()||{}; ADM.liveAt=Date.now(); } }catch(e){} }
 async function admVerify(){ const u=fbURL(); if(!u || !/^[0-9a-f]{64}$/.test(ADM.k||'')) return false;
@@ -7609,7 +7652,7 @@ async function admVerify(){ const u=fbURL(); if(!u || !/^[0-9a-f]{64}$/.test(ADM
 function admLock(){ ADM.k=''; ADM.ok=false; store('buckets-admk',''); $('#adminBtn').classList.add('hidden'); $('#adminPanel').classList.add('hidden'); }
 async function openAdmin(){ if(!ADM.k) return; if(!ADM.ok){ try{ await FB_READY; }catch(e){} const ok=await admVerify(); if(ok===false){ admLock(); toast('🔒 Not an admin'); return; } if(ok!==true){ toast('Can\'t reach the server to confirm admin'); return; } ADM.ok=true; }
   $('#home').classList.add('hidden'); $('#shop').classList.add('hidden'); V.shopOpen=false; $('#adminPanel').classList.remove('hidden'); renderAdmin();
-  ctlFetch().then(()=>Promise.all([admLive(), admDiag(), admCheats()])).then(renderAdmin); if(!LB.rows && !LB.loading) lbFetch().then(renderAdmin); }
+  ctlFetch().then(()=>Promise.all([admLive(), admDiag(), admCheats(), admWalList()])).then(renderAdmin); if(!LB.rows && !LB.loading) lbFetch().then(renderAdmin); }
 function closeAdmin(){ $('#adminPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); }
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 function admSeg(opts, cur, on){ const r=el('div','adSeg'); for(const [v,label] of opts){ const b=el('button','btn tiny'+(String(cur)===String(v)?' on':''), label); b.onclick=()=>on(v); r.append(b); } return r; }
@@ -7637,6 +7680,15 @@ function renderAdmin(){
     if(rows.length) s.append(ul);
     s.append(el('p','adSub', 'Settings checked '+(CTL_AT?ago(CTL_AT):'never')+' · 🏟️ Game server: '+(CTL.gsOff?'OFF (backup mode)':'ON')));
     const rf=el('button','btn tiny','🔄 Refresh'); rf.onclick=async()=>{ rf.disabled=true; await ctlFetch(); await admLive(); renderAdmin(); }; s.append(rf);
+    B.append(s); }
+  // ---- 💰 wallets (coins + items now live on the game server)
+  { const s=admSec('💰 WALLETS TO CHECK', 'Old saves were brought onto the server once. Lots of items with few games played is suspicious. Reset = back to a brand-new player (coins, gems and items). Can\'t be undone.');
+    const W=ADM.wal; if(!W) s.append(el('p','adSub','Loading…'));
+    else if(!W.list.length) s.append(el('p','adSub','No wallets yet'));
+    else { s.append(el('p','adSub', W.total+' wallets on the server. Most suspicious first:')); const ul=el('ul','adList');
+      W.list.slice(0,25).forEach(w=>{ const li=el('li',''); li.append(el('b','',(w.susp>=30?'⚠️ ':'')+w.n), document.createTextNode(' · '+w.items+' items · '+w.games+' games · 💰'+(w.c||0).toLocaleString()+' · 💎'+(w.g||0).toLocaleString()+' · score '+w.susp+' '));
+        if(w.pk){ const b=el('button','btn tiny','Reset wallet'); b.onclick=async()=>{ if(!confirm('Reset '+w.n+'\'s wallet to a brand-new player? This removes ALL their coins, gems and items. It can\'t be undone.')) return; const r=await admWal({wal:'reset', pk:w.pk}); toast(r&&r.ok?'✅ Wallet reset':'❌ Couldn\'t reset'); ADM.wal=null; admWalList().then(renderAdmin); }; li.append(b); }
+        ul.append(li); }); s.append(ul); }
     B.append(s); }
   // ---- 🚨 cheat reports (from the game server)
   { const s=admSec('🚨 CHEAT REPORTS (TODAY)', 'The game server flags auto-green scripts and fake position/shot reports. Flagged players lose automatic greens for the rest of that game.');
@@ -7794,7 +7846,7 @@ function renderCrates(box){
   // 🎁 free daily pack
   const day=new Date().toDateString(), dailyOk=SAVE.dailyPack!==day;
   { const d=el('div','dailyCard'+(dailyOk?' ready':'')); d.append(el('div','dIcon','🎁'), el('div','dTxt', dailyOk ? 'FREE daily Street Pack is ready!' : 'Free Street Pack again tomorrow'));
-    const b=el('button','btn '+(dailyOk?'yellow':''), dailyOk?'Open free':'✓ Claimed'); b.disabled=!dailyOk; b.onclick=()=>{ if(SAVE.dailyPack===day) return; SAVE.dailyPack=day; persist(); openPack('street', true); }; d.append(b); box.append(d); }
+    const b=el('button','btn '+(dailyOk?'yellow':''), dailyOk?'Open free':'✓ Claimed'); b.disabled=!dailyOk; b.onclick=()=>{ if(SAVE.dailyPack===day) return; openPack('street', true); }; d.append(b); box.append(d); }
   { const g=el('div','shardBar'); g.append(el('b','','💎 '+(SAVE.gems||0)+' Gems'), el('small','',' · earn them playing online + ranked (~25-40 a game), +60 daily quests, +30 per pass level, +250 per trophy, and from codes + events.')); box.append(g); }
   // free packs you've been given (Season Pass, admin gifts, codes)
   for(const [id,n] of Object.entries(SAVE.freeCrates||{})) if(n>0 && packOf(id)) box.append(packCard(packOf(id), n));
@@ -7850,9 +7902,11 @@ function cosPrice(o){ return (o && COS_PRICE[o.r])||0; }
 function cosOwned(pi,oi){ const o=cosOpt(pi,oi); return !!o && (!cosPrice(o) || !!(SAVE.cos||{})[cosKey(pi,oi)]); }
 function cosFind(k,n){ const pi=LOOK_PARTS.findIndex(P=>P.k===k); return [pi, LOOK_PARTS[pi].opts.findIndex(o=>o.n===n)]; }
 function cosEquip(pi,oi){ const a=lookArr(); a[pi]=oi; SAVE.look=a.join('.'); persist(); syncGear(); }
-function cosBuy(list, price){
+async function cosBuy(list, price, setName){
   if(SAVE.coins<price){ toast('Not enough 💰: you need '+(price-SAVE.coins).toLocaleString()+' more'); return false; }
-  SAVE.coins-=price; SAVE.cos=SAVE.cos||{}; for(const [i,j] of list) SAVE.cos[cosKey(i,j)]=1;
+  if(V.buyBusy) return false; V.buyBusy=true; let d=null; try{ d=await walApi('buy',{list, set:setName||''}); }finally{ V.buyBusy=false; }   // 🛍️ priced + paid on the game server
+  if(!d){ toast('📶 Can\'t reach the game server right now. Try again in a moment'); return false; }
+  if(!d.ok){ toast(d.error==='coins'?'Not enough 💰':d.error==='already yours'?'You already own that':'❌ '+(d.error||'Couldn\'t buy it')); return false; }
   SAVE.stats.cosBought=(SAVE.stats.cosBought||0)+list.length; persist(); try{ sfx('swish'); }catch(e){} confetti(0);
   toast('🛍️ Yours! '+list.map(x=>cosOpt(...x).n).join(', ')); return true; }
 // saves from before the shop: whatever you were wearing is yours to keep; shades/chain moved to their own slots
@@ -8034,7 +8088,7 @@ function cosDetail(pi,oi){ const P=LOOK_PARTS[pi], o=P.opts[oi], own=cosOwned(pi
   const S=STYLE_SETS.find(S=>S.list.some(([a,b])=>a===pi&&b===oi)); if(S) info.append(el('div','fnMSet','Part of the '+S.ic+' '+S.n+' Set'));
   const row=el('div','row');
   if(own){ const eq=lookArr()[pi]===oi, b=el('button','btn yellow', eq?'Wearing it ✓':'👕 Wear it'); b.disabled=eq; b.onclick=()=>{ cosEquip(pi,oi); toast('👕 '+o.n+' on!'); close(); }; row.append(b); }
-  else if(shop){ const b=el('button','btn orange','Buy · 💰 '+pr.toLocaleString()); b.onclick=()=>{ if(cosBuy([[pi,oi]],pr)) cosDetail(pi,oi); }; row.append(b);
+  else if(shop){ const b=el('button','btn orange','Buy · 💰 '+pr.toLocaleString()); b.onclick=()=>{ cosBuy([[pi,oi]],pr).then(ok=>{ if(ok) cosDetail(pi,oi); }); }; row.append(b);
     if(SAVE.coins<pr) info.append(el('small','cmNeed','You have 💰 '+SAVE.coins.toLocaleString()+'. Win games, hit greens and get stops to earn more.')); }
   else row.append(el('div','cmNot','Not in the shop today. It changes every night at midnight.'));
   const x=el('button','btn','Close'); x.onclick=close; row.append(x); info.append(row); }
@@ -8043,7 +8097,7 @@ function cosSetDetail(S,off){ const [pr,full]=bundlePrice(S.list,off), {info,clo
   const ch=el('div','fnChips'); for(const [i,j] of S.list){ const o=cosOpt(i,j), b=el('button','fnChip'+(cosOwned(i,j)?' own':'')); b.style.setProperty('--rc',FN_RC[o.r]); b.append(el('span','',LOOK_PARTS[i].ic), el('b','',o.n), el('small','',cosOwned(i,j)?'✓':'💰 '+cosPrice(o).toLocaleString())); b.onclick=e=>{ e.stopPropagation(); cosDetail(i,j); }; ch.append(b); } info.append(ch);
   const row=el('div','row');
   if(!full){ const b=el('button','btn yellow','👕 Wear the whole set'); b.onclick=()=>{ SAVE.look=cosLook(S.list).join('.'); persist(); syncGear(); toast('👕 '+S.n+' on!'); close(); }; row.append(b); }
-  else { const b=el('button','btn orange','Buy the set · 💰 '+pr.toLocaleString()+' '); b.append(el('s','',full.toLocaleString())); b.onclick=()=>{ if(cosBuy(S.list.filter(x=>!cosOwned(...x)),pr)){ SAVE.look=cosLook(S.list).join('.'); persist(); syncGear(); toast('👕 Set bought and equipped!'); cosSetDetail(S,off); } }; row.append(b); }
+  else { const b=el('button','btn orange','Buy the set · 💰 '+pr.toLocaleString()+' '); b.append(el('s','',full.toLocaleString())); b.onclick=()=>{ cosBuy(S.list.filter(x=>!cosOwned(...x)),pr,S.fit?'fit':S.n).then(ok=>{ if(!ok) return; SAVE.look=cosLook(S.list).join('.'); persist(); syncGear(); toast('👕 Set bought and equipped!'); cosSetDetail(S,off); }); }; row.append(b); }
   const x=el('button','btn','Close'); x.onclick=close; row.append(x); info.append(row); }
 function drawCmPreview(){ const c=$('#cmCv'), m=$('#cosModal'); if(!c || !V.cmLook || !m || m.classList.contains('hidden')){ V.cmLoop=false; return; } requestAnimationFrame(drawCmPreview); drawLookFull(c, V.cmLook, 'none'); }
 setInterval(()=>{ try{ const t=document.querySelector('#shop:not(.hidden) .fnTimer'); if(t){ if(V.isDay!==shopDay()) renderShop(); else t.textContent='⏱ NEW ITEMS IN '+untilReset(); } }catch(e){} }, 20000);
@@ -8064,7 +8118,7 @@ function renderBook(box){
     const row=el('div','setMiles');
     for(const m of SET_MILES){ const got=!!(SAVE.setClaim[k]||{})[m.p], can=pc>=m.p && !got;
       const b=el('button','btn tiny'+(can?' yellow':''), (got?'✓ ':can?'🎁 ':'🔒 ')+m.p+'% · '+m.t); b.disabled=!can;
-      b.onclick=()=>{ if(!(setPct(k)>=m.p) || (SAVE.setClaim[k]||{})[m.p]) return; SAVE.setClaim[k]=SAVE.setClaim[k]||{}; SAVE.setClaim[k][m.p]=true;
+      b.onclick=()=>{ if(!(setPct(k)>=m.p) || (SAVE.setClaim[k]||{})[m.p]) return; SAVE.setClaim[k]=SAVE.setClaim[k]||{}; SAVE.setClaim[k][m.p]=true; walQ({k:'setmile', set:k, p:m.p});
         if(m.rw.pack){ SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[m.rw.pack]=(SAVE.freeCrates[m.rw.pack]||0)+1; }
         if(m.rw.title){ SAVE.ctitle=k; }
         persist(); syncGear(); confetti(0); toast('📖 '+S.n+' '+m.p+'%: '+m.t+(m.rw.pack?' (in Packs)':'')); renderShop(); };
@@ -8102,7 +8156,7 @@ const FEATS=[
 function featProg(f){ if(f.id==='rank') return Math.max(SAVE.rank.rr||0, SAVE.rank.best||0)>=TIERS.find(t=>t.n==='Diamond').min ? 1 : 0; return Math.min(f.goal, SAVE.feat[f.id]||0); }
 function bumpFeat(id){ SAVE.feat[id]=(SAVE.feat[id]||0)+1; checkFeats(); }
 function checkFeats(){ for(const f of FEATS){ if(featProg(f)<f.goal || SAVE.owned[f.kind].includes(f.item)) continue;
-  SAVE.owned[f.kind].push(f.item); SAVE.gems=(SAVE.gems||0)+250; persist(); const it=itemOf(f.kind,f.item);
+  SAVE.owned[f.kind].push(f.item); SAVE.gems=(SAVE.gems||0)+250; walQ({k:'trophy', id:f.id}); persist(); const it=itemOf(f.kind,f.item);
   V.flash=.6; confetti(0); confetti(1); toast('🏅 TROPHY UNLOCKED: '+f.n+'! '+it.icon+' '+it.name+' + 250 💎'); } }
 setTimeout(()=>{ try{ checkFeats(); }catch(e){} }, 1500);
 setTimeout(()=>{ try{ if(SAVE.rank && SAVE.rank.games && !LB.posted) lbPublish(); }catch(e){} }, 9000);
@@ -8127,7 +8181,7 @@ function loginCheck(){
   box.append(el('h2','','📅 Daily Login · Day '+streak), el('p','how', L.last===yest || streak===1 ? 'Come back every day. Day 7 is an All-Star Pack. Miss a day and it starts over.' : ''));
   const row=el('div','lgRow'); LOGIN_REW.forEach((r,i)=>{ const t=el('div','lgDay'+(i+1<streak?' got':i+1===streak?' now':'')); t.append(el('b','','Day '+(i+1)), el('div','lgRw', loginText(r))); row.append(t); }); box.append(row);
   const b=el('button','btn big orange','🎁 Claim '+loginText(rw));
-  b.onclick=()=>{ SAVE.login={last:today, streak}; if(rw.gems) SAVE.gems=(SAVE.gems||0)+rw.gems; if(rw.pack){ SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[rw.pack]=(SAVE.freeCrates[rw.pack]||0)+1; }
+  b.onclick=()=>{ SAVE.login={last:today, streak}; walQ({k:'login'}); if(rw.gems) SAVE.gems=(SAVE.gems||0)+rw.gems; if(rw.pack){ SAVE.freeCrates=SAVE.freeCrates||{}; SAVE.freeCrates[rw.pack]=(SAVE.freeCrates[rw.pack]||0)+1; }
     persist(); confetti(0); box.remove(); toast('📅 Day '+streak+': '+loginText(rw)+(rw.pack?' (open it in the Shop)':'')); shopBadge(); };
   box.append(b); document.body.append(box);
 }
@@ -8151,19 +8205,20 @@ function rollPack(pk){
   return out.sort((a,b)=>RORDER.indexOf(a.r)-RORDER.indexOf(b.r));      // best card last
 }
 let PK=null;
-function openPack(id, dailyFree){
-  const pk=packOf(id); if(!pk) return;
+async function openPack(id, dailyFree){
+  const pk=packOf(id); if(!pk || V.packBusy) return;
   SAVE.freeCrates=SAVE.freeCrates||{};
-  if(!dailyFree){
-    if(SAVE.freeCrates[pk.id]>0) SAVE.freeCrates[pk.id]--;
-    else if(pk.gems){ if((SAVE.gems||0)<pk.gems){ toast('Not enough 💎 Gems. Play online or ranked games to earn them'); return; } SAVE.gems-=pk.gems; }
-    else { if(pk.freeOnly){ toast('No free '+pk.name+'s left'); return; } if(SAVE.coins<pk.price){ toast('Not enough 💰 — go win some games'); return; } SAVE.coins-=pk.price; }
+  if(!dailyFree && !(SAVE.freeCrates[pk.id]>0)){
+    if(pk.gems){ if((SAVE.gems||0)<pk.gems){ toast('Not enough 💎 Gems. Play online or ranked games to earn them'); return; } }
+    else { if(pk.freeOnly){ toast('No free '+pk.name+'s left'); return; } if(SAVE.coins<pk.price){ toast('Not enough 💰 — go win some games'); return; } }
   }
-  const cards=rollPack(pk).map(it=>{
-    const own=SAVE.owned[it.kind].includes(it.id), l0=lvOf(it.kind,it.id);
-    let refund=0; if(own){ refund=RAR[it.r].refund||0; SAVE.coins+=refund; } else SAVE.owned[it.kind].push(it.id);
-    return {...it, isNew:!own, refund, lvUp:0};
-  });
+  // 🎲 rolled on the game server (an edited copy of the game can't pick its own cards)
+  V.packBusy=true; toast('📦 Opening…'); let d=null; try{ d=await walApi('pack',{id:pk.id, mode:dailyFree?'daily':''}); }finally{ V.packBusy=false; }
+  if(!d){ toast('📶 Can\'t reach the game server right now. Packs open online: try again in a moment'); return; }
+  if(!d.ok){ toast(d.error==='gems'?'Not enough 💎 Gems':d.error==='coins'?'Not enough 💰':d.error==='already opened today'?'Free pack already opened today':'❌ '+(d.error||'Couldn\'t open it')); try{ renderShop(); }catch(e){} return; }
+  if(dailyFree){ SAVE.dailyPack=new Date().toDateString(); }
+  const cards=(d.cards||[]).map(c=>{ const it=itemOf(c.kind,c.id); return it ? {...it, kind:c.kind, isNew:!!c.isNew, refund:c.refund||0, lvUp:0} : null; }).filter(Boolean);
+  if(!cards.length){ toast('❌ Couldn\'t open it'); return; }
   SAVE.stats.crates=(SAVE.stats.crates||0)+1; questProgress('CRATE');
   persist(); syncGear();                                         // saved before the show, so closing the app can't lose it
   PK={pk, cards, flipped:0}; showPackOpen();
@@ -8230,7 +8285,8 @@ function rollCrate(cr){
   for(const r of avail){ x-=cr.odds[r]; if(x<0){ rar=r; break; } }
   return pick(items.filter(i=>i.r===rar));
 }
-function openCrate(id){
+function openCrate(id){ return openPack(id); }
+function openCrateOld(id){
   const cr=CRATES.find(c=>c.id===id); if(!cr || (cr.code && !SAVE.vault)) return;
   if(cr.freeOnly && !((SAVE.freeCrates||{})[cr.id]>0)){ toast('No free Secret Crates left'); return; }
   // a free open (from a code) is used before coins
@@ -8368,11 +8424,11 @@ function renderQuests(){
     const bar=el('div','qBar'), fill=el('div','qFill'); fill.style.width=Math.round(q.p/D.n*100)+'%'; bar.append(fill);
     const info=el('div','qInfo'); info.append(el('b','',D.t.replace('{n}',D.n)), bar, el('small','', q.p+' / '+D.n));
     const btn=el('button','btn '+(done&&!q.c?'yellow':''), q.c?'✓ Claimed':done?'Claim 💰'+D.r:'💰'+D.r); btn.disabled=!done||q.c;
-    btn.onclick=()=>{ if(q.c||q.p<D.n) return; q.c=true; SAVE.coins+=D.r; persist(); confetti(0); toast('+'+D.r+' 💰'); renderQuests(); updateQuestBadge(); };
+    btn.onclick=()=>{ if(q.c||q.p<D.n) return; q.c=true; SAVE.coins+=D.r; walQ({k:'quest', r:D.r}); persist(); confetti(0); toast('+'+D.r+' 💰'); renderQuests(); updateQuestBadge(); };
     li.append(el('div','qIcon',D.i), info, btn); box.append(li);
   }
   const all=Qs.list.every(q=>q.c), bb=el('button','btn '+(all&&!Qs.bonus?'orange':''), Qs.bonus?'✓ Daily bonus claimed':all?'🎁 Claim daily bonus · 💰'+QUEST_BONUS+' + 60 💎':'Finish all 3 for 💰'+QUEST_BONUS+' + 60 💎');
-  bb.disabled=!all||Qs.bonus; bb.onclick=()=>{ if(!all||Qs.bonus) return; Qs.bonus=true; SAVE.coins+=QUEST_BONUS; SAVE.gems=(SAVE.gems||0)+60; persist(); confetti(1); V.flash=.4; toast('🎁 +'+QUEST_BONUS+' 💰 + 60 💎 daily bonus!'); renderQuests(); updateQuestBadge(); };
+  bb.disabled=!all||Qs.bonus; bb.onclick=()=>{ if(!all||Qs.bonus) return; Qs.bonus=true; SAVE.coins+=QUEST_BONUS; SAVE.gems=(SAVE.gems||0)+60; walQ({k:'qbonus'}); persist(); confetti(1); V.flash=.4; toast('🎁 +'+QUEST_BONUS+' 💰 + 60 💎 daily bonus!'); renderQuests(); updateQuestBadge(); };
   box.append(bb);
   const ms=86400000-((Date.now()-new Date().getTimezoneOffset()*60000)%86400000), h=Math.floor(ms/3600000), m=Math.floor(ms/60000)%60;
   box.append(el('p','how','New quests in '+h+'h '+m+'m'));

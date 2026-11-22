@@ -28,7 +28,7 @@ export default {
     // accounts: unique names + cloud saves (one Durable Object holds them all)
     if (url.pathname.startsWith('/api/')) {
       if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
-      if (url.pathname.startsWith('/api/rk/')) { const res = await env.PROFILES.get(env.PROFILES.idFromName('global')).fetch(req); const h = new Headers(res.headers); for (const k in CORS) h.set(k, CORS[k]); return new Response(res.body, { status: res.status, headers: h }); }
+      if (url.pathname.startsWith('/api/rk/') || url.pathname.startsWith('/api/w/')) { const res = await env.PROFILES.get(env.PROFILES.idFromName('global')).fetch(req); const h = new Headers(res.headers); for (const k in CORS) h.set(k, CORS[k]); return new Response(res.body, { status: res.status, headers: h }); }
       const stub = env.ACCOUNTS.get(env.ACCOUNTS.idFromName('global'));
       const res = await stub.fetch(req);
       const h = new Headers(res.headers); for (const k in CORS) h.set(k, CORS[k]);
