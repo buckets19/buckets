@@ -10,6 +10,8 @@ const S = makeSim();
 const TICK_MS = 1000 / 60;                 // 60 updates a second = one game step each (smoothest, smallest buffer)                 // 50 updates a second to every player (less waiting, smaller buffer on iPads)
 const GRACE_MS = 15000;                    // a player whose Wi-Fi drops keeps their spot this long
 const NO_GEAR = new Set(['t','name','pk','duo','r2','q','exp','create','party','rr','id','rejoin','c']);
+const FB = 'https://buckets-37d04-default-rtdb.firebaseio.com';   // cheat reports land here (admin panel shows them)
+const nyDay = () => new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10).replace(/-/g, '');
 const rid = n => { const A = 'abcdefghjkmnpqrstuvwxyz23456789'; let s = ''; for (let i = 0; i < n; i++) s += A[Math.floor(Math.random() * A.length)]; return s; };
 
 export class GameRoom {
@@ -17,7 +19,7 @@ export class GameRoom {
   reset() {
     this.G = { phase: 'lobby', players: new Map(), toWin: 11, diff: 'pro', winBy2: false, ranked: false, ranked2: false, party: false, srch: false };
     this.socks = new Map();      // id -> { ws, away }
-    this.owner = null; this.RM = null; this.q = null; this.code = ''; this.emAt = new Map();
+    this.owner = null; this.RM = null; this.q = null; this.code = ''; this.emAt = new Map(); this.prAt = new Map(); this.ac = this.ac || new Map();
     if (this.loop) clearInterval(this.loop); this.loop = null;
     if (this.qTimer) clearTimeout(this.qTimer); this.qTimer = null;
   }
@@ -203,10 +205,45 @@ export class GameRoom {
     const p = S.findP(RM, id); if (!p) return;
     const cl = (v, a, b) => Math.max(a, Math.min(b, v));
     if (d.t === 'in') { p.inX = cl(+d.x || 0, -1, 1); p.inZ = cl(+d.z || 0, -1, 1);
-      if (Number.isFinite(+d.px) && Number.isFinite(+d.pz)) { p.authX = cl(+d.px, 60, 1740); p.authZ = cl(+d.pz, -S.HALF_D + 12, S.HALF_D - 12); p.authAt = performance.now(); } }
-    else if (d.t === 'a') { if (d.d) { p.wantA = true; p.reqW = d.w != null && Number.isFinite(+d.w) ? cl(+d.w, 0, 0.2) : null; } else p.relA = cl(+d.m || 0, 0, 1.5); }
+      if (Number.isFinite(+d.px) && Number.isFinite(+d.pz)) {
+        // position reports must be physically possible: faster than a sprint burst between reports, or far
+        // from where the server has you = ignored (no teleporting / speed hacks / standing in someone's face)
+        const nx = cl(+d.px, 60, 1740), nz = cl(+d.pz, -S.HALF_D + 12, S.HALF_D - 12), now = performance.now();
+        const dt = p.authAt ? Math.max(0.016, (now - p.authAt) / 1000) : 1, jump = p.authAt ? Math.hypot(nx - p.authX, nz - p.authZ) : 0;
+        if ((p.authAt && jump / dt > 1100 && jump > 40) || Math.hypot(nx - p.x, nz - p.z) > 220) { this.strike(id, r, 'position'); }
+        else { p.authX = nx; p.authZ = nz; p.authAt = now; } } }
+    else if (d.t === 'a') {
+      if (d.d) { p.wantA = true; p.reqW = d.w != null && Number.isFinite(+d.w) ? cl(+d.w, 0, 0.2) : null; this.prAt.set(id, Date.now()); }
+      else { let m = cl(+d.m || 0, 0, 1.5);
+        // the iPad times the release (so timing feels exactly the same for everyone). The server only checks the
+        // claim is possible: a release time that's way off how long the button was really held (a script
+        // sending a perfect number) is replaced with the real hold time. Normal lag is far inside this margin.
+        const t0 = this.prAt.get(id); this.prAt.delete(id);
+        if (t0) { const held = (Date.now() - t0) / 1000 / S.METER_T; if (Math.abs(m - held) > 0.45) { m = cl(held, 0, 1.5); this.strike(id, r, 'release'); } }
+        p.relA = this.watchShot(id, r, m, p); }
+    }
     else if (d.t === 'b') p.wantB = true;
     else if (d.t === 'c') p.wantC = true;
+  }
+  // 🛡️ auto-green watch. People are never pixel-perfect: even great shooters land within ±9ms of dead centre
+  // only about 1 shot in 4. A script lands there every time. 8 in a row = flagged: their green stops being
+  // automatic for the rest of the match, and it's reported to the admin panel.
+  watchShot(id, r, m, p) {
+    const A = this.ac.get(r.pk || id) || { e: [], flag: 0, strikes: 0, run: 0, tight: 0 };
+    const e = Math.abs(m - S.SWEET), w = p && p.act === 'shoot' ? (p.meterWin || 0) : null;
+    A.e.push(e); if (A.e.length > 8) A.e.shift();
+    if (w !== null) { const green = w > 0 && e <= w; A.run = green ? (A.run || 0) + 1 : 0; if (green && w < 0.02) A.tight = (A.tight || 0) + 1; }
+    if (!A.flag && A.e.length >= 8 && A.e.every(x => x <= 0.011)) { A.flag = 1; this.report(r, 'auto-green (8 perfect releases in a row)'); }
+    if (!A.flag && A.run >= 12) { A.flag = 1; this.report(r, 'auto-green (12 greens in a row)'); }
+    if (!A.flag && A.tight >= 5) { A.flag = 1; this.report(r, 'auto-green (5 greens on tiny contested windows)'); }
+    this.ac.set(r.pk || id, A);
+    if (A.flag) m += (Math.random() < 0.5 ? -1 : 1) * (0.035 + Math.random() * 0.08);   // a flagged script's releases get human-sized misses
+    return m;
+  }
+  strike(id, r, why) { const A = this.ac.get(r.pk || id) || { e: [], flag: 0, strikes: 0 }; A.strikes++; this.ac.set(r.pk || id, A); if (A.strikes === 3) this.report(r, 'fake ' + why + ' reports'); }
+  report(r, why) {
+    const rec = { n: String(r.name || '').slice(0, 24), pk: String(r.pk || '').slice(0, 16), why, room: this.code, ranked: !!(this.G.ranked || this.G.ranked2 || this.q), t: Date.now() };
+    try { fetch(FB + '/rooms/_cheat' + nyDay() + '.json', { method: 'POST', body: JSON.stringify(rec) }).catch(() => {}); } catch (e) {}
   }
   // room owner's buttons (start, bots, settings...)
   cmd(id, d) {

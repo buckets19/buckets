@@ -194,7 +194,7 @@ function shotWindow(M,p){
   for(const o of M.players){
     if(o.team===p.team) continue;
     let ox=o.x-p.x, oz=o.z-p.z;
-    if(!o.bot && o.authAt){ const age=(performance.now()-o.authAt)/1000; if(age<0.3){ const ax=o.authX+o.vx*Math.min(age,0.08)-p.x, az=o.authZ+o.vz*Math.min(age,0.08)-p.z; if(hyp(ax,az)<hyp(ox,oz)){ ox=ax; oz=az; } } }
+    if(!o.bot && o.authAt && hyp(o.authX-o.x,o.authZ-o.z)<70){ const age=(performance.now()-o.authAt)/1000; if(age<0.3){ const ax=o.authX+o.vx*Math.min(age,0.08)-p.x, az=o.authZ+o.vz*Math.min(age,0.08)-p.z; if(hyp(ax,az)<hyp(ox,oz)){ ox=ax; oz=az; } } }
     let d=hyp(ox,oz); const ahead=ox*v.ux+oz*v.uz;
     if(!o.bot && d>1 && d<95){ const closing=-(o.vx*ox+o.vz*oz)/d; if(closing>0) d=Math.max(0, d-Math.min(closing,400)*0.06); }
     if(d<150){
@@ -466,7 +466,7 @@ function movePlayer(M,p,dt){
     // steady run isn't tugged back a little between reports (that tug looked like a stutter to everyone)
     const age=Math.min(0.08, (performance.now()-p.authAt)/1000);
     const ex=p.authX+p.vx*age-p.x, ez=p.authZ+p.vz*age-p.z, d=hyp(ex,ez);
-    if(d<180){ const k=Math.min(1,dt*12); p.x+=ex*k; p.z+=ez*k; }
+    if(d<130){ const k=Math.min(1,dt*12); p.x+=ex*k; p.z+=ez*k; }
   }
   p.z=clamp(p.z+p.vz*dt, -HALF_D+12, HALF_D-12);
   // "set" = planted on the floor; set defenders hold their ground and can take charges
@@ -894,5 +894,5 @@ function diffForRR(rr){
   d.name='Ranked'; return d;
 }
 
-  return { HALF_D, newMatch, stepMatch, makeSnap, findP, looseBall, BOTDIFF, RIVALS, RIVAL_BY, rivalRR, diffForRR, BOT_NAMES, MAX_PER_TEAM, hash, cleanName, Q };
+  return { METER_T, SWEET, HALF_D, newMatch, stepMatch, makeSnap, findP, looseBall, BOTDIFF, RIVALS, RIVAL_BY, rivalRR, diffForRR, BOT_NAMES, MAX_PER_TEAM, hash, cleanName, Q };
 }

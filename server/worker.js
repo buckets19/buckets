@@ -13,10 +13,17 @@ export { GameRoom, Matchmaker } from './game.js';
 
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'POST, GET, OPTIONS', 'access-control-allow-headers': 'content-type', 'cache-control': 'no-store' };
 
+// 🔒 Only the real game page may play online or touch accounts. A copy of the game on any other site
+// (or opened from a file / a link to an altered page) is turned away here, before it reaches a game.
+const ALLOWED = new Set(['https://buckets19.github.io']);
+const okOrigin = (req, env) => { const o = req.headers.get('Origin') || ''; return ALLOWED.has(o) || (env && env.DEV === '1' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o)); };
+
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname === '/ping') return new Response('ok', { headers: CORS });
+    if ((url.pathname.startsWith('/api/') || url.pathname.startsWith('/g/') || url.pathname === '/mm' || url.pathname.startsWith('/room/')) && req.method !== 'OPTIONS' && !okOrigin(req, env))
+      return new Response('unofficial copy of the game', { status: 403, headers: CORS });
     // accounts: unique names + cloud saves (one Durable Object holds them all)
     if (url.pathname.startsWith('/api/')) {
       if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });

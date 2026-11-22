@@ -1298,7 +1298,7 @@ function shotWindow(M,p){
   for(const o of M.players){
     if(o.team===p.team) continue;
     let ox=o.x-p.x, oz=o.z-p.z;
-    if(!o.bot && o.authAt){ const age=(performance.now()-o.authAt)/1000; if(age<0.3){ const ax=o.authX+o.vx*Math.min(age,0.08)-p.x, az=o.authZ+o.vz*Math.min(age,0.08)-p.z; if(hyp(ax,az)<hyp(ox,oz)){ ox=ax; oz=az; } } }
+    if(!o.bot && o.authAt && hyp(o.authX-o.x,o.authZ-o.z)<70){ const age=(performance.now()-o.authAt)/1000; if(age<0.3){ const ax=o.authX+o.vx*Math.min(age,0.08)-p.x, az=o.authZ+o.vz*Math.min(age,0.08)-p.z; if(hyp(ax,az)<hyp(ox,oz)){ ox=ax; oz=az; } } }
     let d=hyp(ox,oz); const ahead=ox*v.ux+oz*v.uz;
     if(!o.bot && d>1 && d<95){ const closing=-(o.vx*ox+o.vz*oz)/d; if(closing>0) d=Math.max(0, d-Math.min(closing,400)*0.06); }
     if(d<150){
@@ -1570,7 +1570,7 @@ function movePlayer(M,p,dt){
     // steady run isn't tugged back a little between reports (that tug looked like a stutter to everyone)
     const age=Math.min(0.08, (performance.now()-p.authAt)/1000);
     const ex=p.authX+p.vx*age-p.x, ez=p.authZ+p.vz*age-p.z, d=hyp(ex,ez);
-    if(d<180){ const k=Math.min(1,dt*12); p.x+=ex*k; p.z+=ez*k; }
+    if(d<130){ const k=Math.min(1,dt*12); p.x+=ex*k; p.z+=ez*k; }
   }
   p.z=clamp(p.z+p.vz*dt, -HALF_D+12, HALF_D-12);
   // "set" = planted on the floor; set defenders hold their ground and can take charges
@@ -2176,6 +2176,8 @@ const SERVER_URL='';
 // 🏟️ our own game server on our own domain (like Three Pins). Being tested at school first: games don't use it yet.
 // The admin can point it at a different domain (cfg.gs) if this one ever gets blocked.
 const GAME_SERVER='https://live.bucketsonline.site';
+const OFFICIAL = location.hostname==='buckets19.github.io' || /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+if(!OFFICIAL) addEventListener('DOMContentLoaded', ()=>{ try{ const b=document.createElement('div'); b.textContent='⚠️ This is not the real Buckets. Play at buckets19.github.io/buckets'; b.style.cssText='position:fixed;z-index:999;left:0;right:0;top:0;background:#d62828;color:#fff;font:800 16px sans-serif;text-align:center;padding:10px'; document.body.append(b); }catch(e){} });
 function gsURL(){ try{ if(CTL && /^https:\/\/[a-z0-9.-]+$/i.test(CTL.gs||'')) return CTL.gs; }catch(e){} return GAME_SERVER; }
 // can this Wi-Fi reach it, and how fast? (web request round trip, then a real live connection)
 async function gsProbe(){
@@ -6865,7 +6867,7 @@ function openProfile(other){
     const owned=Object.values(SAVE.owned).reduce((a,b)=>a+b.length,0);
     I.append(el('p','how','Collection '+owned+'/'+ITEMS.length+' · ICONs '+ITEMS.filter(i=>i.r==='icon' && SAVE.owned[i.kind].includes(i.id)).length+' · Packs opened '+(S.crates||0)));
   }
-  if(!me && ADM.k && other.pk){ const box=el('div','pfAdm'); box.append(el('b','','🛠️ ADMIN'), el('span','','Checking…')); I.prepend(box);
+  if(!me && ADM.ok && other.pk){ const box=el('div','pfAdm'); box.append(el('b','','🛠️ ADMIN'), el('span','','Checking…')); I.prepend(box);
     const lastRanked = other.t ? 'Last ranked game '+ago(other.t*1000) : '';
     (async()=>{ let on=null; try{ const r=await fetch(fbURL()+'/rooms/_on/'+String(other.pk).slice(0,16)+'.json',{cache:'no-store'}); if(r.ok) on=await r.json(); }catch(e){}
       const sp=box.querySelector('span'); if(!sp) return; const fresh=on && Date.now()-(+on.t||0)<4*60000;
@@ -7476,7 +7478,7 @@ async function admTry(code){
   const u=fbURL(); if(!u) return false;
   let h; try{ h=await admHash(String(code)); }catch(e){ return false; }
   try{ const r=await fetch(u+'/akey.json',{method:'PATCH', body:JSON.stringify({[h]:{'.sv':'timestamp'}})}); if(!r.ok) return false; }catch(e){ return false; }
-  ADM.k=h; store('buckets-admk', h); $('#adminBtn').classList.remove('hidden'); return true;
+  ADM.k=h; ADM.ok=true; store('buckets-admk', h); $('#adminBtn').classList.remove('hidden'); return true;
 }
 // change master settings: every write carries the code's fingerprint (checked by Google, in the same update)
 async function admSave(patch, okMsg){
@@ -7489,9 +7491,14 @@ async function admSave(patch, okMsg){
   await ctlFetch(); renderAdmin(); return true;
 }
 async function admDiag(){ const u=fbURL(); if(!u) return; try{ const r=await fetch(u+'/rooms/_diag'+diagDay()+'.json',{cache:'no-store'}); if(r.ok) ADM.diag=await r.json()||{}; }catch(e){} }
+async function admCheats(){ const u=fbURL(); if(!u) return; try{ const d=new Date(Date.now()-5*3600e3).toISOString().slice(0,10).replace(/-/g,''); const r=await fetch(u+'/rooms/_cheat'+d+'.json',{cache:'no-store'}); if(r.ok) ADM.cheats=Object.values(await r.json()||{}); }catch(e){} }
 async function admLive(){ const u=fbURL(); if(!u) return; try{ const r=await fetch(u+'/live.json',{cache:'no-store'}); if(r.ok){ ADM.live=await r.json()||{}; ADM.liveAt=Date.now(); } }catch(e){} }
-function openAdmin(){ if(!ADM.k) return; $('#home').classList.add('hidden'); $('#shop').classList.add('hidden'); V.shopOpen=false; $('#adminPanel').classList.remove('hidden'); renderAdmin();
-  ctlFetch().then(()=>Promise.all([admLive(), admDiag()])).then(renderAdmin); if(!LB.rows && !LB.loading) lbFetch().then(renderAdmin); }
+async function admVerify(){ const u=fbURL(); if(!u || !/^[0-9a-f]{64}$/.test(ADM.k||'')) return false;
+  try{ const r=await fetch(u+'/akey.json',{method:'PATCH', body:JSON.stringify({[ADM.k]:{'.sv':'timestamp'}})}); return r.ok; }catch(e){ return null; } }
+function admLock(){ ADM.k=''; ADM.ok=false; store('buckets-admk',''); $('#adminBtn').classList.add('hidden'); $('#adminPanel').classList.add('hidden'); }
+async function openAdmin(){ if(!ADM.k) return; if(!ADM.ok){ try{ await FB_READY; }catch(e){} const ok=await admVerify(); if(ok===false){ admLock(); toast('🔒 Not an admin'); return; } if(ok!==true){ toast('Can\'t reach the server to confirm admin'); return; } ADM.ok=true; }
+  $('#home').classList.add('hidden'); $('#shop').classList.add('hidden'); V.shopOpen=false; $('#adminPanel').classList.remove('hidden'); renderAdmin();
+  ctlFetch().then(()=>Promise.all([admLive(), admDiag(), admCheats()])).then(renderAdmin); if(!LB.rows && !LB.loading) lbFetch().then(renderAdmin); }
 function closeAdmin(){ $('#adminPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); }
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 function admSeg(opts, cur, on){ const r=el('div','adSeg'); for(const [v,label] of opts){ const b=el('button','btn tiny'+(String(cur)===String(v)?' on':''), label); b.onclick=()=>on(v); r.append(b); } return r; }
@@ -7519,6 +7526,12 @@ function renderAdmin(){
     if(rows.length) s.append(ul);
     s.append(el('p','adSub', 'Settings checked '+(CTL_AT?ago(CTL_AT):'never')+' · 🏟️ Game server: '+(CTL.gsOff?'OFF (backup mode)':'ON')));
     const rf=el('button','btn tiny','🔄 Refresh'); rf.onclick=async()=>{ rf.disabled=true; await ctlFetch(); await admLive(); renderAdmin(); }; s.append(rf);
+    B.append(s); }
+  // ---- 🚨 cheat reports (from the game server)
+  { const s=admSec('🚨 CHEAT REPORTS (TODAY)', 'The game server flags auto-green scripts and fake position/shot reports. Flagged players lose automatic greens for the rest of that game.');
+    const C=ADM.cheats; if(!C) s.append(el('p','adSub','Loading…'));
+    else if(!C.length) s.append(el('p','adSub','Nothing flagged today ✅'));
+    else { const ul=el('ul','adList'); C.slice().sort((a,b)=>b.t-a.t).slice(0,30).forEach(c=>ul.append(el('li','', new Date(c.t).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+' · '+c.n+' · '+c.why+(c.ranked?' · ranked':'')))); s.append(ul); }
     B.append(s); }
   // ---- 📶 connection report (today, from real iPads)
   { const s=admSec('📶 CONNECTION (TODAY)', 'Real numbers from iPads that played online today. Updates every 30s while people play.');
@@ -7658,7 +7671,7 @@ function renderAdmin(){
 $('#adminBtn').onclick=openAdmin;
 $('#passBtn').onclick=openPass; $('#passClose').onclick=closePass;
 $('#adminClose').onclick=closeAdmin;
-if(ADM.k) $('#adminBtn').classList.remove('hidden');
+if(ADM.k){ (async()=>{ try{ await FB_READY; }catch(e){} const ok=await admVerify(); if(ok===true){ ADM.ok=true; $('#adminBtn').classList.remove('hidden'); } else if(ok===false) admLock(); })(); }
 setInterval(()=>{ const a=document.activeElement; if($('#adminPanel').classList.contains('hidden') || (a && /INPUT|SELECT/.test(a.tagName) && $('#adminPanel').contains(a))) return; admLive().then(renderAdmin); }, 30000);   // never wipe what you're typing
 
 function renderCrates(box){

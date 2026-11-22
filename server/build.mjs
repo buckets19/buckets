@@ -20,7 +20,7 @@ ${helpers}
 ${sim}
 ${riv}
 ${dif}
-  return { HALF_D, newMatch, stepMatch, makeSnap, findP, looseBall, BOTDIFF, RIVALS, RIVAL_BY, rivalRR, diffForRR, BOT_NAMES, MAX_PER_TEAM, hash, cleanName, Q };
+  return { METER_T, SWEET, HALF_D, newMatch, stepMatch, makeSnap, findP, looseBall, BOTDIFF, RIVALS, RIVAL_BY, rivalRR, diffForRR, BOT_NAMES, MAX_PER_TEAM, hash, cleanName, Q };
 }
 `;
 fs.writeFileSync(new URL('./sim.js', import.meta.url), out);
