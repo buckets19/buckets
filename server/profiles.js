@@ -2,6 +2,21 @@
 // give itself RR), and the leaderboard is built from here (nobody can post a fake row).
 //   p:<id>   -> { n, rr, g, w, st, b, sn, pk, card, t }       id = hash of the player's secret token
 //   k:<pk>   -> id                                            one leaderboard identity per player
+import { schnorr } from '@noble/curves/secp256k1';
+import LEGACY from './legacy.json';
+// everyone who was on the old leaderboard (snapshot taken when ranked moved onto the server). They show up
+// right away; once their iPad checks in and proves it's them (signed with their leaderboard key), their
+// server profile takes over that spot with the same rank.
+const LEG = new Map(LEGACY.map(r => [r.pk, r]));
+const hex = u => [...new Uint8Array(u)].map(x => x.toString(16).padStart(2, '0')).join('');
+// proof that this iPad holds the leaderboard key for pk: a signed note binding it to this token
+async function pkProof(pk, tok, ev) {
+  try {
+    if (!ev || ev.pubkey !== pk || typeof ev.sig !== 'string' || ev.content !== 'bk19rk:' + tok || Math.abs(Date.now() / 1000 - ev.created_at) > 86400) return false;
+    const id = hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify([0, ev.pubkey, ev.created_at, ev.kind, ev.tags || [], ev.content]))));
+    return schnorr.verify(ev.sig, id, pk);
+  } catch (e) { return false; }
+}
 const FB = 'https://buckets-37d04-default-rtdb.firebaseio.com';
 const SEASON_START = Date.UTC(2026, 10, 18), SEASON_LEN = 14 * 86400000;
 const seasonN = () => Math.max(1, Math.floor((Date.now() - SEASON_START) / SEASON_LEN) + 1);
@@ -27,8 +42,10 @@ export class Profiles {
     const path = new URL(req.url).pathname;
     if (path === '/api/rk/lb') {   // the leaderboard: top 200
       if (!this.lb || Date.now() - this.lbAt > 20000) {
-        const all = await this.st.list({ prefix: 'p:' }), rows = [];
-        for (const [, p] of all) { this.season(p); if ((p.g | 0) >= 1 && !p.hide) rows.push({ pk: p.pk || '', n: p.n, rr: p.rr, g: p.g, w: p.w, b: p.b, t: p.t, card: p.card || null }); }
+        const all = await this.st.list({ prefix: 'p:' }), claimed = await this.st.list({ prefix: 'k:' }), rows = [], seen = new Set();
+        for (const [, p] of all) { this.season(p); if ((p.g | 0) >= 1 && !p.hide) { rows.push({ pk: p.pk || '', n: p.n, rr: p.rr, g: p.g, w: p.w, b: p.b, t: p.t, card: p.card || null }); if (p.pk) seen.add(p.pk); } }
+        const hid = (await this.st.get('hideLeg')) || {};
+        for (const [pk, r] of LEG) if (!seen.has(pk) && !claimed.has('k:' + pk) && !hid[pk]) rows.push({ ...r });
         rows.sort((a, b) => b.rr - a.rr || b.g - a.g); this.lb = rows.slice(0, 200); this.lbAt = Date.now();
       }
       return J({ ok: true, rows: this.lb });
@@ -40,12 +57,22 @@ export class Profiles {
       if (!okTok(b.tok)) return J({ error: 'bad token' }, 400);
       const id = await sha(b.tok); let p = await this.st.get('p:' + id), dirty = false;
       if (!p) {
-        const c = b.claim || {}, g = clamp(c.g | 0, 0, 3000);
-        p = { n: cleanN(b.name), rr: clamp(Math.round(+c.rr || 0), 0, g >= 25 ? 2600 : g >= 5 ? 1500 : 600), g, w: clamp(c.w | 0, 0, g), st: 0, b: 0, sn: seasonN(), t: Date.now() };
-        p.b = Math.max(p.rr, clamp(Math.round(+c.b || 0), 0, p.rr + 300)); dirty = true;
+        const c = b.claim || {};
+        p = { n: cleanN(b.name), rr: clamp(Math.round(+c.rr || 0), 0, 600), g: 0, w: 0, st: 0, b: 0, sn: seasonN(), t: Date.now() };
+        p.b = p.rr; dirty = true;
       }
       this.season(p);
-      if (typeof b.pk === 'string' && /^[0-9a-f]{64}$/.test(b.pk) && p.pk !== b.pk) { const owner = await this.st.get('k:' + b.pk); if (!owner || owner === id) { p.pk = b.pk; await this.st.put('k:' + b.pk, id); dirty = true; } }
+      const okPk = typeof b.pk === 'string' && /^[0-9a-f]{64}$/.test(b.pk);
+      if (okPk && (p.pk !== b.pk || !p.lg) && await pkProof(b.pk, b.tok, b.pf)) {
+        const owner = await this.st.get('k:' + b.pk);
+        if (!owner || owner === id) {
+          if (p.pk && p.pk !== b.pk) await this.st.delete('k:' + p.pk);
+          p.pk = b.pk; await this.st.put('k:' + b.pk, id);
+          const L = LEG.get(b.pk);
+          if (L && !p.lg) { p.rr = Math.max(p.rr, L.rr); p.g = Math.max(p.g, L.g); p.w = Math.max(p.w, L.w); p.b = Math.max(p.b, L.b, p.rr); }
+          p.lg = 1; dirty = true; this.lb = null;
+        }
+      }
       if (b.name && cleanN(b.name) !== p.n) { p.n = cleanN(b.name); dirty = true; }
       if (b.card && typeof b.card === 'object') { const s = JSON.stringify(b.card); if (s.length < 4000) { p.card = b.card; dirty = true; } }
       if (dirty) await this.st.put('p:' + id, p);
@@ -56,7 +83,9 @@ export class Profiles {
       if (typeof b.akey !== 'string' || !/^[0-9a-f]{64}$/.test(b.akey)) return J({ error: 'no' }, 403);
       const ok = await fetch(FB + '/akey.json', { method: 'PATCH', body: JSON.stringify({ [b.akey]: { '.sv': 'timestamp' } }) }).then(r => r.ok).catch(() => false);
       if (!ok) return J({ error: 'no' }, 403);
-      const id = typeof b.pk === 'string' ? await this.st.get('k:' + b.pk) : null; if (!id) return J({ error: 'player not found' }, 404);
+      const id = typeof b.pk === 'string' ? await this.st.get('k:' + b.pk) : null;
+      if (!id && LEG.has(b.pk) && b.hide !== undefined) { const h = (await this.st.get('hideLeg')) || {}; if (b.hide) h[b.pk] = 1; else delete h[b.pk]; await this.st.put('hideLeg', h); this.lb = null; return J({ ok: true }); }
+      if (!id) return J({ error: 'player not found' }, 404);
       const p = await this.st.get('p:' + id); if (!p) return J({ error: 'player not found' }, 404);
       if (b.rr !== undefined) { p.rr = clamp(Math.round(+b.rr || 0), 0, 9999); p.b = Math.max(p.b, p.rr); }
       if (b.hide !== undefined) p.hide = !!b.hide;
@@ -65,14 +94,14 @@ export class Profiles {
     }
     // ---- internal (game server only; not reachable from outside): look up / record ranked results
     if (path === '/rk/get') {
-      const out = {}; for (const t of (b.toks || []).slice(0, 8)) if (okTok(t)) { const p = await this.st.get('p:' + await sha(t)); if (p) out[t] = this.season(p).rr; }
-      return J({ ok: true, rr: out });
+      const out = {}, nm = {}; for (const t of (b.toks || []).slice(0, 8)) if (okTok(t)) { const p = await this.st.get('p:' + await sha(t)); if (p) { out[t] = this.season(p).rr; nm[t] = { n: p.n, pk: p.pk || '' }; } }
+      return J({ ok: true, rr: out, nm });
     }
     if (path === '/rk/res') {
       const ev = await this.event(), out = {};
       for (const x of (b.list || []).slice(0, 8)) {
         if (!okTok(x.tok)) continue; const id = await sha(x.tok); let p = await this.st.get('p:' + id);
-        if (!p) { const c = clamp(Math.round(+x.claim || 0), 0, 1500); p = { n: cleanN(x.name), rr: c, g: 0, w: 0, st: 0, b: c, sn: seasonN(), t: Date.now() }; }   // never checked in yet: start from their (capped) rank
+        if (!p) { const c = clamp(Math.round(+x.claim || 0), 0, 600); p = { n: cleanN(x.name), rr: c, g: 0, w: 0, st: 0, b: c, sn: seasonN(), t: Date.now() }; }   // never checked in yet: start from their (capped) rank
         this.season(p);
         let d = rrDelta(!!x.win, p.rr, clamp(+x.opp || 0, 0, 9999), clamp(x.margin | 0, 0, 50), p.st, clamp(x.perf | 0, -2, 6));
         if (x.win && ev && ev.kind === 'rr2') d *= 2;

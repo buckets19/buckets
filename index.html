@@ -2592,10 +2592,12 @@ const srvId=()=>('u'+Math.random().toString(36).slice(2,11)).padEnd(10,'0');
 function ptok(){ if(!SAVE.ptok || !/^[0-9a-f]{40}$/.test(SAVE.ptok)){ SAVE.ptok=[...crypto.getRandomValues(new Uint8Array(20))].map(b=>b.toString(16).padStart(2,'0')).join(''); persist(); } return SAVE.ptok; }
 function helloOf(name, extra){ return {name:cleanName(name), ...myGear(), rr:SAVE.rank.rr, pk:lbMe()||'', ...(store('buckets-nolb')?{}:{tok:ptok()}), ...(extra||{})}; }
 async function rkSync(){ try{ if(!OFFICIAL || store('buckets-nolb')) return null;
-    const r=await fetch(GAME_SERVER+'/api/rk/me',{method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({tok:ptok(), name:getName(), pk:lbMe()||'', card:myCardData(), claim:{rr:SAVE.rank.rr, g:SAVE.rank.games|0, w:SAVE.rank.wins|0, b:SAVE.rank.best|0}})});
+    // prove this iPad owns its old leaderboard spot (signed with its leaderboard key), so it keeps its rank
+    let pk='', pf=null; try{ const nt=await loadNostr(); if(nt){ const sk=lbKey(); pk=nt.getPublicKey(sk); pf=nt.finalizeEvent({kind:27235, created_at:Math.floor(Date.now()/1000), tags:[], content:'bk19rk:'+ptok()}, sk); } }catch(e){}
+    const r=await fetch(GAME_SERVER+'/api/rk/me',{method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({tok:ptok(), name:getName(), pk, pf, card:myCardData(), claim:{rr:SAVE.rank.rr, g:SAVE.rank.games|0, w:SAVE.rank.wins|0, b:SAVE.rank.best|0}})});
     if(!r.ok) return null; const d=await r.json(); if(!d || !d.ok) return null;
     const R=SAVE.rank; R.rr=d.rr; R.games=d.g; R.wins=d.w; R.streak=d.st; R.best=Math.max(R.best||0, d.b||0); persist(); try{ updateCoinUI(); }catch(e){} return d; }catch(e){ return null; } }
-setTimeout(()=>{ rkSync(); }, 2500);
+loadNostr(); setTimeout(()=>{ rkSync().then(()=>{ LB.at=0; }); }, 2500);
 // nobody in the queue: a Ranked Rival game ON THE SERVER (so it counts). No server = an unranked practice game.
 async function srvSolo(mode){
   if(OFFICIAL && await srvUse()){ const code='R'+Math.random().toString(36).slice(2,9).toUpperCase();
@@ -4614,15 +4616,18 @@ function predictMe(S, dt){
     if(jy<=0 && tt>0.1){ jy=0; if((srv[Q.y]<1 && srv[Q.act]!==2) || tt>1.6){ V.pj=null; jy=-1; } } }   // landed: stay down until the server agrees
   const free = srv[Q.act]===0 && srv[Q.stum]===0 && srv[Q.y]<1 && V.lastSnap.ph==='play';
   if(!V.pred){ V.pred={x:srv[Q.x], z:srv[Q.z], vx:srv[Q.vx], vz:srv[Q.vz], blend:0, bt:0}; }
-  else if(!free && !V.pj && !(V.pred.bt>0)){
+  else if(!free && !V.pj && !(V.pred.bt>0) && !(V.pred.ht>0)){
     // the server is moving you (follow-through, dunk, stumble): glide along with it instead of snapping to the delayed copy
     const P=V.pred, lead=clamp((V.rtt||80)/2000,.03,.3), tx=srv[Q.x]+srv[Q.vx]*lead, tz=srv[Q.z]+srv[Q.vz]*lead, c=Math.min(1,dt*10);
     P.vx=srv[Q.vx]; P.vz=srv[Q.vz];
     if(hyp(tx-P.x,tz-P.z)>220){ P.x=tx; P.z=tz; } else { P.x+=(tx-P.x)*c; P.z+=(tz-P.z)*c; }
   }
   else {
-    const P=V.pred, a=ctl.axis(), has=S.b[3]===0 && S.b[4]===net.myId, k=has?0.93:1;
-    if(P.bt>0){ P.bt-=dt; P.vx=P.bdx*BURST_V; P.vz=P.bdz*BURST_V*0.85; }          // predicted crossover / move burst
+    const P=V.pred, a=ctl.axis(), has=S.b[3]===0 && S.b[4]===net.myId, k=(has?0.93:1)*(P.bo>0&&has?1.22:1);
+    if(P.bo>0) P.bo-=dt;
+    if(P.ht>0){ P.ht-=dt; P.vx=approach(P.vx,0,ACC*2*dt); P.vz=approach(P.vz,0,ACC*2*dt);      // predicted hesi: frozen like the server…
+      if(P.ht<=0){ P.bo=0.6; const l=hyp(a.x,a.z); if(l>0.3 && has){ P.bdx=a.x/l; P.bdz=a.z/l; P.bt=BURST_T*1.15; } } }   // …then the hesi-GO explodes out of it
+    else if(P.bt>0){ P.bt-=dt; P.vx=P.bdx*BURST_V; P.vz=P.bdz*BURST_V*0.85; }          // predicted crossover / move burst
     else if(jy>=0){ P.vx=approach(P.vx,a.x*RUN*0.25,AIR_ACC*dt); P.vz=approach(P.vz,a.z*RUN*0.2,AIR_ACC*dt); }  // in the air on a shot: keep your drift (fadeaways)
     else { P.vx=approach(P.vx, a.x*RUN*k, ACC*dt); P.vz=approach(P.vz, a.z*RUN*0.85*k, ACC*dt); }
     P.x=clamp(P.x+P.vx*dt, COURT_L+P_R, COURT_R-P_R); P.z=clamp(P.z+P.vz*dt, -HALF_D+12, HALF_D-12);
@@ -4649,7 +4654,8 @@ function predictLocalMove(kind){
   const has=S.b[3]===0 && S.b[4]===net.myId;
   if(kind==='a'){ if(has && !V.pj){ V.pj={t:0}; V.pred.vx*=0.4; V.pred.vz*=0.4; } return; }   // same momentum the server keeps
   if(kind==='c'){ if((V.pred.cdT||0)>performance.now()) return;
-    const a=ctl.axis(), l=hyp(a.x,a.z); if(l<0.2) return;                 // hesi = stop, nothing to predict
+    const a=ctl.axis(), l=hyp(a.x,a.z);
+    if(l<0.2){ if(S.b[3]===0 && S.b[4]===net.myId){ V.pred.ht=HESI_T; V.pred.vx*=0.15; V.pred.vz*=0.15; V.pred.cdT=performance.now()+BURST_CD*1000; } return; }   // hesi: stop on a dime here too (the go comes after)
     if(has){ const h=attackHoop(me[Q.team]), v=hoopVec({x:me[Q.x],z:me[Q.z]},h); if((a.x*v.ux+a.z*v.uz)/l<-0.5) return; }   // stepback: let the host do it
     V.pred.bdx=a.x/l; V.pred.bdz=a.z/l; V.pred.bt=BURST_T; V.pred.cdT=performance.now()+BURST_CD*1000; }
 }
@@ -7555,7 +7561,7 @@ function renderAdmin(){
   { const s=admSec('🚨 CHEAT REPORTS (TODAY)', 'The game server flags auto-green scripts and fake position/shot reports. Flagged players lose automatic greens for the rest of that game.');
     const C=ADM.cheats; if(!C) s.append(el('p','adSub','Loading…'));
     else if(!C.length) s.append(el('p','adSub','Nothing flagged today ✅'));
-    else { const ul=el('ul','adList'); C.slice().sort((a,b)=>b.t-a.t).slice(0,30).forEach(c=>ul.append(el('li','', new Date(c.t).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+' · '+c.n+' · '+c.why+(c.ranked?' · ranked':'')))); s.append(ul); }
+    else { const ul=el('ul','adList'); C.slice().sort((a,b)=>b.t-a.t).slice(0,30).forEach(c=>{ const li=el('li',''); const b=el('b','', '🚩 '+(c.n||'?')+(c.lb && c.lb!==c.n ? ' (leaderboard: '+c.lb+')' : '')); li.append(b, document.createTextNode(' · '+c.why+' · '+new Date(c.t).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+(c.ranked?' · ranked':'')+(c.rr!=null?' · '+c.rr+' RR':'')+(c.pk?' · ID '+c.pk.slice(0,8):' · (no leaderboard ID)'))); ul.append(li); }); s.append(ul); }
     B.append(s); }
   // ---- 📶 connection report (today, from real iPads)
   { const s=admSec('📶 CONNECTION (TODAY)', 'Real numbers from iPads that played online today. Updates every 30s while people play.');

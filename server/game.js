@@ -225,7 +225,8 @@ export class GameRoom {
         // from where the server has you = ignored (no teleporting / speed hacks / standing in someone's face)
         const nx = cl(+d.px, 60, 1740), nz = cl(+d.pz, -S.HALF_D + 12, S.HALF_D - 12), now = performance.now();
         const dt = p.authAt ? Math.max(0.016, (now - p.authAt) / 1000) : 1, jump = p.authAt ? Math.hypot(nx - p.authX, nz - p.authZ) : 0;
-        if ((p.authAt && jump / dt > 1100 && jump > 40) || Math.hypot(nx - p.x, nz - p.z) > 220) { this.strike(id, r, 'position'); }
+        const off = Math.hypot(nx - p.x, nz - p.z);
+        if ((p.authAt && jump / dt > 1100 && jump > 150) || off > 320) { if (jump > 260 || off > 450) this.strike(id, r, 'position'); }
         else { p.authX = nx; p.authZ = nz; p.authAt = now; } } }
     else if (d.t === 'a') {
       if (d.d) { p.wantA = true; p.reqW = d.w != null && Number.isFinite(+d.w) ? cl(+d.w, 0, 0.2) : null; this.prAt.set(id, Date.now()); }
@@ -271,9 +272,11 @@ export class GameRoom {
     if (A.flag) m += (Math.random() < 0.5 ? -1 : 1) * (0.035 + Math.random() * 0.08);   // a flagged script's releases get human-sized misses
     return m;
   }
-  strike(id, r, why) { const A = this.ac.get(r.pk || id) || { e: [], flag: 0, strikes: 0 }; A.strikes++; this.ac.set(r.pk || id, A); if (A.strikes === 3) this.report(r, 'fake ' + why + ' reports'); }
-  report(r, why) {
+  strike(id, r, why) { const A = this.ac.get(r.pk || id) || { e: [], flag: 0, strikes: 0 }; A.strikes++; this.ac.set(r.pk || id, A); if (A.strikes === 6) this.report(r, 'fake ' + why + ' reports'); }
+  async report(r, why) {
     const rec = { n: String(r.name || '').slice(0, 24), pk: String(r.pk || '').slice(0, 16), why, room: this.code, ranked: !!(this.G.ranked || this.G.ranked2 || this.q), t: Date.now() };
+    // add who they are on the leaderboard (the name in-game can be anything)
+    try { const P = this.prof(), t = this.tok.get(r.id); if (P && t) { const d = await P.fetch('https://x/rk/get', { method: 'POST', body: JSON.stringify({ toks: [t] }) }).then(x => x.json()); const m = d.nm && d.nm[t]; if (m) { rec.lb = String(m.n || '').slice(0, 24); if (!rec.pk && m.pk) rec.pk = m.pk.slice(0, 16); rec.rr = d.rr[t]; } } } catch (e) {}
     try { fetch(FB + '/rooms/_cheat' + nyDay() + '.json', { method: 'POST', body: JSON.stringify(rec) }).catch(() => {}); } catch (e) {}
   }
   // room owner's buttons (start, bots, settings...)
