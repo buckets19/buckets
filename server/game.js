@@ -8,7 +8,11 @@
 import { makeSim } from './sim.js';
 const S = makeSim();
 const TICK_MS = 1000 / 60;                 // 60 updates a second = one game step each (smoothest, smallest buffer)                 // 50 updates a second to every player (less waiting, smaller buffer on iPads)
-const GRACE_MS = 15000;                    // a player whose Wi-Fi drops keeps their spot this long
+const GRACE_MS = 15000;
+// 💸 Cloudflare bills every second a room has players connected, so rooms don't sit open doing nothing:
+const RESULTS_STEP_MS = 6000;               // ranked/queue games: stop simulating this long after the final buzzer
+const RESULTS_CLOSE_MS = 25000;             // ...and hang up here (the iPad keeps showing the results; it already has them)
+const LOBBY_IDLE_MS = 8 * 60000;            // a private lobby with no game and nobody doing anything for 8 minutes closes                    // a player whose Wi-Fi drops keeps their spot this long
 const NO_GEAR = new Set(['t','name','pk','duo','r2','q','exp','create','party','rr','id','rejoin','c','tok']);
 import CAT from './catalog.js';
 import { walGear } from './wallet.js';
@@ -29,6 +33,17 @@ export class GameRoom {
     this.owner = null; this.RM = null; this.q = null; this.code = ''; this.emAt = new Map(); this.prAt = new Map(); this.ac = this.ac || new Map(); this.tok = new Map(); this.rk = null;
     if (this.loop) clearInterval(this.loop); this.loop = null;
     if (this.qTimer) clearTimeout(this.qTimer); this.qTimer = null;
+    if (this.endT) clearTimeout(this.endT); this.endT = null; if (this.idleT) clearTimeout(this.idleT); this.idleT = null; this.overAt = 0; this.lastAct = Date.now();
+  }
+  // say goodbye to everyone and empty the room (nothing left running = nothing billed)
+  closeAll(note) {
+    for (const [, s] of this.socks) { try { if (note) this.send(s.ws, { t: note }); this.send(s.ws, { t: 'bye' }); s.ws.close(1000, 'done'); } catch (e) {} }
+    this.reset();
+  }
+  idleCheck() {
+    if (this.idleT) clearTimeout(this.idleT);
+    this.idleT = setTimeout(() => { this.idleT = null; if (!this.humans()) return;
+      if (this.G.phase === 'lobby' && Date.now() - (this.lastAct || 0) >= LOBBY_IDLE_MS - 1000) this.closeAll('idle'); else this.idleCheck(); }, 60000);
   }
   async fetch(req) {
     if ((req.headers.get('Upgrade') || '').toLowerCase() !== 'websocket') return new Response('websocket only', { status: 426 });
@@ -55,7 +70,7 @@ export class GameRoom {
   roster() {
     const G = this.G;
     return { t: 'roster', code: this.code, phase: G.phase, toWin: G.toWin, diff: G.diff, winBy2: !!G.winBy2, ranked: !!G.ranked, ranked2: !!G.ranked2,
-      party: !!G.party, srch: !!G.srch, owner: this.owner, players: [...G.players.values()] };
+      party: !!G.party, srch: !!G.srch, owner: this.owner, players: [...G.players.values()].map(({ want, conf, gq, ...p }) => p) };   // (want/conf: the wallet check, server-only)
   }
   pushRoster() { this.all(this.roster()); }
   newNum() { const used = new Set([...this.G.players.values()].map(p => p.num)); let n; do { n = 1 + Math.floor(Math.random() * 45); } while (used.has(n)); return n; }
@@ -94,7 +109,7 @@ export class GameRoom {
 
   // ---------------------------------------------------------------- joining
   hello(ws, d) {
-    let G = this.G;
+    let G = this.G; this.lastAct = Date.now(); if (!this.idleT) this.idleCheck();
     if (d.t !== 'hello') { ws.close(1000); return null; }
     const empty = this.humans() === 0;
     // coming back after a Wi-Fi drop: same id, same spot
@@ -172,6 +187,7 @@ export class GameRoom {
   startMatch(wait) {
     const G = this.G; if (G.phase !== 'lobby') return;
     const ro = [...G.players.values()]; if (!ro.some(p => p.team === 0) || !ro.some(p => p.team === 1)) return;
+    this.overAt = 0; if (this.endT) { clearTimeout(this.endT); this.endT = null; }
     this.RM = S.newMatch(ro, G.toWin, false, G.diff, G.winBy2); if (wait) this.RM.phaseT = Math.max(this.RM.phaseT, wait);
     this.RM.hum0 = this.humans(0) > 0; this.RM.hum1 = this.humans(1) > 0; this.overSeen = false; this.tl = new Map(); this.credited = new Set(); this.rc = new Map(); this.finP = null;
     // ranked results are decided here: matchmade games, Ranked Rival games and ranked 2v2s (not private 1v1 rooms: no farming)
@@ -186,7 +202,8 @@ export class GameRoom {
     const RM = this.RM; if (!RM) { clearInterval(this.loop); this.loop = null; return; }
     const now = Date.now(); this.acc += Math.min(250, now - this.last) / 1000; this.last = now;
     try { while (this.acc >= 1 / 60) { this.acc -= 1 / 60; S.stepMatch(RM, 1 / 60); this.simT += 1000 / 60; } } catch (e) { console.log('sim error', e && e.stack); }
-    if (RM.phase === 'over' && !this.overSeen) { this.overSeen = true; if (this.q) RM.phaseT = 1e6; this.finish(RM.winner); }    // ranked queue games stay on the results
+    if (RM.phase === 'over' && !this.overSeen) { this.overSeen = true; this.overAt = now; if (this.q) { RM.phaseT = 1e6; if (this.endT) clearTimeout(this.endT); this.endT = setTimeout(() => this.closeAll(), RESULTS_CLOSE_MS); } this.finish(RM.winner); }
+    if (this.q && this.overAt && now - this.overAt > RESULTS_STEP_MS) { this.all(S.makeSnap(RM, true)); clearInterval(this.loop); this.loop = null; return; }   // results screen: nothing moves any more
     const snap = S.makeSnap(RM, true); snap.st = Math.round(this.simT); if (!snap.ev.length) delete snap.ev;   // st: game time of this update (60 steps/s vs 50 updates/s, so wall time would wobble)
     this.all(snap); this.tally(RM.events); RM.events = [];
     if (RM.phase === 'over' && RM.phaseT <= 0) this.toLobby();
@@ -209,7 +226,7 @@ export class GameRoom {
       // a whole side of real players left a ranked game: the other side wins (counts for rank)
       if ((G.ranked || G.ranked2 || this.q) && RM.phase !== 'over') {
         const left0 = RM.hum0 && this.humans(0) === 0, left1 = RM.hum1 && this.humans(1) === 0;
-        if ((left0 || left1) && this.humans() > 0) { const w = left0 ? 1 : 0; RM.winner = w; RM.phase = 'over'; RM.phaseT = this.q ? 1e6 : 15; RM.events.push({ k: 'over', w, forfeit: 1 }); this.overSeen = true; }
+        if ((left0 || left1) && this.humans() > 0) { const w = left0 ? 1 : 0; RM.winner = w; RM.phase = 'over'; RM.phaseT = this.q ? 1e6 : 15; RM.events.push({ k: 'over', w, forfeit: 1 }); this.overSeen = true; this.overAt = Date.now(); if (this.q) { if (this.endT) clearTimeout(this.endT); this.endT = setTimeout(() => this.closeAll(), RESULTS_CLOSE_MS); } }
         if (left0 || left1) this.finish(left0 ? 1 : 0);   // quitting a ranked game is a loss, decided here (refreshing can't dodge it)
       }
     }
@@ -227,6 +244,7 @@ export class GameRoom {
   onMsg(id, d, ws) {
     const G = this.G, r = G.players.get(id); if (!r) return;
     const s = this.socks.get(id); if (s && s.ws !== ws) return;
+    if (d.t !== 'ping' && d.t !== 'in') this.lastAct = Date.now();
     switch (d.t) {
       case 'ping': this.send(ws, { t: 'pong', ts: d.ts }); return;
       case 'bye': this.remove(id); try { ws.close(1000); } catch (e) {} return;

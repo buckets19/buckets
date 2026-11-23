@@ -2637,7 +2637,8 @@ async function walFlush(){ if(WAL.fl || !SAVE.walMade || !(SAVE.wq||[]).length) 
     if(d && Array.isArray(d.res)){ const done=new Set(d.res.filter(r=>!r.retry).map(r=>r.id)); SAVE.wq=SAVE.wq.filter(x=>!done.has(x.id)); persist(); if(SAVE.wq.length) setTimeout(walFlush, done.size ? 600 : 20000); } }
   catch(e){} finally{ WAL.fl=false; } }
 setTimeout(()=>{ walSync(); }, 1800);
-setInterval(()=>{ if(!V.inRoom && document.visibilityState==='visible') walSync(); }, 150000);
+try{ if(sessionStorage.getItem('bk-idle')){ sessionStorage.removeItem('bk-idle'); setTimeout(()=>toast('😴 Your room closed after 8 minutes without a game. Start a new one any time!'), 1200); } }catch(e){}
+setInterval(()=>{ if(!V.inRoom && document.visibilityState==='visible') walSync(); }, 300000);
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible' && !V.inRoom && Date.now()-WAL.at>30000) walSync(); });
 // nobody in the queue: a Ranked Rival game ON THE SERVER (so it counts). No server = an unranked practice game.
 async function srvSolo(mode){
@@ -2690,6 +2691,7 @@ function srvAdopt(r, code, opts){
   const conn=r.conn; net.role='client'; net.peer=null; net.myId=r.id; net.hostConn=conn; net.code=code; net.via='gameserver';
   conn.on('data', onClientData);
   conn.on('close', ()=>{ if(V.migrating) return; if(opts && opts.onClose && opts.onClose(conn)) return; if(V.overSeen) return;
+    if(V.idleClosed){ try{ sessionStorage.setItem('bk-idle','1'); }catch(e){} location.href=location.pathname; return; }   // the room closed itself after sitting idle
     fatal('Lost connection to the game. Check your Wi-Fi and try again.'); });
 }
 async function srvHost(name){
@@ -2956,6 +2958,7 @@ function onClientData(d){
   else if(d.t==='banned') fatal('🚫 This name can\'t play online right now.');
   else if(d.t==='roster') applyRoster(d);
   else if(d.t==='wal'){ walMirror(d.w); }
+  else if(d.t==='idle'){ V.idleClosed=true; }
   else if(d.t==='rk'){ V.rkMsg=d; if(V.overSeen && !V.rankRes){ V.rankRes=applyRanked(d.win,0,0,0,d); V.rkMsg=null; const S=currentSnap(); if(S && S.ph==='over') showGameOver(S); } }
   else if(d.t==='ev') handleEvent(d.e,false);
   else if(d.t==='pong'){ const r=performance.now()-(+d.ts||0); if(r>0 && r<5000){ V.rtt=V.rtt?lerp(V.rtt,r,.3):r; V.pingNow=V.pingNow?lerp(V.pingNow,r,.6):r; diagAdd('ping', r); } }
@@ -7175,14 +7178,14 @@ function showVsCard2(){
   setTimeout(()=>{ c.classList.add('out'); setTimeout(()=>c.classList.add('hidden'),400); }, 3600);
 }
 function showVsCard(opp){
-  const R=opp.R, S=R?STYLES[R.style]:null, c=$('#vsCard'); c.innerHTML='';
+  const bot=!!(opp.who && opp.who.bot), R=opp.R || (bot ? (RIVAL_BY[opp.who.rv] || RIVALS.find(x=>x.n===opp.n)) : null), S=R?STYLES[R.style]:null, c=$('#vsCard'); c.innerHTML='';   // a CPU rival is never shown as a live player
   c.append(el('div','vsTop','RANKED MATCH FOUND'));
   const row=el('div','vsRow');
   const side=(name, rr, sub, who)=>{ const d=el('div','vsSide'); d.append(el('div','vsName',name), rankBadge(rr||0, true)); const tg=vsTags(who); if(tg) d.append(tg); if(sub) d.append(el('div','vsSub',sub)); return d; };
-  const a=side(getName(), SAVE.rank.rr, SAVE.rank.streak>1?'🔥 '+SAVE.rank.streak+' streak':'', meWho()), b=side(opp.n, opp.rr, R ? S.icon+' '+S.name : '🟢 LIVE PLAYER', opp.who||null);
+  const a=side(getName(), SAVE.rank.rr, SAVE.rank.streak>1?'🔥 '+SAVE.rank.streak+' streak':'', meWho()), b=side(opp.n, opp.rr, R ? S.icon+' '+S.name : bot ? '🤖 CPU' : '🟢 LIVE PLAYER', opp.who||null);
   row.append(a, el('div','vsVs','VS'), b); c.append(row);
   if(R) c.append(el('div','vsBio','“'+R.bio+'”'), el('div','vsTip', S.tip+'  ·  Your record vs '+R.n+': '+rivalRecord(R)+'  ·  CPU rival'));
-  else c.append(el('div','vsTip','A real player from the ranked queue. Good luck.'));
+  else c.append(el('div','vsTip', bot ? 'Nobody else was in the queue, so you got a CPU. It still counts.' : 'A real player from the ranked queue. Good luck.'));
   c.classList.remove('hidden'); c.classList.remove('out'); void c.offsetWidth; c.classList.add('in');
   setTimeout(()=>{ c.classList.add('out'); setTimeout(()=>c.classList.add('hidden'),400); }, 3200);
 }
