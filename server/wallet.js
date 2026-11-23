@@ -52,12 +52,23 @@ export function walImpossible(W) {
   return f;
 }
 // start over as a new player (codes, gifts and pass levels already used stay used)
+// undo a reset: everything from before it comes back, plus anything earned or bought since (nothing is lost)
+export function walUndo(W) {
+  if (!W || !W.bak) return W; const B = W.bak, R = { ...B, ck: 1, restored: Date.now() };
+  R.c = (B.c || 0) + Math.max(0, (W.c || 0) - 150); R.g = (B.g || 0) + Math.max(0, (W.g || 0) - 150);
+  R.own = {}; for (const k of new Set([...Object.keys(B.own || {}), ...Object.keys(W.own || {})])) R.own[k] = [...new Set([...((B.own || {})[k] || []), ...((W.own || {})[k] || [])])];
+  R.cos = { ...(B.cos || {}), ...(W.cos || {}) };
+  R.fc = { ...(B.fc || {}) }; for (const id in (W.fc || {})) R.fc[id] = (R.fc[id] || 0) + W.fc[id];
+  R.once = { ...(B.once || {}) }; for (const k in (W.once || {})) R.once[k] = { ...(R.once[k] || {}), ...W.once[k] };
+  R.cid = [...new Set([...(B.cid || []), ...(W.cid || [])])].slice(-300);
+  delete R.wreset; delete R.why; delete R.bak; return R;
+}
 export function walRestart(old, why) { const W = walNew(); if (old) { W.once = old.once || {}; W.cid = old.cid || []; W.pass = old.pass || W.pass; W.imp = old.imp; } W.wreset = Date.now(); W.why = why || ''; W.ck = 1; if (old) { const { bak, ...keep } = old; W.bak = keep; } return W; }   // (bak: the admin can undo it)
 
 // ---- one-time import of an old save (capped money; items as they were, scored for the admin to review)
 export function walImport(s, season) {
   const W = walNew(); s = s && typeof s === 'object' ? s : {};
-  W.c = clamp(Math.round(+s.coins || 0), 0, 100000); W.g = clamp(Math.round(+s.gems || 0), 0, 25000);
+  W.c = clamp(Math.round(+s.coins || 0), 0, 1e12); W.g = clamp(Math.round(+s.gems || 0), 0, 1e12);   // (no cap: the admin hands out big amounts)
   const ow = s.owned && typeof s.owned === 'object' ? s.owned : {};
   for (const k in CAT.kinds) for (const id of (Array.isArray(ow[k]) ? ow[k] : []).slice(0, 500)) addItem(W, k, String(id));
   if (s.cos && typeof s.cos === 'object') for (const key of Object.keys(s.cos).slice(0, 600)) { const [k, oi] = key.split('.'), pi = CAT.cos.findIndex(P => P.k === k); if (pi >= 0 && cosPriceOf(pi, +oi) > 0) W.cos[cosKey(pi, +oi)] = 1; }
@@ -77,8 +88,8 @@ export function walImport(s, season) {
   // how believable is this save? lots of items with few games played = worth a look (admin panel)
   const items = itemCount(W), games = clamp(+s.games | 0, 0, 100000);
   W.imp = { t: Date.now(), items, cos: Object.keys(W.cos).length, games, c: W.c, g: W.g, rc: Math.max(0, Math.round(+s.coins || 0)), rg: Math.max(0, Math.round(+s.gems || 0)) };
-  W.ck = 1; const bad = walImpossible(W);
-  return bad.length ? walRestart(W, bad.join(', ')) : W;
+  W.ck = 1;
+  return W;
 }
 
 export function walView(W) { return { c: W.c, g: W.g, own: W.own, cos: Object.keys(W.cos), fc: W.fc, tk: W.tk, pass: W.pass, feat: W.feat, login: W.login }; }
@@ -158,9 +169,10 @@ export function walClaim(W, x, ctx) {
       const rw = e.reward || {}; give(clamp(+rw.coins || 0, 0, 100000), clamp(+rw.gems || 0, 0, 20000)); if (rw.item) item(rw.item); if (rw.crate) pack(rw.crate); break; }
     case 'gift': { const gifts = ctx.cfg && ctx.cfg.gifts, key = String(x.key || ''), id = String(x.id || '').slice(0, 40);
       const okKey = key === '*' || (ctx.pk && key === 'p' + ctx.pk.slice(0, 16)) || (ctx.nk && key === 'n' + ctx.nk);
+      if (!okKey && key !== '*' && !(key[0] === 'p' ? ctx.pk : ctx.nk)) return { err: 'not yet', retry: 1 };   // the server doesn't know who this is yet: try again shortly
       const g = okKey && gifts && gifts[key] && gifts[key][id]; if (!g || typeof g !== 'object') return no('no such gift');
       if (once(W, 'gift')[id]) return no('already claimed'); W.once.gift[id] = 1;
-      give(clamp(+g.coins || 0, -1e6, 1e6), clamp(+g.gems || 0, -1e5, 1e5)); if (g.item) item(g.item); if (g.crate) pack(g.crate); break; }
+      give(clamp(+g.coins || 0, -1e9, 1e9), clamp(+g.gems || 0, -1e8, 1e8)); if (g.item) item(g.item); if (g.crate) pack(g.crate); break; }
     case 'code': { const rw = CAT.codes[String(x.h || '')]; if (!rw) return no('not a code'); if (once(W, 'code')[rw.id]) return no('already redeemed'); W.once.code[rw.id] = 1;
       give(rw.coins || 0, rw.gems || 0); if (rw.freeCrate) pack(rw.freeCrate); break; }
     default: return no('unknown claim');

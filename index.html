@@ -2512,6 +2512,8 @@ function ctlBanner(){
 function ctlGifts(){
   const G0=CTL.gifts; if(!G0 || typeof G0!=='object') return;
   SAVE.gifts=SAVE.gifts||[]; let any=false;
+  // gifts that got lost on the way to the server (Nov 22-23): ask for them again (the server never pays one twice)
+  if(!SAVE.giftRe1 && SAVE.walMade){ SAVE.giftRe1=1; for(const key of [...myKeys(), '*']){ const g=G0[key]; if(g && typeof g==='object') for(const id in g) if(SAVE.gifts.includes(id)) walQ({k:'gift', key, id}); } persist(); }
   for(const key of [...myKeys(), '*']){ const g=G0[key]; if(!g || typeof g!=='object') continue;
     for(const id in g){ if(SAVE.gifts.includes(id)) continue; const x=g[id]||{}; SAVE.gifts.push(id); any=true; walQ({k:'gift', key, id});
       const coins=Math.round(+x.coins||0); rewGive({coins, item:x.item, crate:x.crate}); const gm=Math.round(+x.gems||0); if(gm) SAVE.gems=Math.max(0,(SAVE.gems||0)+gm);
@@ -2632,7 +2634,7 @@ async function walSync(){
 function walQ(x){ try{ SAVE.wq=SAVE.wq||[]; x.id=Math.random().toString(36).slice(2,12); SAVE.wq.push(x); if(SAVE.wq.length>80) SAVE.wq=SAVE.wq.slice(-80); persist(); clearTimeout(WAL.ft); WAL.ft=setTimeout(walFlush, 900); }catch(e){} }
 async function walFlush(){ if(WAL.fl || !SAVE.walMade || !(SAVE.wq||[]).length) return; WAL.fl=true;
   try{ const list=SAVE.wq.slice(0,40), d=await walApi('claim',{list});
-    if(d && Array.isArray(d.res)){ const done=new Set(d.res.map(r=>r.id)); SAVE.wq=SAVE.wq.filter(x=>!done.has(x.id)); persist(); if(SAVE.wq.length) setTimeout(walFlush, 600); } }
+    if(d && Array.isArray(d.res)){ const done=new Set(d.res.filter(r=>!r.retry).map(r=>r.id)); SAVE.wq=SAVE.wq.filter(x=>!done.has(x.id)); persist(); if(SAVE.wq.length) setTimeout(walFlush, done.size ? 600 : 20000); } }
   catch(e){} finally{ WAL.fl=false; } }
 setTimeout(()=>{ walSync(); }, 1800);
 setInterval(()=>{ if(!V.inRoom && document.visibilityState==='visible') walSync(); }, 150000);
