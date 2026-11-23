@@ -241,13 +241,11 @@ export class GameRoom {
     const cl = (v, a, b) => Math.max(a, Math.min(b, v));
     if (d.t === 'in') { p.inX = cl(+d.x || 0, -1, 1); p.inZ = cl(+d.z || 0, -1, 1);
       if (Number.isFinite(+d.px) && Number.isFinite(+d.pz)) {
-        // position reports must be physically possible: faster than a sprint burst between reports, or far
-        // from where the server has you = ignored (no teleporting / speed hacks / standing in someone's face)
-        const nx = cl(+d.px, 60, 1740), nz = cl(+d.pz, -S.HALF_D + 12, S.HALF_D - 12), now = performance.now();
-        const dt = p.authAt ? Math.max(0.016, (now - p.authAt) / 1000) : 1, jump = p.authAt ? Math.hypot(nx - p.authX, nz - p.authZ) : 0;
-        const off = Math.hypot(nx - p.x, nz - p.z);
-        if ((p.authAt && jump / dt > 1100 && jump > 150) || off > 320) { if (jump > 260 || off > 450) this.strike(id, r, 'position'); }
-        else { p.authX = nx; p.authZ = nz; p.authAt = now; } } }
+        // a position report far from where the server has you is just ignored (no teleporting). It isn't
+        // reported as cheating: after every bucket the server moves everyone back, and for a moment the iPad's
+        // report is still from before that, which looks exactly like a teleport.
+        const nx = cl(+d.px, 60, 1740), nz = cl(+d.pz, -S.HALF_D + 12, S.HALF_D - 12);
+        if (Math.hypot(nx - p.x, nz - p.z) <= 320) { p.authX = nx; p.authZ = nz; p.authAt = performance.now(); } } }
     else if (d.t === 'a') {
       if (d.d) { p.wantA = true; p.reqW = d.w != null && Number.isFinite(+d.w) ? cl(+d.w, 0, 0.2) : null; this.prAt.set(id, Date.now()); }
       else { let m = cl(+d.m || 0, 0, 1.5);
@@ -255,7 +253,7 @@ export class GameRoom {
         // claim is possible: a release time that's way off how long the button was really held (a script
         // sending a perfect number) is replaced with the real hold time. Normal lag is far inside this margin.
         const t0 = this.prAt.get(id); this.prAt.delete(id);
-        if (t0) { const held = (Date.now() - t0) / 1000 / S.METER_T; if (Math.abs(m - held) > 0.45) { m = cl(held, 0, 1.5); this.strike(id, r, 'release'); } }
+        if (t0) { const held = (Date.now() - t0) / 1000 / S.METER_T; if (Math.abs(m - held) > 0.75) { m = cl(held, 0, 1.5); this.strike(id, r, 'release'); } }
         p.relA = this.watchShot(id, r, m, p); }
     }
     else if (d.t === 'b') p.wantB = true;
@@ -307,17 +305,17 @@ export class GameRoom {
   watchShot(id, r, m, p) {
     const A = this.ac.get(r.pk || id) || { e: [], flag: 0, strikes: 0, run: 0, tight: 0 };
     const e = Math.abs(m - S.SWEET), w = p && p.act === 'shoot' ? (p.meterWin || 0) : null;
-    A.e.push(e); if (A.e.length > 8) A.e.shift();
-    if (w !== null) { const green = w > 0 && e <= w; A.run = green ? (A.run || 0) + 1 : 0; if (green && w < 0.02) A.tight = (A.tight || 0) + 1; }
-    if (!A.flag && A.e.length >= 8 && A.e.every(x => x <= 0.011)) { A.flag = 1; this.report(r, 'auto-green (8 perfect releases in a row)'); }
-    if (!A.flag && A.run >= 12) { A.flag = 1; this.report(r, 'auto-green (12 greens in a row)'); }
-    if (!A.flag && A.tight >= 5) { A.flag = 1; this.report(r, 'auto-green (5 greens on tiny contested windows)'); }
+    A.e.push(e); if (A.e.length > 10) A.e.shift();
+    // 10 releases in a row within ~19ms of dead centre: a person's timing wobbles far more than that (greens are much
+    // wider, so streaks of greens alone prove nothing); a script lands there every single time.
+    if (!A.flag && A.e.length >= 10 && A.e.every(x => x <= 0.011)) { A.flag = 1; this.report(r, 'auto-green script (10 dead-centre releases in a row)'); }
     this.ac.set(r.pk || id, A);
     if (A.flag) m += (Math.random() < 0.5 ? -1 : 1) * (0.035 + Math.random() * 0.08);   // a flagged script's releases get human-sized misses
     return m;
   }
-  strike(id, r, why) { const A = this.ac.get(r.pk || id) || { e: [], flag: 0, strikes: 0 }; A.strikes++; this.ac.set(r.pk || id, A); if (A.strikes === 6) this.report(r, 'fake ' + why + ' reports'); }
+  strike(id, r, why) { const A = this.ac.get(r.pk || id) || { e: [], flag: 0, strikes: 0 }; A.strikes++; this.ac.set(r.pk || id, A); if (A.strikes === 12) this.report(r, 'fake ' + why + ' reports'); }
   async report(r, why) {
+    this.reported = this.reported || new Set(); const rk = (r.pk || r.id) + '|' + why; if (this.reported.has(rk)) return; this.reported.add(rk);
     const rec = { n: String(r.name || '').slice(0, 24), pk: String(r.pk || '').slice(0, 16), why, room: this.code, ranked: !!(this.G.ranked || this.G.ranked2 || this.q), t: Date.now() };
     // add who they are on the leaderboard (the name in-game can be anything)
     try { const P = this.prof(), t = this.tok.get(r.id); if (P && t) { const d = await P.fetch('https://x/rk/get', { method: 'POST', body: JSON.stringify({ toks: [t] }) }).then(x => x.json()); const m = d.nm && d.nm[t]; if (m) { rec.lb = String(m.n || '').slice(0, 24); if (!rec.pk && m.pk) rec.pk = m.pk.slice(0, 16); rec.rr = d.rr[t]; } } } catch (e) {}

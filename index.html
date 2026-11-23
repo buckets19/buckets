@@ -7022,8 +7022,9 @@ function openProfile(other){
     (async()=>{ let on=null; try{ const r=await fetch(fbURL()+'/rooms/_on/'+String(other.pk).slice(0,16)+'.json',{cache:'no-store'}); if(r.ok) on=await r.json(); }catch(e){}
       const sp=box.querySelector('span'); if(!sp) return; const fresh=on && Date.now()-(+on.t||0)<4*60000;
       sp.textContent = (fresh ? '🟢 Online now · '+(on.w||'') : on ? '⚪ Offline · last seen '+ago(+on.t) : '⚪ Not seen yet') + (lastRanked?' · '+lastRanked:''); box.classList.toggle('on', !!fresh);
-      const wd=await admWal({wal:'get', pk:other.pk}); if(wd && wd.ok && wd.w){ const w=wd.w; box.append(el('span','', '💰'+w.c.toLocaleString()+' · 💎'+w.g.toLocaleString()+' · '+w.items+' items'+(w.reset?' · (reset)':'')));
-        const b=el('button','btn tiny','Reset wallet'); b.onclick=async()=>{ if(!confirm('Reset this player\'s wallet to a brand-new player? Removes ALL their coins, gems and items. Can\'t be undone.')) return; const r=await admWal({wal:'reset', pk:other.pk}); toast(r&&r.ok?'✅ Wallet reset':'❌ Couldn\'t reset'); }; box.append(b); } })(); }
+      const wd=await admWal({wal:'get', pk:other.pk}); if(wd && wd.ok && wd.w){ const w=wd.w; box.append(el('span','', '💰'+w.c.toLocaleString()+' · 💎'+w.g.toLocaleString()+' · '+w.items+' items'+(w.reset?' · reset'+(w.why?' ('+w.why+')':''):'')));
+        const b=el('button','btn tiny','Reset wallet'); b.onclick=async()=>{ if(!confirm('Reset this player\'s wallet to a brand-new player? Removes all their coins, gems and items (you can undo it here).')) return; const r=await admWal({wal:'reset', pk:other.pk}); toast(r&&r.ok?'✅ Wallet reset':'❌ Couldn\'t reset'); }; box.append(b);
+        if(w.canUndo){ const u=el('button','btn tiny','Undo reset'); u.onclick=async()=>{ if(!confirm('Give this player back everything they had before the reset?')) return; const r=await admWal({wal:'undo', pk:other.pk}); toast(r&&r.ok?'✅ Wallet restored':'❌ Couldn\'t restore'); }; box.append(u); } } })(); }
   if(!V.inRoom) $('#home').classList.add('hidden'); $('#rankedPanel').classList.add('hidden'); P.classList.remove('hidden');
   if(!V.pfLoop){ V.pfLoop=true; requestAnimationFrame(drawProfile); }
 }
@@ -7644,7 +7645,6 @@ async function admSave(patch, okMsg){
 }
 async function admDiag(){ const u=fbURL(); if(!u) return; try{ const r=await fetch(u+'/rooms/_diag'+diagDay()+'.json',{cache:'no-store'}); if(r.ok) ADM.diag=await r.json()||{}; }catch(e){} }
 async function admWal(body){ try{ const r=await fetch(GAME_SERVER+'/api/rk/admin',{method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({akey:ADM.k, ...body})}); return r.ok ? await r.json() : null; }catch(e){ return null; } }
-async function admWalList(){ const d=await admWal({wal:'list'}); ADM.wal = d && d.ok ? d : {list:[], total:0}; }
 async function admCheats(){ const u=fbURL(); if(!u) return; try{ const d=new Date(Date.now()-5*3600e3).toISOString().slice(0,10).replace(/-/g,''); const r=await fetch(u+'/rooms/_cheat'+d+'.json',{cache:'no-store'}); if(r.ok) ADM.cheats=Object.values(await r.json()||{}); }catch(e){} }
 async function admLive(){ const u=fbURL(); if(!u) return; try{ const r=await fetch(u+'/live.json',{cache:'no-store'}); if(r.ok){ ADM.live=await r.json()||{}; ADM.liveAt=Date.now(); } }catch(e){} }
 async function admVerify(){ const u=fbURL(); if(!u || !/^[0-9a-f]{64}$/.test(ADM.k||'')) return false;
@@ -7652,7 +7652,7 @@ async function admVerify(){ const u=fbURL(); if(!u || !/^[0-9a-f]{64}$/.test(ADM
 function admLock(){ ADM.k=''; ADM.ok=false; store('buckets-admk',''); $('#adminBtn').classList.add('hidden'); $('#adminPanel').classList.add('hidden'); }
 async function openAdmin(){ if(!ADM.k) return; if(!ADM.ok){ try{ await FB_READY; }catch(e){} const ok=await admVerify(); if(ok===false){ admLock(); toast('🔒 Not an admin'); return; } if(ok!==true){ toast('Can\'t reach the server to confirm admin'); return; } ADM.ok=true; }
   $('#home').classList.add('hidden'); $('#shop').classList.add('hidden'); V.shopOpen=false; $('#adminPanel').classList.remove('hidden'); renderAdmin();
-  ctlFetch().then(()=>Promise.all([admLive(), admDiag(), admCheats(), admWalList()])).then(renderAdmin); if(!LB.rows && !LB.loading) lbFetch().then(renderAdmin); }
+  ctlFetch().then(()=>Promise.all([admLive(), admDiag(), admCheats()])).then(renderAdmin); if(!LB.rows && !LB.loading) lbFetch().then(renderAdmin); }
 function closeAdmin(){ $('#adminPanel').classList.add('hidden'); if(!V.inRoom) $('#home').classList.remove('hidden'); }
 const gid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 function admSeg(opts, cur, on){ const r=el('div','adSeg'); for(const [v,label] of opts){ const b=el('button','btn tiny'+(String(cur)===String(v)?' on':''), label); b.onclick=()=>on(v); r.append(b); } return r; }
@@ -7681,20 +7681,13 @@ function renderAdmin(){
     s.append(el('p','adSub', 'Settings checked '+(CTL_AT?ago(CTL_AT):'never')+' · 🏟️ Game server: '+(CTL.gsOff?'OFF (backup mode)':'ON')));
     const rf=el('button','btn tiny','🔄 Refresh'); rf.onclick=async()=>{ rf.disabled=true; await ctlFetch(); await admLive(); renderAdmin(); }; s.append(rf);
     B.append(s); }
-  // ---- 💰 wallets (coins + items now live on the game server)
-  { const s=admSec('💰 WALLETS TO CHECK', 'Old saves were brought onto the server once. Lots of items with few games played is suspicious. Reset = back to a brand-new player (coins, gems and items). Can\'t be undone.');
-    const W=ADM.wal; if(!W) s.append(el('p','adSub','Loading…'));
-    else if(!W.list.length) s.append(el('p','adSub','No wallets yet'));
-    else { s.append(el('p','adSub', W.total+' wallets on the server. Most suspicious first:')); const ul=el('ul','adList');
-      W.list.slice(0,25).forEach(w=>{ const li=el('li',''); li.append(el('b','',(w.susp>=30?'⚠️ ':'')+w.n), document.createTextNode(' · '+w.items+' items · '+w.games+' games · 💰'+(w.c||0).toLocaleString()+' · 💎'+(w.g||0).toLocaleString()+' · score '+w.susp+' '));
-        if(w.pk){ const b=el('button','btn tiny','Reset wallet'); b.onclick=async()=>{ if(!confirm('Reset '+w.n+'\'s wallet to a brand-new player? This removes ALL their coins, gems and items. It can\'t be undone.')) return; const r=await admWal({wal:'reset', pk:w.pk}); toast(r&&r.ok?'✅ Wallet reset':'❌ Couldn\'t reset'); ADM.wal=null; admWalList().then(renderAdmin); }; li.append(b); }
-        ul.append(li); }); s.append(ul); }
-    B.append(s); }
   // ---- 🚨 cheat reports (from the game server)
-  { const s=admSec('🚨 CHEAT REPORTS (TODAY)', 'The game server flags auto-green scripts and fake position/shot reports. Flagged players lose automatic greens for the rest of that game.');
+  { const s=admSec('🚨 CHEATERS CAUGHT (TODAY)', 'Players the game server caught using a script. Their shots stop being automatic for the rest of that game.');
     const C=ADM.cheats; if(!C) s.append(el('p','adSub','Loading…'));
-    else if(!C.length) s.append(el('p','adSub','Nothing flagged today ✅'));
-    else { const ul=el('ul','adList'); C.slice().sort((a,b)=>b.t-a.t).slice(0,30).forEach(c=>{ const li=el('li',''); const b=el('b','', '🚩 '+(c.n||'?')+(c.lb && c.lb!==c.n ? ' (leaderboard: '+c.lb+')' : '')); li.append(b, document.createTextNode(' · '+c.why+' · '+new Date(c.t).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+(c.ranked?' · ranked':'')+(c.rr!=null?' · '+c.rr+' RR':'')+(c.pk?' · ID '+c.pk.slice(0,8):' · (no leaderboard ID)'))); ul.append(li); }); s.append(ul); }
+    else { const by=new Map(); for(const c of C){ if(/position/.test(c.why||'')) continue; const k=c.pk||c.n||'?', x=by.get(k)||{c, n:0, t:0}; x.n++; if(c.t>x.t){ x.t=c.t; x.c=c; } by.set(k,x); }   // (old "position" flags were false alarms)
+      if(!by.size) s.append(el('p','adSub','Nobody today ✅'));
+      else { const ul=el('ul','adList'); [...by.values()].sort((a,b)=>b.t-a.t).slice(0,20).forEach(({c,n,t})=>{ const li=el('li','');
+          li.append(el('b','', c.n||'?'), document.createTextNode(' · '+String(c.why||'').replace(/ (.*)$/,'')+(n>1?' ×'+n:'')+' · '+new Date(t).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})+(c.lb && c.lb!==c.n?' · leaderboard name '+c.lb:''))); ul.append(li); }); s.append(ul); } }
     B.append(s); }
   // ---- 📶 connection report (today, from real iPads)
   { const s=admSec('📶 CONNECTION (TODAY)', 'Real numbers from iPads that played online today. Updates every 30s while people play.');

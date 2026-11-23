@@ -4,7 +4,7 @@
 //   k:<pk>   -> id                                            one leaderboard identity per player
 import { schnorr } from '@noble/curves/secp256k1';
 import LEGACY from './legacy.json';
-import { walNew, walImport, walView, walPack, walBuy, walClaim, walGame, walGear, itemCount, IMPORT_UNTIL } from './wallet.js';
+import { walNew, walImport, walView, walPack, walBuy, walClaim, walGame, walGear, walImpossible, walRestart, itemCount, IMPORT_UNTIL } from './wallet.js';
 import CAT from './catalog.js';
 // everyone who was on the old leaderboard (snapshot taken when ranked moved onto the server). They show up
 // right away; once their iPad checks in and proves it's them (signed with their leaderboard key), their
@@ -93,6 +93,7 @@ export class Profiles {
       const id = await sha(b.tok), key = 'w:' + id;
       const ctx = path === '/api/w/claim' ? { season: seasonN(), cfg: await this.cfg() } : null;   // (fetch BEFORE reading the wallet: nothing can slip in between read and write)
       let W = await this.st.get(key), made = 0;
+      if (W && W.imp && !W.ck) { const bad = walImpossible(W); W = bad.length ? walRestart(W, bad.join(', ')) : { ...W, ck: 1 }; made = 3; }   // saves moved over before this check existed
       if (!W) { W = Date.now() < IMPORT_UNTIL && b.imp && typeof b.imp === 'object' ? walImport(b.imp, seasonN()) : walNew(); made = W.imp ? 2 : 1; }
       let out = {};
       if (path === '/api/w/sync') out = {};
@@ -117,16 +118,11 @@ export class Profiles {
       if (typeof b.akey !== 'string' || !/^[0-9a-f]{64}$/.test(b.akey)) return J({ error: 'no' }, 403);
       const ok = await fetch(FB + '/akey.json', { method: 'PATCH', body: JSON.stringify({ [b.akey]: { '.sv': 'timestamp' } }) }).then(r => r.ok).catch(() => false);
       if (!ok) return J({ error: 'no' }, 403);
-      if (b.wal === 'list') {   // wallets worth a look: imported with lots of items and few games
-        const all = await this.st.list({ prefix: 'w:' }), out = [];
-        for (const [k, W] of all) { if (!W.imp || W.wreset) continue; const p = await this.st.get('p:' + k.slice(2)); out.push({ n: p ? p.n : '?', pk: p && p.pk || '', susp: W.imp.susp, items: W.imp.items, games: W.imp.games, c: W.c, g: W.g, t: W.imp.t }); }
-        out.sort((a, b) => b.susp - a.susp || b.items - a.items); return J({ ok: true, list: out.slice(0, 40), total: all.size });
-      }
       const id = typeof b.pk === 'string' ? await this.st.get('k:' + b.pk) : null;
-      if (id && b.wal === 'get') { const W = await this.st.get('w:' + id); return J({ ok: true, w: W ? { c: W.c, g: W.g, items: itemCount(W), cos: Object.keys(W.cos).length, imp: W.imp || null, reset: !!W.wreset } : null }); }
+      if (id && b.wal === 'get') { const W = await this.st.get('w:' + id); return J({ ok: true, w: W ? { c: W.c, g: W.g, items: itemCount(W), cos: Object.keys(W.cos).length, reset: !!W.wreset, why: W.why || '', canUndo: !!W.bak } : null }); }
+      if (id && b.wal === 'undo') { const W = await this.st.get('w:' + id); if (!W || !W.bak) return J({ error: 'nothing to undo' }, 404); await this.st.put('w:' + id, { ...W.bak, ck: 1 }); return J({ ok: true }); }
       if (id && b.wal === 'reset') {   // wipe a cheater's wallet back to a new player's (codes/gifts already used stay used)
-        const old = await this.st.get('w:' + id), W = walNew(); if (old) { W.once = old.once || {}; W.cid = old.cid || []; W.pass = old.pass || W.pass; }
-        W.wreset = Date.now(); await this.st.put('w:' + id, W); return J({ ok: true }); }
+        await this.st.put('w:' + id, walRestart(await this.st.get('w:' + id), 'reset by admin')); return J({ ok: true }); }
       if (!id && LEG.has(b.pk) && b.hide !== undefined) { const h = (await this.st.get('hideLeg')) || {}; if (b.hide) h[b.pk] = 1; else delete h[b.pk]; await this.st.put('hideLeg', h); this.lb = null; return J({ ok: true }); }
       if (!id) return J({ error: 'player not found' }, 404);
       const p = await this.st.get('p:' + id); if (!p) return J({ error: 'player not found' }, 404);

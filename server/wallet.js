@@ -38,6 +38,21 @@ const once = (W, key) => (W.once[key] = W.once[key] || {});
 function addItem(W, kind, id) { if (!ITEM[kind] || !ITEM[kind].has(id)) return false; const a = W.own[kind] = W.own[kind] || []; if (a.includes(id)) return false; a.push(id); return true; }
 function addPack(W, id, n = 1) { id = packId(id); if (!packOf(id)) return; W.fc[id] = clamp((W.fc[id] || 0) + n, 0, 99); }
 export const itemCount = W => Object.values(W.own).reduce((t, a) => t + a.length, 0) - Object.keys(CAT.kinds).length;
+export const ALL_ITEMS = Object.values(CAT.kinds).reduce((t, k) => t + k.list.length - 1, 0);
+// a moved-over save that can't be real: hacked money (a million coins) or nearly the whole game unlocked.
+// Nobody gets near these by playing, so such a save simply starts over as a new player. [] = it's fine
+export function walImpossible(W) {
+  const I = W.imp; if (!I) return [];
+  const f = [], rc = I.rc !== undefined ? I.rc : I.c, rg = I.rg !== undefined ? I.rg : I.g;
+  if (I.rc !== undefined ? rc >= 1000000 : false) f.push('had ' + rc.toLocaleString('en-US') + ' coins');
+  if (I.rg !== undefined ? rg >= 100000 : false) f.push('had ' + rg.toLocaleString('en-US') + ' gems');
+  if (I.items >= ALL_ITEMS * 0.95) f.push('owned ' + I.items + ' of ' + ALL_ITEMS + ' items');
+  let top = 0; for (const k in W.own) for (const id of W.own[k]) { const it = ITEM[k] && ITEM[k].get(id); if (it && (it.r === 'icon' || it.r === 'secret')) top++; }
+  if (top >= 10) f.push(top + ' Icon/Secret items');
+  return f;
+}
+// start over as a new player (codes, gifts and pass levels already used stay used)
+export function walRestart(old, why) { const W = walNew(); if (old) { W.once = old.once || {}; W.cid = old.cid || []; W.pass = old.pass || W.pass; W.imp = old.imp; } W.wreset = Date.now(); W.why = why || ''; W.ck = 1; if (old) { const { bak, ...keep } = old; W.bak = keep; } return W; }   // (bak: the admin can undo it)
 
 // ---- one-time import of an old save (capped money; items as they were, scored for the admin to review)
 export function walImport(s, season) {
@@ -61,8 +76,9 @@ export function walImport(s, season) {
   if (Number.isInteger(s.season) && s.season > 0) for (let n = 1; n < s.season; n++) once(W, 'season')[n] = 1;   // already paid on the iPad
   // how believable is this save? lots of items with few games played = worth a look (admin panel)
   const items = itemCount(W), games = clamp(+s.games | 0, 0, 100000);
-  W.imp = { t: Date.now(), items, cos: Object.keys(W.cos).length, games, c: W.c, g: W.g, susp: Math.round(clamp((items - 25 - games * 1.2) / 3, 0, 100)) };
-  return W;
+  W.imp = { t: Date.now(), items, cos: Object.keys(W.cos).length, games, c: W.c, g: W.g, rc: Math.max(0, Math.round(+s.coins || 0)), rg: Math.max(0, Math.round(+s.gems || 0)) };
+  W.ck = 1; const bad = walImpossible(W);
+  return bad.length ? walRestart(W, bad.join(', ')) : W;
 }
 
 export function walView(W) { return { c: W.c, g: W.g, own: W.own, cos: Object.keys(W.cos), fc: W.fc, tk: W.tk, pass: W.pass, feat: W.feat, login: W.login }; }
