@@ -2532,7 +2532,8 @@ addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visibl
 const LIVE_ID=Math.random().toString(36).slice(2,12);
 function liveTick(){
   const u=fbURL(); if(!u || CTL.route==='relays') return;
-  const on=amHost() && V.inRoom && !V.practice;
+  const over=V.overSeen || (V.lastSnap && V.lastSnap.ph==='over') || (net.hostConn && net.hostConn.open===false);   // results screen / room already closed: not a live game any more
+  const on=amHost() && V.inRoom && !V.practice && !over;
   if(!on){ if(liveTick.was){ liveTick.was=false; fetch(u+'/live/'+LIVE_ID+'.json',{method:'DELETE', keepalive:true}).catch(()=>{}); } return; }
   liveTick.was=true;
   const ro=net.role==='host' ? [...G.players.values()] : (V.roster||[]);
@@ -2569,7 +2570,8 @@ function diagSend(){
 setInterval(diagSend, 30000);
 // 👥 who's on the site right now (every open game, not just people in a match): shown in the admin panel
 function presencePing(){ try{ if(document.visibilityState!=='visible' || store('buckets-nolb')) return; const u=fbURL(), pk=lbMe(); if(!u || !pk) return;
-  const w = V.inRoom ? (V.phase==='game' ? (V.queueMatch||G.ranked2||V.ranked2 ? 'playing ranked' : 'playing a game') : 'in a lobby') : V.practice ? 'practicing' : !$('#packOpen').classList.contains('hidden') ? 'opening packs' : V.shopOpen ? 'in the shop' : V.rankedOpen ? 'on the ranked screen' : 'on the menu';
+  const over=V.overSeen || (V.lastSnap && V.lastSnap.ph==='over');
+  const w = V.inRoom ? (over ? 'on the results screen' : V.phase==='game' ? (V.queueMatch||G.ranked2||V.ranked2 ? 'playing ranked' : 'playing a game') : 'in a lobby') : V.practice ? 'practicing' : !$('#packOpen').classList.contains('hidden') ? 'opening packs' : V.shopOpen ? 'in the shop' : V.rankedOpen ? 'on the ranked screen' : 'on the menu';
   fetch(u+'/rooms/_on/'+pk.slice(0,16)+'.json',{method:'PUT', body:JSON.stringify({n:getName(), w, t:{'.sv':'timestamp'}})}).catch(()=>{}); }catch(e){} }
 setInterval(presencePing, 60000); setTimeout(presencePing, 6000);
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') presencePing(); });
@@ -4209,6 +4211,7 @@ function applyRoster(m){
   fillGear(m.players); V.owner=m.owner||null;
   V.roster=m.players; V.rmap=new Map(m.players.map(p=>[p.id,p])); V.phase=m.phase; V.toWin=m.toWin; V.diff=m.diff||'pro'; V.winBy2=!!m.winBy2; V.rankedRoom=!!m.ranked; V.ranked2=!!m.ranked2; V.party2Room=!!m.party; V.p2Srch=!!m.srch; if(m.code) net.code=m.code;
   if(!V.inRoom) return;
+  if(V.phase!==prev) setTimeout(()=>{ try{ liveTick(); presencePing(); }catch(e){} }, 600);   // admin panel stays accurate
   if(V.phase==='game' && prev!=='game'){ V.snaps=[]; $('#over').classList.add('hidden'); boxReset(); if(m.ranked2 && (V.roster||[]).filter(p=>!p.bot).length>=2) setTimeout(showVsCard2, 300); }
   if(V.phase==='lobby' && prev==='game') $('#over').classList.add('hidden');
   renderLobby(); updateControlsVisibility();
@@ -4462,7 +4465,7 @@ function handleEvent(e, demo){
     case 'emote': V.emotes[e.id]={e:EMOTES[e.e], t:2.2}; if(V.inRoom) sfx('pop'); break;
     case 'over':
       if(!demo){
-        sfx('buzzer');
+        sfx('buzzer'); setTimeout(()=>{ try{ liveTick(); presencePing(); }catch(e){} }, 1500);
         const me=V.rmap.get(net.myId); if(me && me.team===e.w) confettiWin(e.w);
         if(me){ setTimeout(()=>{ try{ passGameXP(me.team===e.w); }catch(x){} }, 900); SAVE.stats.games++; earn(10,'PLAYED'); setTimeout(()=>{ if(V.gemGame>0){ toast('💎 +'+V.gemGame+' Gems this game'); V.gemGame=0; } }, 2400); if(me.team===e.w){ SAVE.stats.wins++; earn(25,'WIN'); const sc=(V.lastSnap||{}).sc||[1,1]; if(realGame() && sc[1-me.team]===0 && sc[me.team]>=7){ SAVE.feat.zero=1; checkFeats(); } } persist(); }
         V.rankRes=null;
