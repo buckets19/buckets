@@ -2962,7 +2962,7 @@ function onClientData(d){
   else if(d.t==='roster') applyRoster(d);
   else if(d.t==='wal'){ walMirror(d.w); }
   else if(d.t==='idle'){ V.idleClosed=true; }
-  else if(d.t==='rk'){ V.rkMsg=d; if(V.overSeen && !V.rankRes){ V.rankRes=applyRanked(d.win,0,0,0,d); V.rkMsg=null; const S=currentSnap(); if(S && S.ph==='over') showGameOver(S); } }
+  else if(d.t==='rk'){ if(d.note) setTimeout(()=>toast('🧀 '+d.note), 1200); V.rkMsg=d; if(V.overSeen && !V.rankRes){ V.rankRes=applyRanked(d.win,0,0,0,d); V.rkMsg=null; const S=currentSnap(); if(S && S.ph==='over') showGameOver(S); } }
   else if(d.t==='ev') handleEvent(d.e,false);
   else if(d.t==='pong'){ const r=performance.now()-(+d.ts||0); if(r>0 && r<5000){ V.rtt=V.rtt?lerp(V.rtt,r,.3):r; V.pingNow=V.pingNow?lerp(V.pingNow,r,.6):r; diagAdd('ping', r); } }
   else if(d.t==='migrate') migrateTo(String(d.code||'').slice(0,8), d.tag);

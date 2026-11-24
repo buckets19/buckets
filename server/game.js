@@ -187,7 +187,7 @@ export class GameRoom {
   startMatch(wait) {
     const G = this.G; if (G.phase !== 'lobby') return;
     const ro = [...G.players.values()]; if (!ro.some(p => p.team === 0) || !ro.some(p => p.team === 1)) return;
-    this.overAt = 0; if (this.endT) { clearTimeout(this.endT); this.endT = null; }
+    this.overAt = 0; if (this.endT) { clearTimeout(this.endT); this.endT = null; } this.matchAt = Date.now(); this.fft = false;
     this.RM = S.newMatch(ro, G.toWin, false, G.diff, G.winBy2); if (wait) this.RM.phaseT = Math.max(this.RM.phaseT, wait);
     this.RM.hum0 = this.humans(0) > 0; this.RM.hum1 = this.humans(1) > 0; this.overSeen = false; this.tl = new Map(); this.credited = new Set(); this.rc = new Map(); this.finP = null;
     // ranked results are decided here: matchmade games, Ranked Rival games and ranked 2v2s (not private 1v1 rooms: no farming)
@@ -227,7 +227,7 @@ export class GameRoom {
       if ((G.ranked || G.ranked2 || this.q) && RM.phase !== 'over') {
         const left0 = RM.hum0 && this.humans(0) === 0, left1 = RM.hum1 && this.humans(1) === 0;
         if ((left0 || left1) && this.humans() > 0) { const w = left0 ? 1 : 0; RM.winner = w; RM.phase = 'over'; RM.phaseT = this.q ? 1e6 : 15; RM.events.push({ k: 'over', w, forfeit: 1 }); this.overSeen = true; this.overAt = Date.now(); if (this.q) { if (this.endT) clearTimeout(this.endT); this.endT = setTimeout(() => this.closeAll(), RESULTS_CLOSE_MS); } }
-        if (left0 || left1) this.finish(left0 ? 1 : 0);   // quitting a ranked game is a loss, decided here (refreshing can't dodge it)
+        if (left0 || left1) { this.fft = true; this.finish(left0 ? 1 : 0); }   // quitting a ranked game is a loss, decided here (refreshing can't dodge it)
       }
     }
     if (this.owner === id) { const h = [...G.players.values()].find(p => !p.bot); this.owner = h ? h.id : null; }
@@ -312,7 +312,7 @@ export class GameRoom {
     const pts = RM.players.map(p => p.pts || 0), avgP = pts.reduce((a, b) => a + b, 0) / Math.max(1, pts.length);
     const list = [...this.rk].map(([id, x]) => { const win = x.team === w, mp = (RM.players.find(p => p.id === id) || {}).pts || 0, ratio = avgP > 0 ? clamp(mp / avgP, 0.4, 1.8) : 1;
       return { id, tok: x.tok, name: x.name, claim: x.claim, win, opp: avgRR(1 - x.team), margin: Math.abs(sc[0] - sc[1]), perf: win ? Math.round(clamp((ratio - 1) * 8, -2, 6)) : Math.round(clamp((ratio - 1) * 6, -2, 4)),
-        cpu: RM.players.filter(p => p.team !== x.team).every(p => p.bot) ? 1 : 0 }; });   // beat only CPUs (Ranked Rival / empty queue)
+        team: x.team, fft: this.fft ? 1 : 0, dur: Math.round((Date.now() - (this.matchAt || Date.now())) / 1000), pts: (sc[0] | 0) + (sc[1] | 0) }; });   // (for the win-trading checks)
     const P = this.prof(); if (!P || !list.length) return;
     try { const r = await P.fetch('https://x/rk/res', { method: 'POST', body: JSON.stringify({ list }) }).then(r => r.json());
       for (const x of list) { const res = r.res && r.res[x.tok]; if (!res) continue; this.to(x.id, { t: 'rk', win: x.win, ...res });

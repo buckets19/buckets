@@ -165,19 +165,29 @@ export class Profiles {
       return J({ ok: true, rr: out, nm });
     }
     if (path === '/rk/res') {
-      const ev = await this.event(), out = {};
-      for (const x of (b.list || []).slice(0, 8)) {
+      const ev = await this.event(), out = {}, L = (b.list || []).slice(0, 8), ids = {};
+      for (const x of L) if (okTok(x.tok)) ids[x.tok] = await sha(x.tok);
+      for (const x of L) {
         if (!okTok(x.tok)) continue; const id = await sha(x.tok); let p = await this.st.get('p:' + id);
         if (!p) { const c = clamp(Math.round(+x.claim || 0), 0, 600); p = { n: cleanN(x.name), rr: c, g: 0, w: 0, st: 0, b: c, sn: seasonN(), t: Date.now() }; }   // never checked in yet: start from their (capped) rank
         this.season(p);
         let d = rrDelta(!!x.win, p.rr, clamp(+x.opp || 0, 0, 9999), clamp(x.margin | 0, 0, 50), p.st, clamp(x.perf | 0, -2, 6));
-        if (x.win && ev && ev.kind === 'rr2' && !x.cpu) d *= 2;
-        if (x.win && x.cpu) {   // 🤖 wins over CPU rivals count, but can't carry you up the board: half RR, and +100 a day at most
-          const day = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10); if (p.cd !== day) { p.cd = day; p.cg = 0; }
-          d = Math.min(clamp(Math.round(d * 0.5), 2, 15), Math.max(0, 100 - (p.cg | 0))); p.cg = (p.cg | 0) + d; }
+        if (x.win && ev && ev.kind === 'rr2') d *= 2;
+        // 🧀 anti win-trading (two accounts queueing into each other, one quitting right away)
+        let note = '';
+        if (x.win) {
+          const opp = L.filter(y => y.team !== x.team && ids[y.tok]).map(y => ids[y.tok]), now = Date.now();
+          if (x.fft && (x.pts | 0) < 3) { d = 0; note = 'Your opponent quit before the game got going: this win gives no RR'; }   // (quitting at 0-0 / 1-0 = an alt feeding wins; a real blowout counts)
+          else if (opp.length) {
+            p.rec = (p.rec || []).filter(r => now - r.t < 3600e3); const prior = p.rec.filter(r => opp.includes(r.o)).length;
+            if (prior >= 2) { d = 0; note = 'You already beat this player twice in the last hour: no RR this time'; }
+            else if (prior === 1) { d = Math.round(d / 2); note = '2nd win over the same player this hour: half RR'; }
+            for (const o of opp) p.rec.push({ o, t: now }); p.rec = p.rec.slice(-30);
+          }
+        }
         p.rr = Math.max(0, p.rr + d); p.g++; if (x.win) { p.w++; p.st++; } else p.st = 0; p.b = Math.max(p.b, p.rr); p.t = Date.now(); p.sg = (p.sg | 0) + 1; p.sp = Math.max(p.sp | 0, p.rr);
         if (x.name) p.n = cleanN(x.name);
-        await this.st.put('p:' + id, p); out[x.tok] = { d, rr: p.rr, g: p.g, w: p.w, st: p.st, b: p.b };
+        await this.st.put('p:' + id, p); out[x.tok] = { d, rr: p.rr, g: p.g, w: p.w, st: p.st, b: p.b, ...(note ? { note } : {}) };
       }
       this.lb = null; return J({ ok: true, res: out });
     }
