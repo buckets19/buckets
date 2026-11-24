@@ -2567,10 +2567,11 @@ function diagSend(){
   fetch(u+'/rooms/_diag'+diagDay()+'/'+DIAG.id+'.json',{method:'PUT', body:JSON.stringify(rec)}).catch(()=>{});
 }
 setInterval(diagSend, 30000);
-function presencePing(){ try{ if(document.visibilityState!=='visible' || store('buckets-nolb')) return; const u=fbURL(), pk=lbMe(); if(!u || !pk || !SAVE.rank || !SAVE.rank.games) return;
-  const w = V.inRoom ? (V.phase==='game' ? (V.queueMatch||G.ranked2||V.ranked2 ? 'playing ranked' : 'playing a game') : 'in a lobby') : V.practice ? 'practicing' : 'on the menu';
+// 👥 who's on the site right now (every open game, not just people in a match): shown in the admin panel
+function presencePing(){ try{ if(document.visibilityState!=='visible' || store('buckets-nolb')) return; const u=fbURL(), pk=lbMe(); if(!u || !pk) return;
+  const w = V.inRoom ? (V.phase==='game' ? (V.queueMatch||G.ranked2||V.ranked2 ? 'playing ranked' : 'playing a game') : 'in a lobby') : V.practice ? 'practicing' : !$('#packOpen').classList.contains('hidden') ? 'opening packs' : V.shopOpen ? 'in the shop' : V.rankedOpen ? 'on the ranked screen' : 'on the menu';
   fetch(u+'/rooms/_on/'+pk.slice(0,16)+'.json',{method:'PUT', body:JSON.stringify({n:getName(), w, t:{'.sv':'timestamp'}})}).catch(()=>{}); }catch(e){} }
-setInterval(presencePing, 120000); setTimeout(presencePing, 8000);
+setInterval(presencePing, 60000); setTimeout(presencePing, 6000);
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') presencePing(); });
 addEventListener('pagehide', diagSend);
 // =====================================================================
@@ -2600,7 +2601,7 @@ async function rkSync(){ try{ if(!OFFICIAL || store('buckets-nolb')) return null
     const r=await fetch(GAME_SERVER+'/api/rk/me',{method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({tok:ptok(), name:getName(), pk, pf, card:myCardData(), claim:{rr:SAVE.rank.rr, g:SAVE.rank.games|0, w:SAVE.rank.wins|0, b:SAVE.rank.best|0}})});
     if(!r.ok) return null; const d=await r.json(); if(!d || !d.ok) return null;
     const R=SAVE.rank; R.rr=d.rr; R.games=d.g; R.wins=d.w; R.streak=d.st; R.best=Math.max(R.best||0, d.b||0); persist(); try{ updateCoinUI(); }catch(e){} return d; }catch(e){ return null; } }
-loadNostr(); setTimeout(()=>{ rkSync().then(()=>{ LB.at=0; }); }, 2500);
+loadNostr(); setTimeout(()=>{ rkSync().then(()=>{ LB.at=0; setTimeout(()=>walSync(), 800); }); }, 2500);   // (a moved player's stuff follows them: re-read the wallet)
 // =====================================================================
 //  💰 WALLET. Your coins, gems, packs and items are kept on the game server (an edited copy of the game
 //  can't give itself anything that counts). This iPad shows a copy. Rewards you earn here are sent to
@@ -3024,7 +3025,9 @@ function say(kind, vars={}){
   V.announce={text:s, t:2.8};
 }
 function camFlashes(n){ for(let i=0;i<n;i++) V.camFl.push({x:camX+rnd(-700,700), y:rnd(60,420), t:rnd(0,0.6), life:0.12}); }
-function confetti(team){ for(let i=0;i<160;i++) V.confetti.push({x:rnd(0,W), y:rnd(-H,0), vx:rnd(-40,40), vy:rnd(120,260), r:rnd(0,TAU), vr:rnd(-8,8), c:[TEAM_COL[team],'#ffd23f','#fff','#47e27a'][i%4], t:6}); }
+// 🎉 confetti only when YOU win (it was firing on every reward and everyone hated it)
+function confetti(){}
+function confettiWin(team){ for(let i=0;i<160;i++) V.confetti.push({x:rnd(0,W), y:rnd(-H,0), vx:rnd(-40,40), vy:rnd(120,260), r:rnd(0,TAU), vr:rnd(-8,8), c:[TEAM_COL[team],'#ffd23f','#fff','#47e27a'][i%4], t:6}); }
 
 // ---------------------------------------------------------------- collectibles: rarities, catalog, crates, saved data
 const RAR={
@@ -4211,7 +4214,7 @@ function applyRoster(m){
   renderLobby(); updateControlsVisibility();
 }
 function renderLobby(){
-  const p2=!!V.party2Room && !V.practice && V.phase==='lobby' && !V.shopOpen;
+  const p2=!!V.party2Room && !V.practice && !V.queueMatch && V.phase==='lobby' && !V.shopOpen;   // (a queued 2v2 starts on its own: no team-up screen flashing up)
   $('#party2').classList.toggle('hidden', !p2);
   if(p2){ $('#lobby').classList.add('hidden'); renderParty2(); return; }
   $('#lobby').classList.toggle('hidden', V.phase!=='lobby' || !!V.shopOpen);
@@ -4459,8 +4462,8 @@ function handleEvent(e, demo){
     case 'emote': V.emotes[e.id]={e:EMOTES[e.e], t:2.2}; if(V.inRoom) sfx('pop'); break;
     case 'over':
       if(!demo){
-        sfx('buzzer'); confetti(e.w);
-        const me=V.rmap.get(net.myId);
+        sfx('buzzer');
+        const me=V.rmap.get(net.myId); if(me && me.team===e.w) confettiWin(e.w);
         if(me){ setTimeout(()=>{ try{ passGameXP(me.team===e.w); }catch(x){} }, 900); SAVE.stats.games++; earn(10,'PLAYED'); setTimeout(()=>{ if(V.gemGame>0){ toast('💎 +'+V.gemGame+' Gems this game'); V.gemGame=0; } }, 2400); if(me.team===e.w){ SAVE.stats.wins++; earn(25,'WIN'); const sc=(V.lastSnap||{}).sc||[1,1]; if(realGame() && sc[1-me.team]===0 && sc[me.team]>=7){ SAVE.feat.zero=1; checkFeats(); } } persist(); }
         V.rankRes=null;
         if(me && (V.ranked || V.queueMatch || V.ranked2 || (V.rankedRoom && rankedRoomOk()))){ V.overSeen=true;
@@ -4472,7 +4475,7 @@ function handleEvent(e, demo){
           rgClear();
           if(V.ranked) recordRival(me.team===e.w);
           questProgress('RANKED');
-          if(V.rankRes && V.rankRes.promo && V.rankRes.after.ti>V.rankRes.before.ti){ confetti(e.w); V.flash=.5; }
+          if(V.rankRes && V.rankRes.promo && V.rankRes.after.ti>V.rankRes.before.ti){ confettiWin(e.w); V.flash=.5; }
           if(net.role==='host' && RM && (V.ranked||V.queueMatch)) RM.phaseT=1e6;        // stay on the results until you pick
         }
         setTimeout(()=>{ const S=currentSnap(); if(S && V.phase==='game' && S.ph==='over') showGameOver(S); }, 1200);
@@ -4605,6 +4608,9 @@ let W=0,H=0,dpr=1;
 function resize(){ dpr=Math.min(V.lowFx2?1.25:V.lowFx?1.6:2,devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*dpr; cv.height=H*dpr;
   $('#rotate').classList.toggle('hidden', !(touchMode && H>W)); }
 addEventListener('resize', resize); resize();
+// iPads sometimes report the old size right after rotating / closing the keyboard (the game looked squished): re-check
+addEventListener('orientationchange', ()=>{ for(const t of [100,400,1000]) setTimeout(resize,t); });
+try{ visualViewport && visualViewport.addEventListener('resize', ()=>setTimeout(resize,50)); }catch(e){}
 const FONT='"Barlow Condensed","Arial Narrow",system-ui,sans-serif';
 const PX=(x,z)=>x+z*SKEW, PY=(y,z)=>-(y+z*DEPTH);
 const DS=z=>1-z*0.0005;
@@ -4718,6 +4724,7 @@ function frame(){
   requestAnimationFrame(frame);
   const now=performance.now(), dt=Math.min(.05,(now-lastF)/1000); lastF=now; clock+=dt;
   if(W<10 || H<10){ resize(); return; }
+  if(innerWidth!==W || innerHeight!==H) resize();          // the screen changed size without telling us
   if(!isFinite(camX)) camX=COURT_W/2;
   // older iPads: if frames run slow for a few seconds, drop the heavy effects for good
   V.ftA = V.ftA ? lerp(V.ftA,dt,.05) : dt;
@@ -7651,7 +7658,7 @@ async function admSave(patch, okMsg){
 async function admDiag(){ const u=fbURL(); if(!u) return; try{ const r=await fetch(u+'/rooms/_diag'+diagDay()+'.json',{cache:'no-store'}); if(r.ok) ADM.diag=await r.json()||{}; }catch(e){} }
 async function admWal(body){ try{ const r=await fetch(GAME_SERVER+'/api/rk/admin',{method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({akey:ADM.k, ...body})}); return r.ok ? await r.json() : null; }catch(e){ return null; } }
 async function admCheats(){ const u=fbURL(); if(!u) return; try{ const d=new Date(Date.now()-5*3600e3).toISOString().slice(0,10).replace(/-/g,''); const r=await fetch(u+'/rooms/_cheat'+d+'.json',{cache:'no-store'}); if(r.ok) ADM.cheats=Object.values(await r.json()||{}); }catch(e){} }
-async function admLive(){ const u=fbURL(); if(!u) return; try{ const r=await fetch(u+'/live.json',{cache:'no-store'}); if(r.ok){ ADM.live=await r.json()||{}; ADM.liveAt=Date.now(); } }catch(e){} }
+async function admLive(){ const u=fbURL(); if(!u) return; try{ const [r,o]=await Promise.all([fetch(u+'/live.json',{cache:'no-store'}), fetch(u+'/rooms/_on.json',{cache:'no-store'})]); if(r.ok){ ADM.live=await r.json()||{}; ADM.liveAt=Date.now(); } if(o.ok) ADM.on=await o.json()||{}; }catch(e){} }
 async function admVerify(){ const u=fbURL(); if(!u || !/^[0-9a-f]{64}$/.test(ADM.k||'')) return false;
   try{ const r=await fetch(u+'/akey.json',{method:'PATCH', body:JSON.stringify({[ADM.k]:{'.sv':'timestamp'}})}); return r.ok; }catch(e){ return null; } }
 function admLock(){ ADM.k=''; ADM.ok=false; store('buckets-admk',''); $('#adminBtn').classList.add('hidden'); $('#adminPanel').classList.add('hidden'); }
@@ -7679,8 +7686,12 @@ function renderAdmin(){
     const now=Date.now(), rows=Object.entries(ADM.live||{}).filter(([k,v])=>v && now-(+v.t||0)<90000);
     const players=rows.reduce((a,[k,v])=>a+(+v.n||0),0), joiners=Math.max(0, players-rows.length);
     const line=el('div','adStat');
-    line.append(el('b','', rows.length+' online room'+(rows.length===1?'':'s')), el('span','', players+' players online'));
+    const site=Object.values(ADM.on||{}).filter(v=>v && now-(+v.t||0)<150000);   // pinged in the last 2½ minutes = has the game open
+    line.append(el('b','', site.length+' on the website'), el('span','', rows.length+' online room'+(rows.length===1?'':'s')+' · '+players+' in games'));
     s.append(line);
+    if(site.length){ const by={}; for(const v of site) by[v.w||'on the menu']=(by[v.w||'on the menu']||0)+1;
+      s.append(el('p','adSub', Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([w,n])=>n+' '+w).join(' · ')));
+      s.append(el('p','adSub', site.sort((a,b)=>(+b.t)-(+a.t)).slice(0,60).map(v=>cleanName(v.n||'?')).join(', ')+(site.length>60?' …':''))); }
     const ul=el('ul','adList'); rows.sort((a,b)=>(+b[1].n||0)-(+a[1].n||0)).slice(0,12).forEach(([k,v])=>ul.append(el('li','', '🏀 '+(v.m||'game')+' · '+(v.n||0)+' players · '+(v.ph==='game'?'playing':'in lobby'))));
     if(rows.length) s.append(ul);
     s.append(el('p','adSub', 'Settings checked '+(CTL_AT?ago(CTL_AT):'never')+' · 🏟️ Game server: '+(CTL.gsOff?'OFF (backup mode)':'ON')));
@@ -8153,8 +8164,8 @@ const FEATS=[
 ];
 function featProg(f){ if(f.id==='rank') return Math.max(SAVE.rank.rr||0, SAVE.rank.best||0)>=TIERS.find(t=>t.n==='Diamond').min ? 1 : 0; return Math.min(f.goal, SAVE.feat[f.id]||0); }
 function bumpFeat(id){ SAVE.feat[id]=(SAVE.feat[id]||0)+1; checkFeats(); }
-function checkFeats(){ for(const f of FEATS){ if(featProg(f)<f.goal || SAVE.owned[f.kind].includes(f.item)) continue;
-  SAVE.owned[f.kind].push(f.item); SAVE.gems=(SAVE.gems||0)+250; walQ({k:'trophy', id:f.id}); persist(); const it=itemOf(f.kind,f.item);
+function checkFeats(){ SAVE.featTold=SAVE.featTold||{}; for(const f of FEATS){ if(featProg(f)<f.goal || SAVE.owned[f.kind].includes(f.item) || SAVE.featTold[f.id]) continue;
+  SAVE.featTold[f.id]=1; SAVE.owned[f.kind].push(f.item); SAVE.gems=(SAVE.gems||0)+250; walQ({k:'trophy', id:f.id}); persist(); const it=itemOf(f.kind,f.item);
   V.flash=.6; confetti(0); confetti(1); toast('🏅 TROPHY UNLOCKED: '+f.n+'! '+it.icon+' '+it.name+' + 250 💎'); } }
 setTimeout(()=>{ try{ checkFeats(); }catch(e){} }, 1500);
 setTimeout(()=>{ try{ if(SAVE.rank && SAVE.rank.games && !LB.posted) lbPublish(); }catch(e){} }, 9000);

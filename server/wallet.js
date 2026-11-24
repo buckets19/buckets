@@ -92,6 +92,19 @@ export function walImport(s, season) {
   return W;
 }
 
+// the same player on a new iPad (or a restored save): put both wallets together, keeping the best of each
+export function walMerge(A, B) {
+  if (!A) return { ...B }; if (!B) return A; const R = { ...A };
+  R.c = Math.max(A.c || 0, B.c || 0); R.g = Math.max(A.g || 0, B.g || 0);
+  R.own = {}; for (const k of new Set([...Object.keys(A.own || {}), ...Object.keys(B.own || {})])) R.own[k] = [...new Set([...((A.own || {})[k] || []), ...((B.own || {})[k] || [])])];
+  R.cos = { ...(B.cos || {}), ...(A.cos || {}) };
+  R.fc = { ...(B.fc || {}) }; for (const id in (A.fc || {})) R.fc[id] = Math.max(R.fc[id] || 0, A.fc[id]);
+  R.once = { ...(B.once || {}) }; for (const k in (A.once || {})) R.once[k] = { ...(R.once[k] || {}), ...A.once[k] };
+  R.feat = { ...(B.feat || {}) }; for (const k in (A.feat || {})) R.feat[k] = Math.max(R.feat[k] || 0, A.feat[k] || 0);
+  R.tk = [...new Set([...(A.tk || []), ...(B.tk || [])])];
+  if (B.pass && A.pass && B.pass.s === A.pass.s) R.pass = { s: A.pass.s, got: [...new Set([...(A.pass.got || []), ...(B.pass.got || [])])] };
+  return R;
+}
 export function walView(W) { return { c: W.c, g: W.g, own: W.own, cos: Object.keys(W.cos), fc: W.fc, tk: W.tk, pass: W.pass, feat: W.feat, login: W.login }; }
 
 // ---- 📦 open a pack: paid for and rolled here

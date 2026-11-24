@@ -4,7 +4,7 @@
 //   k:<pk>   -> id                                            one leaderboard identity per player
 import { schnorr } from '@noble/curves/secp256k1';
 import LEGACY from './legacy.json';
-import { walNew, walImport, walView, walPack, walBuy, walClaim, walGame, walGear, walRestart, walUndo, itemCount, IMPORT_UNTIL } from './wallet.js';
+import { walNew, walImport, walView, walPack, walBuy, walClaim, walGame, walGear, walRestart, walUndo, walMerge, itemCount, IMPORT_UNTIL } from './wallet.js';
 import CAT from './catalog.js';
 // everyone who was on the old leaderboard (snapshot taken when ranked moved onto the server). They show up
 // right away; once their iPad checks in and proves it's them (signed with their leaderboard key), their
@@ -81,7 +81,15 @@ export class Profiles {
       const okPk = typeof b.pk === 'string' && /^[0-9a-f]{64}$/.test(b.pk);
       if (okPk && (p.pk !== b.pk || !p.lg) && await pkProof(b.pk, b.tok, b.pf)) {
         const owner = await this.st.get('k:' + b.pk);
-        if (!owner || owner === id) {
+        if (owner && owner !== id) {   // this iPad proved it holds the player's key: they moved iPads (or restored a save). Bring their rank + stuff here
+          const op = await this.st.get('p:' + owner), ow = await this.st.get('w:' + owner);
+          if (op) { this.season(op); p.rr = Math.max(p.rr, op.rr | 0); p.g = Math.max(p.g, op.g | 0); p.w = Math.max(p.w, op.w | 0); p.b = Math.max(p.b, op.b | 0, p.rr); p.sg = Math.max(p.sg | 0, op.sg | 0); p.sp = Math.max(p.sp | 0, op.sp | 0); p.lg = p.lg || op.lg; if (op.prev && !p.prev) p.prev = op.prev;
+            op.pk = ''; op.hide = 1; op.movedTo = id; await this.st.put('p:' + owner, op); }
+          if (ow) { const W = await this.st.get('w:' + id); await this.st.put('w:' + id, walMerge(W, ow)); }
+          if (p.pk && p.pk !== b.pk) await this.st.delete('k:' + p.pk);
+          p.pk = b.pk; await this.st.put('k:' + b.pk, id); p.lg = 1; dirty = true; this.lb = null;
+        }
+        else if (!owner || owner === id) {
           if (p.pk && p.pk !== b.pk) await this.st.delete('k:' + p.pk);
           p.pk = b.pk; await this.st.put('k:' + b.pk, id);
           const L = LEG.get(b.pk);
