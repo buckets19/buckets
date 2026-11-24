@@ -171,7 +171,10 @@ export class Profiles {
         if (!p) { const c = clamp(Math.round(+x.claim || 0), 0, 600); p = { n: cleanN(x.name), rr: c, g: 0, w: 0, st: 0, b: c, sn: seasonN(), t: Date.now() }; }   // never checked in yet: start from their (capped) rank
         this.season(p);
         let d = rrDelta(!!x.win, p.rr, clamp(+x.opp || 0, 0, 9999), clamp(x.margin | 0, 0, 50), p.st, clamp(x.perf | 0, -2, 6));
-        if (x.win && ev && ev.kind === 'rr2') d *= 2;
+        if (x.win && ev && ev.kind === 'rr2' && !x.cpu) d *= 2;
+        if (x.win && x.cpu) {   // 🤖 wins over CPU rivals count, but can't carry you up the board: half RR, and +100 a day at most
+          const day = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10); if (p.cd !== day) { p.cd = day; p.cg = 0; }
+          d = Math.min(clamp(Math.round(d * 0.5), 2, 15), Math.max(0, 100 - (p.cg | 0))); p.cg = (p.cg | 0) + d; }
         p.rr = Math.max(0, p.rr + d); p.g++; if (x.win) { p.w++; p.st++; } else p.st = 0; p.b = Math.max(p.b, p.rr); p.t = Date.now(); p.sg = (p.sg | 0) + 1; p.sp = Math.max(p.sp | 0, p.rr);
         if (x.name) p.n = cleanN(x.name);
         await this.st.put('p:' + id, p); out[x.tok] = { d, rr: p.rr, g: p.g, w: p.w, st: p.st, b: p.b };

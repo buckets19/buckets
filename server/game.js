@@ -311,7 +311,8 @@ export class GameRoom {
     const avgRR = team => (this.rkRR || [0, 0])[team] || 0;
     const pts = RM.players.map(p => p.pts || 0), avgP = pts.reduce((a, b) => a + b, 0) / Math.max(1, pts.length);
     const list = [...this.rk].map(([id, x]) => { const win = x.team === w, mp = (RM.players.find(p => p.id === id) || {}).pts || 0, ratio = avgP > 0 ? clamp(mp / avgP, 0.4, 1.8) : 1;
-      return { id, tok: x.tok, name: x.name, claim: x.claim, win, opp: avgRR(1 - x.team), margin: Math.abs(sc[0] - sc[1]), perf: win ? Math.round(clamp((ratio - 1) * 8, -2, 6)) : Math.round(clamp((ratio - 1) * 6, -2, 4)) }; });
+      return { id, tok: x.tok, name: x.name, claim: x.claim, win, opp: avgRR(1 - x.team), margin: Math.abs(sc[0] - sc[1]), perf: win ? Math.round(clamp((ratio - 1) * 8, -2, 6)) : Math.round(clamp((ratio - 1) * 6, -2, 4)),
+        cpu: RM.players.filter(p => p.team !== x.team).every(p => p.bot) ? 1 : 0 }; });   // beat only CPUs (Ranked Rival / empty queue)
     const P = this.prof(); if (!P || !list.length) return;
     try { const r = await P.fetch('https://x/rk/res', { method: 'POST', body: JSON.stringify({ list }) }).then(r => r.json());
       for (const x of list) { const res = r.res && r.res[x.tok]; if (!res) continue; this.to(x.id, { t: 'rk', win: x.win, ...res });
