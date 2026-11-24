@@ -16,7 +16,7 @@ const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods
 
 // 🔒 Only the real game page may play online or touch accounts. A copy of the game on any other site
 // (or opened from a file / a link to an altered page) is turned away here, before it reaches a game.
-const ALLOWED = new Set(['https://buckets19.github.io']);
+const ALLOWED = new Set(['https://11buckets.github.io', 'https://buckets19.github.io']);
 const okOrigin = (req, env) => { const o = req.headers.get('Origin') || ''; return ALLOWED.has(o) || (env && env.DEV === '1' && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o)); };
 
 export default {
